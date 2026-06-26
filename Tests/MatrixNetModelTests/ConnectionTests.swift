@@ -5,7 +5,7 @@ import Testing
 @Suite("Connection")
 struct ConnectionTests {
     private func makeConnection(start: Date) throws -> Connection {
-        let source = try Endpoint(address: #require(IPAddress("192.168.1.5")), port: 50_000)
+        let source = try Endpoint(address: #require(IPAddress("192.168.1.5")), port: 50000)
         let destination = try Endpoint(address: #require(IPAddress("1.1.1.1")), port: 443)
         return Connection(
             fiveTuple: FiveTuple(proto: .tcp, source: source, destination: destination),

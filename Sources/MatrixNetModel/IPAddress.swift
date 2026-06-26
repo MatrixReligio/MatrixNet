@@ -1,4 +1,5 @@
 import Darwin
+import Foundation
 
 /// An IP address, either IPv4 or IPv6.
 ///
@@ -66,15 +67,21 @@ public enum IPAddress: Hashable, Sendable {
 
     private static func packV4(_ bytes: [UInt8]) -> UInt32 {
         var value: UInt32 = 0
-        for byte in bytes { value = (value << 8) | UInt32(byte) }
+        for byte in bytes {
+            value = (value << 8) | UInt32(byte)
+        }
         return value
     }
 
     private static func packV6(_ bytes: [UInt8]) -> (high: UInt64, low: UInt64) {
         var high: UInt64 = 0
         var low: UInt64 = 0
-        for byte in bytes[0 ..< 8] { high = (high << 8) | UInt64(byte) }
-        for byte in bytes[8 ..< 16] { low = (low << 8) | UInt64(byte) }
+        for byte in bytes[0 ..< 8] {
+            high = (high << 8) | UInt64(byte)
+        }
+        for byte in bytes[8 ..< 16] {
+            low = (low << 8) | UInt64(byte)
+        }
         return (high, low)
     }
 }
@@ -85,8 +92,11 @@ extension IPAddress: CustomStringConvertible {
         var rawBytes = bytes
         var buffer = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
         guard inet_ntop(family, &rawBytes, &buffer, socklen_t(INET6_ADDRSTRLEN)) != nil else {
-            return ""
+            // Unreachable for an internally valid address; surface a visible
+            // sentinel rather than silently corrupting logs/UI/pcapng output.
+            return "<invalid-address>"
         }
-        return String(cString: buffer)
+        let utf8 = buffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }
+        return String(bytes: utf8, encoding: .utf8) ?? "<invalid-address>"
     }
 }

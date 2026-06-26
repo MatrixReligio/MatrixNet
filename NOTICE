@@ -1,0 +1,39 @@
+MatrixNet
+Copyright 2026 MatrixReligio LLC
+
+This product is licensed under the Apache License, Version 2.0 (the "License").
+You may not use this product except in compliance with the License. A copy of
+the License is included in the LICENSE file in this distribution, and is also
+available at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+--------------------------------------------------------------------------------
+Attributions
+--------------------------------------------------------------------------------
+
+MatrixNet interoperates with, and builds upon, the following third-party and
+system technologies. Their use does not imply any endorsement by their
+respective authors.
+
+- libpcap / tcpdump
+  MatrixNet reads packets through the BPF / PKTAP interfaces and uses the pcapng
+  capture file format pioneered by these projects for interoperability with
+  Wireshark and other analysis tools.
+  https://www.tcpdump.org
+
+- Wireshark
+  The pcapng files MatrixNet exports are designed to be opened in Wireshark.
+  https://www.wireshark.org
+
+- Apple system frameworks and interfaces
+  MatrixNet relies on macOS system facilities, including the NetworkStatistics
+  framework (the kernel connection-attribution mechanism used by nettop and
+  Activity Monitor), the BPF / PKTAP packet-capture interfaces, ServiceManagement
+  (SMAppService) for privileged helper registration, and XPC for inter-process
+  communication. These are property of Apple Inc.
+
+Additional third-party components bundled with MatrixNet (for example, a local
+GeoIP database and any open-source dependencies) are listed, together with their
+respective licenses, in the application's About / acknowledgements view and the
+source tree as they are introduced.

@@ -87,10 +87,4 @@ public struct FlowKey: Hashable, Sendable {
     let proto: TransportProtocol
     let low: Endpoint
     let high: Endpoint
-
-    init(proto: TransportProtocol, low: Endpoint, high: Endpoint) {
-        self.proto = proto
-        self.low = low
-        self.high = high
-    }
 }

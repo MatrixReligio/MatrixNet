@@ -24,17 +24,17 @@ struct FlowCorrelatorTests {
     @Test("registers a connection and finds it by flow key in either direction")
     func registerAndLookup() async throws {
         let correlator = FlowCorrelator()
-        let connection = try makeConnection(50_000)
+        let connection = try makeConnection(50000)
         await correlator.register(connection)
 
         let forward = await correlator.connection(for: connection.fiveTuple.flowKey)
         #expect(forward?.id == connection.id)
 
         // A packet seen in the reverse direction must resolve to the same connection.
-        let reversed = FiveTuple(
+        let reversed = try FiveTuple(
             proto: .tcp,
-            source: try endpoint("1.1.1.1", 443),
-            destination: try endpoint("192.168.1.5", 50_000)
+            source: endpoint("1.1.1.1", 443),
+            destination: endpoint("192.168.1.5", 50000)
         )
         let backward = await correlator.connectionID(forPacketFlow: reversed.flowKey, pid: nil)
         #expect(backward == connection.id)
@@ -43,7 +43,7 @@ struct FlowCorrelatorTests {
     @Test("falls back to PID when no flow key matches")
     func pidFallback() async throws {
         let correlator = FlowCorrelator()
-        let connection = try makeConnection(50_001, pid: 999)
+        let connection = try makeConnection(50001, pid: 999)
         await correlator.register(connection)
 
         let unrelated = try FiveTuple(
@@ -70,7 +70,7 @@ struct FlowCorrelatorTests {
     @Test("removing a connection drops its flow-key entry")
     func removeDropsEntry() async throws {
         let correlator = FlowCorrelator()
-        let connection = try makeConnection(50_002)
+        let connection = try makeConnection(50002)
         await correlator.register(connection)
         await correlator.remove(connectionID: connection.id)
         let found = await correlator.connection(for: connection.fiveTuple.flowKey)
@@ -81,8 +81,8 @@ struct FlowCorrelatorTests {
     @Test("a newer connection takes over a reused flow key")
     func portReuseTakeover() async throws {
         let correlator = FlowCorrelator()
-        let first = try makeConnection(50_003, remote: "1.1.1.1")
-        let second = try makeConnection(50_003, remote: "1.1.1.1")
+        let first = try makeConnection(50003, remote: "1.1.1.1")
+        let second = try makeConnection(50003, remote: "1.1.1.1")
         await correlator.register(first)
         await correlator.register(second)
         let found = await correlator.connection(for: first.fiveTuple.flowKey)
@@ -100,7 +100,7 @@ struct FlowCorrelatorTests {
     }
 
     @Test("survives concurrent registration and lookup without losing connections")
-    func concurrentStress() async throws {
+    func concurrentStress() async {
         let correlator = FlowCorrelator()
         let count = 2000
 
@@ -108,7 +108,7 @@ struct FlowCorrelatorTests {
             for index in 0 ..< count {
                 group.addTask {
                     // Distinct local ports → distinct flow keys.
-                    if let connection = try? self.makeConnection(UInt16(10_000 + index), pid: Int32(index)) {
+                    if let connection = try? makeConnection(UInt16(10000 + index), pid: Int32(index)) {
                         await correlator.register(connection)
                     }
                 }
@@ -133,7 +133,9 @@ struct FlowCorrelatorTests {
                 }
             }
             var total = 0
-            for await matched in group where matched { total += 1 }
+            for await matched in group where matched {
+                total += 1
+            }
             return total
         }
         #expect(resolvedCount == count)

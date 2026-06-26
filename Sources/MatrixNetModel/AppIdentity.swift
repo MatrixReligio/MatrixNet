@@ -8,7 +8,9 @@ public struct AppIdentity: Hashable, Sendable, Identifiable {
     public let displayName: String
     public let executablePath: String?
 
-    public var id: Int32 { pid }
+    public var id: Int32 {
+        pid
+    }
 
     /// Creates an identity, deriving a human-readable display name when one is
     /// not supplied: the executable's file name if available, otherwise a
@@ -29,10 +31,9 @@ public struct AppIdentity: Hashable, Sendable, Identifiable {
         if let provided, !provided.isEmpty {
             return provided
         }
-        if let path = executablePath,
-           let component = path.split(separator: "/", omittingEmptySubsequences: true).last,
-           !component.isEmpty {
-            return String(component)
+        let fileName = executablePath?.split(separator: "/", omittingEmptySubsequences: true).last
+        if let fileName, !fileName.isEmpty {
+            return String(fileName)
         }
         return "PID \(pid)"
     }

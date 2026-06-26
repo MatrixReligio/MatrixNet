@@ -8,7 +8,7 @@ struct IPAddressTests {
         "127.0.0.1",
         "192.168.1.1",
         "255.255.255.255",
-        "8.8.8.8",
+        "8.8.8.8"
     ])
     func parseIPv4RoundTrip(_ text: String) throws {
         let address = try #require(IPAddress(text), "should parse \(text)")
@@ -24,7 +24,7 @@ struct IPAddressTests {
         ("fe80::1", "fe80::1"),
         // Non-canonical input normalises to canonical RFC 5952 form.
         ("2001:0db8:0000:0000:0000:0000:0000:0001", "2001:db8::1"),
-        ("2001:DB8::1", "2001:db8::1"),
+        ("2001:DB8::1", "2001:db8::1")
     ])
     func parseIPv6Canonical(_ input: String, _ canonical: String) throws {
         let address = try #require(IPAddress(input), "should parse \(input)")
@@ -43,7 +43,7 @@ struct IPAddressTests {
         "2001:db8:::1",
         "12345::",
         " 1.2.3.4",
-        "1.2.3.4 ",
+        "1.2.3.4 "
     ])
     func rejectsMalformed(_ text: String) {
         #expect(IPAddress(text) == nil, "should reject \(text)")
@@ -54,7 +54,7 @@ struct IPAddressTests {
         let v4 = try #require(IPAddress(bytes: [192, 168, 0, 1]))
         #expect(v4.description == "192.168.0.1")
 
-        let v6Bytes: [UInt8] = [0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        let v6Bytes: [UInt8] = [0x20, 0x01, 0x0D, 0xB8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
         let v6 = try #require(IPAddress(bytes: v6Bytes))
         #expect(v6.description == "2001:db8::1")
         #expect(v6.bytes == v6Bytes)

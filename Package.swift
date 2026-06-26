@@ -18,16 +18,27 @@ let package = Package(
     ],
     products: [
         .library(name: "MatrixNetModel", targets: ["MatrixNetModel"]),
+        .library(name: "MatrixNetDissection", targets: ["MatrixNetDissection"]),
     ],
     targets: [
         .target(
             name: "MatrixNetModel",
             path: "Sources/MatrixNetModel"
         ),
+        .target(
+            name: "MatrixNetDissection",
+            dependencies: ["MatrixNetModel"],
+            path: "Sources/MatrixNetDissection"
+        ),
         .testTarget(
             name: "MatrixNetModelTests",
             dependencies: ["MatrixNetModel"],
             path: "Tests/MatrixNetModelTests"
+        ),
+        .testTarget(
+            name: "MatrixNetDissectionTests",
+            dependencies: ["MatrixNetDissection", "MatrixNetModel"],
+            path: "Tests/MatrixNetDissectionTests"
         ),
     ]
 )
