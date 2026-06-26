@@ -6,8 +6,7 @@ A 100% native SwiftUI network monitor and deep packet analyzer for macOS. As
 effortless as Activity Monitor for *who is on the network*, as deep as Wireshark
 for *what is on the wire* — and every packet knows which app sent it.
 
-<!-- Badges (placeholders — wire up once the public CI and release pipeline are live) -->
-[![CI](https://img.shields.io/badge/CI-pending-lightgrey)](https://github.com/MatrixReligio/MatrixNet/actions)
+[![CI](https://github.com/MatrixReligio/MatrixNet/actions/workflows/ci.yml/badge.svg)](https://github.com/MatrixReligio/MatrixNet/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%2026%2B-black)](#requirements)
 [![Swift](https://img.shields.io/badge/Swift-6-orange)](https://swift.org)
