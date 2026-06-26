@@ -30,8 +30,17 @@ struct PacketsView: View {
 
     private var analyzer: some View {
         HSplitView {
-            packetList
-                .frame(minWidth: 360)
+            VStack(spacing: 0) {
+                if let error = capture.lastError {
+                    captureBanner(error)
+                }
+                if capture.packets.isEmpty {
+                    waitingState
+                } else {
+                    packetList
+                }
+            }
+            .frame(minWidth: 360)
             ScrollView {
                 if let packet = selectedPacket {
                     PacketDetail(packet: packet)
@@ -41,6 +50,40 @@ struct PacketsView: View {
             }
             .frame(minWidth: 280)
         }
+    }
+
+    /// Shown inside the analyzer while capturing but before any packet arrives,
+    /// or when capture is idle — with a way to (re)install the helper.
+    private var waitingDescription: LocalizedStringKey {
+        capture.isCapturing
+            ? "Capturing — packets will appear as your apps use the network."
+            : "Press Start to capture. If nothing shows up, reinstall the helper below."
+    }
+
+    private var waitingState: some View {
+        ContentUnavailableView {
+            Label(capture.isCapturing ? "Waiting for Packets" : "Capture Stopped", systemImage: "scope")
+        } description: {
+            Text(waitingDescription)
+        } actions: {
+            if !capture.isCapturing {
+                Button("Start") { capture.startCapture() }
+                    .buttonStyle(.borderedProminent).tint(Theme.accent)
+            }
+            Button("Reinstall Helper") { capture.reinstallHelper() }
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private func captureBanner(_ message: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.advisory)
+            Text(message).font(.caption).lineLimit(2)
+            Spacer()
+            Button("Reinstall Helper") { capture.reinstallHelper() }.font(.caption)
+        }
+        .padding(8)
+        .background(Theme.advisory.opacity(0.12))
     }
 
     private var packetList: some View {

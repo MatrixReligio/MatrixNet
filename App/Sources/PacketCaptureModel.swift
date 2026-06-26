@@ -73,8 +73,19 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
         refreshState()
     }
 
+    /// Unregisters then re-registers the helper. Needed after an app update: the
+    /// previously-registered daemon keeps running the *old* helper binary until
+    /// it is re-registered, so capture would silently use stale code.
+    func reinstallHelper() {
+        stopCapture()
+        try? daemon.unregister()
+        lastError = nil
+        enableHelper()
+    }
+
     func startCapture() {
         guard !isCapturing else { return }
+        lastError = nil
         refreshState()
         guard helperState == .enabled else {
             enableHelper()
