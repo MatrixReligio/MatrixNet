@@ -19,11 +19,13 @@ MatrixNet.xcodeproj/
 .build/
 .swiftpm/
 Package.resolved
+.spm-cache/
 
 # Signing / secrets — never commit
 *.p8
 *.p12
 *.cer
+*.pem
 *.mobileprovision
 *.provisionprofile
 Config/Secrets.xcconfig

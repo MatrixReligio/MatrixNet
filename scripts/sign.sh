@@ -13,6 +13,23 @@ APP="${1:-build/Build/Products/Release/MatrixNet.app}"
 IDENTITY="${SIGN_IDENTITY:-Developer ID Application: MatrixReligio LLC (4DUQGD879H)}"
 WIDGET="$APP/Contents/PlugIns/MatrixNetWidget.appex"
 HELPER="$APP/Contents/MacOS/MatrixNetHelper"
+SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+
+# Sparkle ships nested helpers (XPC services, the updater app, the Autoupdate
+# tool) that must each be signed inside-out with Hardened Runtime before the
+# framework and the app, or notarization/Gatekeeper rejects them.
+if [ -d "$SPARKLE" ]; then
+  echo "==> Signing Sparkle components"
+  SV="$SPARKLE/Versions/B"
+  codesign --force --timestamp --options runtime --sign "$IDENTITY" \
+    "$SV/XPCServices/Downloader.xpc" \
+    "$SV/XPCServices/Installer.xpc"
+  codesign --force --timestamp --options runtime --sign "$IDENTITY" \
+    "$SV/Updater.app"
+  codesign --force --timestamp --options runtime --sign "$IDENTITY" \
+    "$SV/Autoupdate"
+  codesign --force --timestamp --options runtime --sign "$IDENTITY" "$SPARKLE"
+fi
 
 echo "==> Signing privileged helper"
 codesign --force --timestamp --options runtime --sign "$IDENTITY" "$HELPER"

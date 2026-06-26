@@ -10,6 +10,9 @@ options:
 packages:
   MatrixNetCore:
     path: .
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.9.3"
 
 settings:
   base:
@@ -44,6 +47,8 @@ targets:
         product: MatrixNetStore
       - package: MatrixNetCore
         product: MatrixNetGeoIP
+      - package: Sparkle
+        product: Sparkle
       - target: MatrixNetWidget
         embed: true
       - target: MatrixNetHelper
@@ -74,6 +79,12 @@ targets:
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         LSMinimumSystemVersion: "26.0"
+        # Sparkle auto-update. Appcast is published as a stable GitHub "latest
+        # release" asset; the EdDSA public key verifies every downloaded update.
+        SUFeedURL: "https://github.com/MatrixReligio/MatrixNet/releases/latest/download/appcast.xml"
+        SUPublicEDKey: "EGUIhgXktQ0/urKDPSDzDlpb5Yowa/43aJSUdTsacoQ="
+        SUEnableAutomaticChecks: true
+        SUScheduledCheckInterval: 86400
 
   MatrixNetHelper:
     type: tool

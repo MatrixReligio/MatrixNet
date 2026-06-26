@@ -20,5 +20,13 @@
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>26.0</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://github.com/MatrixReligio/MatrixNet/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>EGUIhgXktQ0/urKDPSDzDlpb5Yowa/43aJSUdTsacoQ=</string>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>

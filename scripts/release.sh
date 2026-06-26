@@ -48,4 +48,23 @@ xcrun stapler staple "$DMG"
 xcrun stapler validate "$DMG"
 spctl -a -t open --context context:primary-signature -vvv "$DMG" 2>&1 | head -3 || true
 
+# Generate the EdDSA-signed Sparkle appcast so auto-update can detect this build.
+# generate_appcast reads the DMG's version, signs it with the EdDSA private key
+# (from the login keychain locally, or SPARKLE_PRIVATE_KEY in CI), and writes
+# dist/appcast.xml whose enclosure URL points at the GitHub release asset.
+SPARKLE_BIN="${SPARKLE_BIN:-}"
+GENERATE_APPCAST="$SPARKLE_BIN/generate_appcast"
+[ -n "$SPARKLE_BIN" ] || GENERATE_APPCAST="$(command -v generate_appcast || true)"
+if [ -x "$GENERATE_APPCAST" ]; then
+  echo "==> Generating Sparkle appcast"
+  KEYARGS=()
+  [ -n "${SPARKLE_PRIVATE_KEY:-}" ] && KEYARGS=(--ed-key-file <(printf '%s' "$SPARKLE_PRIVATE_KEY"))
+  "$GENERATE_APPCAST" "${KEYARGS[@]}" \
+    --download-url-prefix "https://github.com/MatrixReligio/MatrixNet/releases/download/v$VERSION/" \
+    "$DIST"
+  echo "appcast: $DIST/appcast.xml"
+else
+  echo "WARN: generate_appcast not found (set SPARKLE_BIN); skipping appcast." >&2
+fi
+
 echo "==> Done: $DMG"

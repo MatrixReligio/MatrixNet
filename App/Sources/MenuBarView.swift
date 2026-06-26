@@ -26,9 +26,13 @@ struct MenuBarView: View {
             }
 
             HStack(spacing: 16) {
-                metric("In", Format.bytes(model.totalBytesIn), Theme.inbound)
-                metric("Out", Format.bytes(model.totalBytesOut), Theme.outbound)
+                metric("↓ Rate", Format.rate(model.throughputIn), Theme.inbound)
+                metric("↑ Rate", Format.rate(model.throughputOut), Theme.outbound)
                 metric("Active", "\(model.activeCount)", Theme.accent)
+            }
+            HStack(spacing: 16) {
+                metric("Received", Format.bytes(model.sessionBytesIn), Theme.inbound)
+                metric("Sent", Format.bytes(model.sessionBytesOut), Theme.outbound)
             }
 
             Divider()
