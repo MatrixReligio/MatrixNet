@@ -12,7 +12,10 @@ struct MatrixNetApp: App {
                 .environment(model)
                 .environment(capture)
                 .frame(minWidth: 880, minHeight: 520)
-                .onAppear { model.start() }
+                .onAppear {
+                    model.start()
+                    Task.detached(priority: .background) { await GeoIP.updateIfNeeded() }
+                }
         }
         .windowToolbarStyle(.unified)
         .commands {

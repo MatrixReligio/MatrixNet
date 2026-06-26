@@ -14,6 +14,9 @@ public struct GeoIPDatabase: Sendable {
 
     private let ranges: [Range]
 
+    /// Whether the database carries no ranges (e.g. a header-only file).
+    public var isEmpty: Bool { ranges.isEmpty }
+
     /// Builds from pre-sorted ranges (used by the loader and tests).
     init(ranges: [Range]) {
         self.ranges = ranges

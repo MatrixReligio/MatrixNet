@@ -1,0 +1,42 @@
+name: Update GeoIP database
+
+# DB-IP publishes the Country Lite dataset (CC-BY-4.0) monthly. This job rebuilds
+# the compact geoip.dat and republishes it as the stable `geoip-latest` release
+# asset, which the app downloads in the background. Runs on the 3rd of each month
+# (after DB-IP's monthly drop) and on demand.
+on:
+  schedule:
+    - cron: "0 6 3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    name: Build and publish geoip.dat
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build geoip.dat from the latest DB-IP dataset
+        run: |
+          set -euo pipefail
+          # Try the current month, fall back to the previous one if not yet up.
+          if ! ./scripts/build-geoip.sh "$(date +%Y-%m)"; then
+            ./scripts/build-geoip.sh "$(date -v-1m +%Y-%m)"
+          fi
+          ls -la App/Resources/geoip.dat
+
+      - name: Publish to the geoip-latest release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: geoip-latest
+          name: GeoIP database (rolling)
+          body: |
+            Rolling GeoIP database for MatrixNet's in-app auto-update.
+
+            IP Geolocation by DB-IP (https://db-ip.com), licensed under CC-BY-4.0.
+            Rebuilt automatically from the latest DB-IP Country Lite dataset.
+          files: App/Resources/geoip.dat
+          make_latest: false
