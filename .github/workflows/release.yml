@@ -64,6 +64,8 @@ jobs:
       - name: Upload release artifacts (DMG + appcast)
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: MatrixNet ${{ github.event.inputs.version }}
           files: |
             dist/MatrixNet-*.dmg
             dist/appcast.xml
