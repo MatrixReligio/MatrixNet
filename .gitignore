@@ -28,6 +28,7 @@ Package.resolved
 *.pem
 *.mobileprovision
 *.provisionprofile
+secrets/
 Config/Secrets.xcconfig
 Config/Local.xcconfig
 ExportOptions.local.plist
