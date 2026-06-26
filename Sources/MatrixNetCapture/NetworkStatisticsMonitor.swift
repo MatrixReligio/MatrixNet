@@ -42,6 +42,7 @@ public final class NetworkStatisticsMonitor: ConnectionMonitoring, @unchecked Se
     private var idBySource: [UInt: UUID] = [:]
     private var startedAtBySource: [UInt: Date] = [:]
     private var queryTimer: DispatchSourceTimer?
+    private var isStopped = false
 
     /// How often to re-enumerate current sources. NetworkStatistics only pushes
     /// state-change/teardown events on its own; an explicit periodic query is
@@ -83,7 +84,10 @@ public final class NetworkStatisticsMonitor: ConnectionMonitoring, @unchecked Se
     public func start() -> AsyncStream<ConnectionEvent> {
         AsyncStream { continuation in
             queue.async { [weak self] in
-                guard let self else { continuation.finish()
+                // If stop() ran before this async setup, abort instead of leaving
+                // a zombie manager + timer behind.
+                guard let self, !self.isStopped else {
+                    continuation.finish()
                     return
                 }
                 self.continuation = continuation
@@ -118,6 +122,7 @@ public final class NetworkStatisticsMonitor: ConnectionMonitoring, @unchecked Se
 
     public func stop() {
         queue.sync {
+            isStopped = true
             queryTimer?.cancel()
             queryTimer = nil
             if let manager {
@@ -175,8 +180,12 @@ public final class NetworkStatisticsMonitor: ConnectionMonitoring, @unchecked Se
     }
 
     deinit {
-        if let manager {
-            destroy(manager)
+        // Synchronise with the callback queue so destroy can't race an in-flight
+        // framework callback.
+        queue.sync {
+            if let manager {
+                destroy(manager)
+            }
         }
         dlclose(handle)
     }

@@ -1,9 +1,15 @@
 name: Release
 
+# Manual trigger: notarized releases require signing/notarization secrets
+# (DEVELOPER_ID_CERT_P12, ASC_KEY_P8, ASC_ISSUER_ID, ...). Configure those, then
+# run this workflow for the tag. Day-to-day releases are cut locally with
+# scripts/release.sh, which signs + notarizes against the Keychain.
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag, e.g. v0.1.0"
+        required: true
 
 permissions:
   contents: write
@@ -48,7 +54,7 @@ jobs:
 
       - name: Build, sign, notarize, staple, package
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ github.event.inputs.version }}
         run: ./scripts/release.sh "$VERSION"
 
       - name: Upload release artifact

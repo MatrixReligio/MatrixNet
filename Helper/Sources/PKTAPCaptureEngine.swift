@@ -77,9 +77,11 @@ final class PKTAPCaptureEngine: @unchecked Sendable {
         for index in 0 ..< 256 {
             let descriptor = open("/dev/bpf\(index)", O_RDONLY)
             if descriptor >= 0 { return descriptor }
-            if errno != EBUSY { continue }
+            // EBUSY: device in use, try the next. Any other error (EPERM when not
+            // root, etc.) is terminal — stop and report it accurately.
+            if errno != EBUSY { throw CaptureError.openDevice(errno) }
         }
-        throw CaptureError.openDevice(errno)
+        throw CaptureError.openDevice(ENODEV)
     }
 
     private func startReading() {

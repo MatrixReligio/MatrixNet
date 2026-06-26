@@ -40,7 +40,6 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
     private(set) var packets: [PacketRow] = []
 
     private let daemon = SMAppService.daemon(plistName: CaptureXPC.helperPlistName)
-    private let dissector = PacketDissector()
     private var connection: NSXPCConnection?
     private var nextID: UInt64 = 0
     private let maxPackets = 5000
@@ -88,10 +87,21 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
         connection.invalidationHandler = { [weak self] in
             Task { @MainActor in self?.isCapturing = false }
         }
+        connection.interruptionHandler = { [weak self] in
+            Task { @MainActor in
+                self?.isCapturing = false
+                self?.lastError = "Helper interrupted — press Start to reconnect."
+            }
+        }
         connection.resume()
         self.connection = connection
 
-        let proxy = connection.remoteObjectProxy as? CaptureControl
+        let proxy = connection.remoteObjectProxyWithErrorHandler { [weak self] error in
+            Task { @MainActor in
+                self?.isCapturing = false
+                self?.lastError = error.localizedDescription
+            }
+        } as? CaptureControl
         proxy?.startCapture(bpfFilter: nil) { [weak self] success, error in
             Task { @MainActor in
                 self?.isCapturing = success
@@ -114,25 +124,42 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
     // MARK: - CaptureClient (called by the helper, off the main actor)
 
     nonisolated func didCapture(_ batch: Data) {
-        let wire = WirePacketBatch.decode(batch)
-        Task { @MainActor in self.ingest(wire) }
+        // Decode and dissect off the main actor; deliver finished rows to the UI
+        // so high packet rates never stall rendering.
+        Task.detached(priority: .utility) { [weak self] in
+            let dissector = PacketDissector()
+            let rows = WirePacketBatch.decode(batch).map { packet -> DissectedRow in
+                let bytes = [UInt8](packet.data)
+                let linkType: LinkLayerType = packet.dlt == 1 ? .ethernet : .rawIP
+                return DissectedRow(
+                    packet: packet,
+                    bytes: bytes,
+                    dissected: dissector.dissect(bytes, linkType: linkType)
+                )
+            }
+            await self?.append(rows)
+        }
     }
 
-    private func ingest(_ wire: [WirePacket]) {
-        for packet in wire {
-            let linkType: LinkLayerType = packet.dlt == 1 ? .ethernet : .rawIP
-            let bytes = [UInt8](packet.data)
-            let dissected = dissector.dissect(bytes, linkType: linkType)
+    /// A dissected packet awaiting a display id (assigned on the main actor).
+    private struct DissectedRow {
+        let packet: WirePacket
+        let bytes: [UInt8]
+        let dissected: DissectedPacket
+    }
+
+    private func append(_ rows: [DissectedRow]) {
+        for row in rows {
             packets.append(PacketRow(
                 id: nextID,
-                timestamp: Date(timeIntervalSince1970: packet.timestamp),
-                processName: packet.processName,
-                pid: packet.pid,
-                direction: direction(from: packet.direction),
-                summary: dissected.summary,
-                protocolPath: dissected.protocolPath,
-                layers: dissected.layers,
-                bytes: bytes
+                timestamp: Date(timeIntervalSince1970: row.packet.timestamp),
+                processName: row.packet.processName,
+                pid: row.packet.pid,
+                direction: direction(from: row.packet.direction),
+                summary: row.dissected.summary,
+                protocolPath: row.dissected.protocolPath,
+                layers: row.dissected.layers,
+                bytes: row.bytes
             ))
             nextID += 1
         }

@@ -29,16 +29,8 @@ echo "==> Signing (Developer ID, inside-out)"
 ./scripts/sign.sh "$APP"
 
 mkdir -p "$DIST"
-ZIP="$DIST/MatrixNet.zip"
-echo "==> Submitting for notarization"
-ditto -c -k --keepParent "$APP" "$ZIP"
-xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARY_PROFILE" --wait
-rm -f "$ZIP"
-
-echo "==> Stapling ticket"
-xcrun stapler staple "$APP"
-
 DMG="$DIST/MatrixNet-$VERSION.dmg"
+
 echo "==> Building DMG: $DMG"
 STAGING="$(mktemp -d)"
 cp -R "$APP" "$STAGING/"
@@ -47,8 +39,13 @@ rm -f "$DMG"
 hdiutil create -volname "MatrixNet" -srcfolder "$STAGING" -ov -format UDZO "$DMG"
 rm -rf "$STAGING"
 
+# Notarize the DMG itself (covers the signed app inside), then staple the DMG.
+echo "==> Submitting DMG for notarization"
+xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
+
 echo "==> Stapling DMG"
 xcrun stapler staple "$DMG"
 xcrun stapler validate "$DMG"
+spctl -a -t open --context context:primary-signature -vvv "$DMG" 2>&1 | head -3 || true
 
 echo "==> Done: $DMG"

@@ -41,14 +41,18 @@ public struct WirePacket: Codable, Sendable, Equatable {
     }
 }
 
-/// Encodes/decodes a batch of `WirePacket`s for one XPC message.
+/// Encodes/decodes a batch of `WirePacket`s for one XPC message. Uses the binary
+/// property-list format: faster than JSON and, crucially, it stores the raw
+/// packet `Data` without base64 expansion on this hot path.
 public enum WirePacketBatch {
     public static func encode(_ packets: [WirePacket]) -> Data {
-        (try? JSONEncoder().encode(packets)) ?? Data()
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .binary
+        return (try? encoder.encode(packets)) ?? Data()
     }
 
     public static func decode(_ data: Data) -> [WirePacket] {
-        (try? JSONDecoder().decode([WirePacket].self, from: data)) ?? []
+        (try? PropertyListDecoder().decode([WirePacket].self, from: data)) ?? []
     }
 }
 

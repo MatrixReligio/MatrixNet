@@ -24,11 +24,13 @@ public enum BPFRecordParser {
         while offset + Offset.minimum <= limit {
             let capturedLength = Int(u32(buffer, offset + Offset.capturedLength))
             let headerLength = Int(u16(buffer, offset + Offset.headerLength))
-            guard headerLength >= Offset.minimum, capturedLength >= 0 else { break }
+            guard headerLength >= Offset.minimum else { break }
 
+            // capturedLength is a UInt32 promoted to Int (always >= 0). Check the
+            // bound in overflow-safe form so a huge value can't wrap.
             let packetStart = offset + headerLength
+            guard capturedLength <= limit - packetStart else { break } // truncated record
             let packetEnd = packetStart + capturedLength
-            guard packetEnd <= limit else { break } // truncated trailing record
 
             packets.append(Array(buffer[packetStart ..< packetEnd]))
 
