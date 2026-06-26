@@ -128,5 +128,6 @@ targets:
       properties:
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
+        CFBundleLocalizations: [en, zh-Hans, zh-Hant, ja, ko, fr, de, es]
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension

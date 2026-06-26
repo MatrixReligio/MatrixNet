@@ -46,4 +46,15 @@ codesign --force --timestamp --options runtime \
 
 echo "==> Verifying"
 codesign --verify --deep --strict --verbose=2 "$APP"
+
+# The widget is a sandboxed extension that reads live metrics from the shared App
+# Group container. If codesign drops the group from its entitlements the widget
+# silently shows no data, so assert the group survived signing.
+echo "==> Verifying widget App Group entitlement"
+if ! codesign -d --entitlements - "$WIDGET" 2>/dev/null \
+    | grep -q "group.com.matrixreligio.matrixnet"; then
+  echo "ERROR: widget is missing the App Group entitlement after signing" >&2
+  codesign -d --entitlements - "$WIDGET" 2>/dev/null | grep -A3 application-groups >&2 || true
+  exit 1
+fi
 echo "OK"
