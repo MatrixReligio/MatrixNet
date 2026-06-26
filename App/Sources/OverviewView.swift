@@ -76,7 +76,7 @@ private struct TopTalkerRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Group {
-                if let icon = AppIconResolver.shared.icon(for: app) {
+                if let icon = AppIconResolver.shared.cachedIcon(for: app) {
                     Image(nsImage: icon).resizable()
                 } else {
                     Image(systemName: "terminal").foregroundStyle(.secondary)

@@ -33,6 +33,28 @@ struct NStatDescriptionParserTests {
         #expect(NStatDescriptionParser.transportProtocol(from: "wat") == nil)
     }
 
+    @Test("maps TCPState to connection state", arguments: [
+        ("Established", ConnectionState.active),
+        ("SynSent", .active),
+        ("Listen", .active),
+        ("Closed", .closed),
+        ("TimeWait", .closed),
+        ("CloseWait", .closed)
+    ])
+    func mapsTCPState(_ tcpState: String, _ expected: ConnectionState) {
+        var description = tcpDescription()
+        description["TCPState"] = tcpState
+        #expect(NStatDescriptionParser.connection(from: description, id: UUID(), startedAt: start)?.state == expected)
+    }
+
+    @Test("UDP flows are active regardless of TCP state field")
+    func udpIsActive() {
+        var description = tcpDescription()
+        description["provider"] = "UDP"
+        description["TCPState"] = nil
+        #expect(NStatDescriptionParser.connection(from: description, id: UUID(), startedAt: start)?.state == .active)
+    }
+
     @Test("builds a connection from a TCP description dictionary")
     func parsesTCPDescription() throws {
         let connection = try #require(

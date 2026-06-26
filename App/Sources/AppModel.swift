@@ -72,6 +72,13 @@ public final class AppModel {
     }
 
     private func publish(_ snapshot: [Connection]) {
-        connections = snapshot.sorted { $0.lastActivityAt > $1.lastActivityAt }
+        // Resolve icons here (off the scroll path); cells then read the cache.
+        AppIconResolver.shared.prewarm(snapshot.map(\.app))
+        connections = snapshot.sorted { lhs, rhs in
+            if (lhs.state == .active) != (rhs.state == .active) {
+                return lhs.state == .active // active connections first
+            }
+            return lhs.lastActivityAt > rhs.lastActivityAt
+        }
     }
 }

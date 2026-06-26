@@ -23,6 +23,7 @@ public final class NetworkStatisticsMonitor: ConnectionMonitoring, @unchecked Se
     private typealias FnAddAll = @convention(c) (OpaquePointer?) -> Int32
     private typealias FnSetDict = @convention(c) (OpaquePointer?, @escaping DictBlock) -> Void
     private typealias FnSetVoid = @convention(c) (OpaquePointer?, @escaping VoidBlock) -> Void
+    private typealias FnQuery = @convention(c) (OpaquePointer?, @escaping VoidBlock) -> Void
     private typealias FnDestroy = @convention(c) (OpaquePointer?) -> Void
 
     private let handle: UnsafeMutableRawPointer
@@ -32,12 +33,20 @@ public final class NetworkStatisticsMonitor: ConnectionMonitoring, @unchecked Se
     private let setDescription: FnSetDict
     private let setCounts: FnSetDict
     private let setRemoved: FnSetVoid
+    private let queryAll: FnQuery
     private let destroy: FnDestroy
 
     private let queue = DispatchQueue(label: "com.matrixreligio.matrixnet.nstat")
     private var manager: OpaquePointer?
     private var continuation: AsyncStream<ConnectionEvent>.Continuation?
     private var idBySource: [UInt: UUID] = [:]
+    private var startedAtBySource: [UInt: Date] = [:]
+    private var queryTimer: DispatchSourceTimer?
+
+    /// How often to re-enumerate current sources. NetworkStatistics only pushes
+    /// state-change/teardown events on its own; an explicit periodic query is
+    /// required to surface (and refresh) established connections.
+    private let queryInterval: DispatchTimeInterval = .milliseconds(1500)
 
     private static let frameworkPath =
         "/System/Library/PrivateFrameworks/NetworkStatistics.framework/NetworkStatistics"
@@ -54,6 +63,7 @@ public final class NetworkStatisticsMonitor: ConnectionMonitoring, @unchecked Se
               let setDescription = bind("NStatSourceSetDescriptionBlock", FnSetDict.self),
               let setCounts = bind("NStatSourceSetCountsBlock", FnSetDict.self),
               let setRemoved = bind("NStatSourceSetRemovedBlock", FnSetVoid.self),
+              let queryAll = bind("NStatManagerQueryAllSourcesDescriptions", FnQuery.self),
               let destroy = bind("NStatManagerDestroy", FnDestroy.self)
         else {
             dlclose(handle)
@@ -66,6 +76,7 @@ public final class NetworkStatisticsMonitor: ConnectionMonitoring, @unchecked Se
         self.setDescription = setDescription
         self.setCounts = setCounts
         self.setRemoved = setRemoved
+        self.queryAll = queryAll
         self.destroy = destroy
     }
 
@@ -83,17 +94,38 @@ public final class NetworkStatisticsMonitor: ConnectionMonitoring, @unchecked Se
                 manager = create(kCFAllocatorDefault, queuePointer, added)
                 _ = addAllTCP(manager)
                 _ = addAllUDP(manager)
+                startQueryTimer()
             }
+        }
+    }
+
+    /// Periodically re-enumerates current sources so established connections
+    /// surface and refresh (NStat only pushes teardown events unprompted).
+    private func startQueryTimer() {
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now() + queryInterval, repeating: queryInterval)
+        timer.setEventHandler { [weak self] in
+            guard let self, let manager else { return }
+            queryAll(manager) {}
+        }
+        timer.resume()
+        queryTimer = timer
+        // Prime an immediate enumeration so the first snapshot is populated.
+        if let manager {
+            queryAll(manager) {}
         }
     }
 
     public func stop() {
         queue.sync {
+            queryTimer?.cancel()
+            queryTimer = nil
             if let manager {
                 destroy(manager)
             }
             manager = nil
             idBySource.removeAll()
+            startedAtBySource.removeAll()
             continuation?.finish()
             continuation = nil
         }
@@ -118,13 +150,16 @@ public final class NetworkStatisticsMonitor: ConnectionMonitoring, @unchecked Se
 
     private func handleDescription(_ dict: CFDictionary?, key: UInt) {
         guard let description = dict as? [String: Any] else { return }
-        // First description for a source emits `.added`; later ones are ignored
-        // (live counter changes arrive via the counts block).
-        guard idBySource[key] == nil else { return }
-        let id = UUID()
-        guard let connection = NStatDescriptionParser.connection(from: description, id: id, startedAt: Date())
+        // Re-emit `.added` on every description so the connection's live state
+        // (e.g. Established -> Closed) stays current; the id and first-seen time
+        // are preserved across refreshes. High-frequency byte updates still
+        // arrive via the counts block.
+        let id = idBySource[key] ?? UUID()
+        let startedAt = startedAtBySource[key] ?? Date()
+        guard let connection = NStatDescriptionParser.connection(from: description, id: id, startedAt: startedAt)
         else { return }
         idBySource[key] = id
+        startedAtBySource[key] = startedAt
         continuation?.yield(.added(connection))
     }
 
@@ -134,6 +169,7 @@ public final class NetworkStatisticsMonitor: ConnectionMonitoring, @unchecked Se
     }
 
     private func handleRemoved(key: UInt) {
+        startedAtBySource[key] = nil
         guard let id = idBySource.removeValue(forKey: key) else { return }
         continuation?.yield(.removed(id))
     }

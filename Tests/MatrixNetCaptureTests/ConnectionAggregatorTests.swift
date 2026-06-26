@@ -56,14 +56,26 @@ struct ConnectionAggregatorTests {
         #expect(await aggregator.snapshot().isEmpty)
     }
 
-    @Test("removed connections are marked closed but retained for display")
-    func removedMarksClosed() async throws {
+    @Test("removed connections drop out of the live snapshot")
+    func removedDropsConnection() async throws {
         let aggregator = ConnectionAggregator()
         let connection = try connection(50002)
         await aggregator.apply(.added(connection))
         await aggregator.apply(.removed(connection.id))
-        let snapshot = await aggregator.snapshot()
-        #expect(snapshot.first?.state == .closed)
+        #expect(await aggregator.snapshot().isEmpty)
+    }
+
+    @Test("re-describing a connection keeps monotonic counters")
+    func reDescribeKeepsCounters() async throws {
+        let aggregator = ConnectionAggregator()
+        var connection = try connection(50005)
+        connection.bytesIn = 5000
+        await aggregator.apply(.added(connection))
+        // A later description arrives with stale (smaller) counters.
+        var stale = connection
+        stale.bytesIn = 10
+        await aggregator.apply(.added(stale))
+        #expect(await aggregator.snapshot().first?.bytesIn == 5000)
     }
 
     @Test("packet correlation resolves registered connections by flow key")

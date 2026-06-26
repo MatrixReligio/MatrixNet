@@ -5,8 +5,17 @@ import Foundation
 import MatrixNetCapture
 import MatrixNetModel
 
-func pad(_ text: String, _ width: Int) -> String {
-    text.count >= width ? String(text.prefix(width)) : text + String(repeating: " ", count: width - text.count)
+actor Counter {
+    var added = 0
+    var removed = 0
+    var counts = 0
+    func record(_ event: ConnectionEvent) {
+        switch event {
+        case .added: added += 1
+        case .removed: removed += 1
+        case .counts: counts += 1
+        }
+    }
 }
 
 guard let monitor = NetworkStatisticsMonitor() else {
@@ -15,26 +24,26 @@ guard let monitor = NetworkStatisticsMonitor() else {
 }
 
 let aggregator = ConnectionAggregator()
+let counter = Counter()
 let stream = monitor.start()
-let pump = Task { await aggregator.consume(stream) }
+let pump = Task {
+    for await event in stream {
+        await counter.record(event)
+        await aggregator.apply(event)
+    }
+}
 
 print("uid=\(getuid()) — collecting live connections via MatrixNetCapture for 3s...\n")
 try await Task.sleep(for: .seconds(3))
-monitor.stop()
-pump.cancel()
 
 let snapshot = await aggregator.snapshot().sorted { $0.totalBytes > $1.totalBytes }
-print("captured \(snapshot.count) connections; top 15 by bytes:\n")
-print(pad("APP", 26) + pad("PROTO", 6) + pad("REMOTE", 26) + pad("RX", 11) + "TX")
+await print("events: added=\(counter.added) counts=\(counter.counts) removed=\(counter.removed)")
+print("snapshot: \(snapshot.count) live connections\n")
 for connection in snapshot.prefix(15) {
     let remote = "\(connection.fiveTuple.destination.address):\(connection.fiveTuple.destination.port)"
-    print(
-        pad(connection.app.displayName, 26)
-            + pad(connection.fiveTuple.proto.displayName, 6)
-            + pad(remote, 26)
-            + pad("\(connection.bytesIn)", 11)
-            + "\(connection.bytesOut)"
-    )
+    let state = connection.state == .active ? "active" : "closed"
+    print("  \(connection.app.displayName)  \(connection.fiveTuple.proto.displayName)  \(remote)  \(state)")
 }
 
-print(snapshot.isEmpty ? "\nRESULT: no connections ❌" : "\nRESULT: live per-app capture works ✅")
+monitor.stop()
+pump.cancel()

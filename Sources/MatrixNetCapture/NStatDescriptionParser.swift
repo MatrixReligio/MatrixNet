@@ -21,6 +21,10 @@ enum NStatDescriptionParser {
             return nil
         }
 
+        // Skip listening sockets and half-open entries: they have no real remote
+        // peer (remote port 0), so they are not flows "talking to the network".
+        guard destination.port != 0 else { return nil }
+
         let pid = Int32(truncatingIfNeeded: intValue(description["processID"]) ?? -1)
         let name = description["processName"] as? String
         let bytesIn = uint64Value(description["rxBytes"])
@@ -36,8 +40,21 @@ enum NStatDescriptionParser {
             bytesIn: bytesIn,
             packetsOut: packetsOut,
             packetsIn: packetsIn,
-            startedAt: startedAt
+            startedAt: startedAt,
+            state: connectionState(from: description, proto: proto)
         )
+    }
+
+    /// Maps NetworkStatistics' `TCPState` to our active/closed state. UDP and
+    /// other protocols have no TCP state, so a present flow is considered active.
+    static func connectionState(from description: [String: Any], proto: TransportProtocol) -> ConnectionState {
+        guard proto == .tcp, let tcpState = description["TCPState"] as? String else { return .active }
+        switch tcpState {
+        case "Closed", "TimeWait", "CloseWait", "LastAck", "Closing", "FinWait1", "FinWait2":
+            return .closed
+        default:
+            return .active
+        }
     }
 
     /// Builds a counter snapshot from a NetworkStatistics counts dictionary.

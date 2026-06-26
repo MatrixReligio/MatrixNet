@@ -17,8 +17,17 @@ public actor ConnectionAggregator {
     public func apply(_ event: ConnectionEvent) async {
         switch event {
         case let .added(connection):
-            connections[connection.id] = connection
-            await correlator.register(connection)
+            // A re-described connection refreshes identity/state but must not
+            // regress its (monotonic) byte/packet counters.
+            var resolved = connection
+            if let existing = connections[connection.id] {
+                resolved.bytesIn = max(connection.bytesIn, existing.bytesIn)
+                resolved.bytesOut = max(connection.bytesOut, existing.bytesOut)
+                resolved.packetsIn = max(connection.packetsIn, existing.packetsIn)
+                resolved.packetsOut = max(connection.packetsOut, existing.packetsOut)
+            }
+            connections[connection.id] = resolved
+            await correlator.register(resolved)
 
         case let .counts(id, counts):
             guard var connection = connections[id] else { return }
@@ -32,10 +41,10 @@ public actor ConnectionAggregator {
             connections[id] = connection
 
         case let .removed(id):
-            if var connection = connections[id] {
-                connection.state = .closed
-                connections[id] = connection
-            }
+            // Drop closed flows from the live snapshot so the view shows current
+            // connections (nettop/Activity Monitor semantics). Historical flows
+            // are the persistence layer's concern.
+            connections[id] = nil
             await correlator.remove(connectionID: id)
         }
     }
