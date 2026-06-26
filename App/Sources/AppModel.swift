@@ -1,0 +1,77 @@
+import Foundation
+import MatrixNetCapture
+import MatrixNetModel
+import Observation
+
+/// Top-level observable state for the connection monitor. Bridges the passive,
+/// actor-isolated capture pipeline to SwiftUI on the main actor: it drains the
+/// `NetworkStatisticsMonitor` event stream into a `ConnectionAggregator` and
+/// periodically publishes a sorted snapshot for the views to render.
+@MainActor
+@Observable
+public final class AppModel {
+    /// The current connections, sorted for display (most recently active first).
+    public private(set) var connections: [Connection] = []
+    /// Whether passive monitoring is active.
+    public private(set) var isMonitoring = false
+    /// Set when the NetworkStatistics framework is unavailable on this system.
+    public private(set) var monitoringUnavailable = false
+
+    private var monitor: NetworkStatisticsMonitor?
+    private let aggregator = ConnectionAggregator()
+    private var pumpTask: Task<Void, Never>?
+    private var refreshTask: Task<Void, Never>?
+
+    public init() {}
+
+    /// The total number of currently active (not closed) connections.
+    public var activeCount: Int {
+        connections.lazy.count(where: { $0.state == .active })
+    }
+
+    /// Aggregate throughput counters across all tracked connections.
+    public var totalBytesIn: UInt64 {
+        connections.reduce(0) { $0 &+ $1.bytesIn }
+    }
+
+    public var totalBytesOut: UInt64 {
+        connections.reduce(0) { $0 &+ $1.bytesOut }
+    }
+
+    /// Starts passive monitoring. No privileges or user approval required.
+    public func start() {
+        guard !isMonitoring else { return }
+        guard let monitor = NetworkStatisticsMonitor() else {
+            monitoringUnavailable = true
+            return
+        }
+        self.monitor = monitor
+        isMonitoring = true
+
+        let stream = monitor.start()
+        let aggregator = aggregator
+        pumpTask = Task { await aggregator.consume(stream) }
+        refreshTask = Task { [weak self] in
+            while !Task.isCancelled {
+                let snapshot = await aggregator.snapshot()
+                self?.publish(snapshot)
+                try? await Task.sleep(for: .milliseconds(700))
+            }
+        }
+    }
+
+    /// Stops monitoring and tears down the pipeline.
+    public func stop() {
+        monitor?.stop()
+        monitor = nil
+        pumpTask?.cancel()
+        refreshTask?.cancel()
+        pumpTask = nil
+        refreshTask = nil
+        isMonitoring = false
+    }
+
+    private func publish(_ snapshot: [Connection]) {
+        connections = snapshot.sorted { $0.lastActivityAt > $1.lastActivityAt }
+    }
+}

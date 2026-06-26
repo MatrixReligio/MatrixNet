@@ -9,12 +9,14 @@ import Foundation
 
 let path = "/System/Library/PrivateFrameworks/NetworkStatistics.framework/NetworkStatistics"
 guard let handle = dlopen(path, RTLD_NOW) else {
-    print("dlopen FAILED"); exit(1)
+    print("dlopen FAILED")
+    exit(1)
 }
 
 func sym(_ name: String) -> UnsafeMutableRawPointer {
     guard let pointer = dlsym(handle, name) else {
-        print("missing symbol \(name)"); exit(1)
+        print("missing symbol \(name)")
+        exit(1)
     }
     return pointer
 }
@@ -40,7 +42,8 @@ let lock = NSLock()
 let added: AddedBlock = { source in
     let describe: DictBlock = { dict in
         guard let dict = dict as NSDictionary? else { return }
-        lock.lock(); defer { lock.unlock() }
+        lock.lock()
+        defer { lock.unlock() }
         if dumped >= 6 { return }
         dumped += 1
         print("\n--- source #\(dumped) description keys ---")
@@ -58,8 +61,10 @@ let added: AddedBlock = { source in
 }
 
 guard let manager = create(kCFAllocatorDefault, queuePointer, added) else {
-    print("NStatManagerCreate returned nil"); exit(1)
+    print("NStatManagerCreate returned nil")
+    exit(1)
 }
+
 _ = addAllTCP(manager)
 _ = addAllUDP(manager)
 

@@ -8,6 +8,7 @@ guard let handle = dlopen(path, RTLD_NOW) else {
     print("dlopen FAILED: \(String(cString: dlerror()))")
     exit(1)
 }
+
 print("dlopen OK: \(path)\n")
 
 let candidates = [
@@ -26,7 +27,7 @@ let candidates = [
     "NStatManagerQueryAllSourcesDescriptions",
     "NStatSourceQueryDescription",
     "NStatManagerSetProviderStateChangeBlock",
-    "NStatManagerSetInterfaceQueryBlock",
+    "NStatManagerSetInterfaceQueryBlock"
 ]
 
 var found = [String]()
@@ -34,6 +35,7 @@ var missing = [String]()
 for name in candidates {
     if dlsym(handle, name) != nil { found.append(name) } else { missing.append(name) }
 }
+
 print("FOUND (\(found.count)):")
 found.forEach { print("  \($0)") }
 print("\nMISSING (\(missing.count)):")

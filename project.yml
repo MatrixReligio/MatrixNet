@@ -1,0 +1,54 @@
+name: MatrixNet
+
+options:
+  bundleIdPrefix: com.matrixreligio
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+packages:
+  MatrixNetCore:
+    path: .
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: 4DUQGD879H
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_HARDENED_RUNTIME: YES
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "Developer ID Application"
+
+targets:
+  MatrixNet:
+    type: application
+    platform: macOS
+    sources:
+      - path: App/Sources
+      - path: App/Resources
+    dependencies:
+      - package: MatrixNetCore
+        product: MatrixNetModel
+      - package: MatrixNetCore
+        product: MatrixNetCapture
+      - package: MatrixNetCore
+        product: MatrixNetDissection
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.matrixreligio.matrixnet
+        PRODUCT_NAME: MatrixNet
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_APP_SANDBOX: NO
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.developer-tools"
+        INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright 2026 MatrixReligio LLC. Licensed under Apache-2.0."
+        INFOPLIST_KEY_CFBundleDisplayName: MatrixNet
+        INFOPLIST_KEY_LSUIElement: NO
+    info:
+      path: App/MatrixNet-Info.plist
+      properties:
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        LSMinimumSystemVersion: "26.0"

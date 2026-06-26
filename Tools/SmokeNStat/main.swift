@@ -36,4 +36,5 @@ for connection in snapshot.prefix(15) {
             + "\(connection.bytesOut)"
     )
 }
+
 print(snapshot.isEmpty ? "\nRESULT: no connections ❌" : "\nRESULT: live per-app capture works ✅")
