@@ -46,7 +46,16 @@ xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
 echo "==> Stapling DMG"
 xcrun stapler staple "$DMG"
 xcrun stapler validate "$DMG"
-spctl -a -t open --context context:primary-signature -vvv "$DMG" 2>&1 | head -3 || true
+
+# Gatekeeper-verify the notarized app *inside* the DMG (running spctl directly on
+# the DMG reports "no usable signature" because a DMG isn't code-signed — only
+# notarized + stapled — so it is not a meaningful check).
+echo "==> Verifying app Gatekeeper acceptance"
+MOUNT="$(mktemp -d)"
+hdiutil attach "$DMG" -nobrowse -quiet -mountpoint "$MOUNT"
+spctl -a -t exec -vvv "$MOUNT/MatrixNet.app" 2>&1 | head -3 || true
+hdiutil detach "$MOUNT" -quiet || true
+rm -rf "$MOUNT"
 
 # Generate the EdDSA-signed Sparkle appcast so auto-update can detect this build.
 # generate_appcast reads the DMG's version, signs it with the EdDSA private key
@@ -58,10 +67,18 @@ GENERATE_APPCAST="$SPARKLE_BIN/generate_appcast"
 if [ -x "$GENERATE_APPCAST" ]; then
   echo "==> Generating Sparkle appcast"
   KEYARGS=()
-  [ -n "${SPARKLE_PRIVATE_KEY:-}" ] && KEYARGS=(--ed-key-file <(printf '%s' "$SPARKLE_PRIVATE_KEY"))
+  KEYFILE=""
+  if [ -n "${SPARKLE_PRIVATE_KEY:-}" ]; then
+    # generate_appcast's --ed-key-file needs a real file path (process
+    # substitution /dev/fd/* is not seekable and fails to load).
+    KEYFILE="$(mktemp)"
+    printf '%s' "$SPARKLE_PRIVATE_KEY" > "$KEYFILE"
+    KEYARGS=(--ed-key-file "$KEYFILE")
+  fi
   "$GENERATE_APPCAST" "${KEYARGS[@]}" \
     --download-url-prefix "https://github.com/MatrixReligio/MatrixNet/releases/download/v$VERSION/" \
     "$DIST"
+  [ -n "$KEYFILE" ] && rm -f "$KEYFILE"
   echo "appcast: $DIST/appcast.xml"
 else
   echo "WARN: generate_appcast not found (set SPARKLE_BIN); skipping appcast." >&2
