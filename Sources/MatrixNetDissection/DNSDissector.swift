@@ -30,7 +30,7 @@ enum DNSDissector {
     /// Maximum compression-pointer jumps before giving up (loop guard).
     static let maxPointerJumps = 128
 
-    static func dissect(_ bytes: [UInt8], at start: Int) throws -> (node: DissectionNode, message: DNSMessage) {
+    static func dissect(_: [UInt8], at _: Int) throws -> (node: DissectionNode, message: DNSMessage) {
         // STUB for RED phase.
         throw DissectionError.malformed
     }

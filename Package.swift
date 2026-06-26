@@ -19,6 +19,7 @@ let package = Package(
     products: [
         .library(name: "MatrixNetModel", targets: ["MatrixNetModel"]),
         .library(name: "MatrixNetDissection", targets: ["MatrixNetDissection"]),
+        .library(name: "MatrixNetCapture", targets: ["MatrixNetCapture"]),
     ],
     targets: [
         .target(
@@ -30,6 +31,11 @@ let package = Package(
             dependencies: ["MatrixNetModel"],
             path: "Sources/MatrixNetDissection"
         ),
+        .target(
+            name: "MatrixNetCapture",
+            dependencies: ["MatrixNetModel"],
+            path: "Sources/MatrixNetCapture"
+        ),
         .testTarget(
             name: "MatrixNetModelTests",
             dependencies: ["MatrixNetModel"],
@@ -39,6 +45,16 @@ let package = Package(
             name: "MatrixNetDissectionTests",
             dependencies: ["MatrixNetDissection", "MatrixNetModel"],
             path: "Tests/MatrixNetDissectionTests"
+        ),
+        .testTarget(
+            name: "MatrixNetCaptureTests",
+            dependencies: ["MatrixNetCapture", "MatrixNetModel"],
+            path: "Tests/MatrixNetCaptureTests"
+        ),
+        .executableTarget(
+            name: "matrixnet-smoke",
+            dependencies: ["MatrixNetCapture", "MatrixNetModel"],
+            path: "Tools/SmokeNStat"
         ),
     ]
 )

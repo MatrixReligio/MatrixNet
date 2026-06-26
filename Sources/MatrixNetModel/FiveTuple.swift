@@ -28,6 +28,17 @@ public enum TransportProtocol: Hashable, Sendable {
         default: self = .other(number)
         }
     }
+
+    /// A short display name for the protocol, e.g. "TCP".
+    public var displayName: String {
+        switch self {
+        case .tcp: "TCP"
+        case .udp: "UDP"
+        case .icmpv4: "ICMP"
+        case .icmpv6: "ICMPv6"
+        case let .other(number): "IP proto \(number)"
+        }
+    }
 }
 
 /// One endpoint of a flow: an address and a port. Port is 0 for protocols

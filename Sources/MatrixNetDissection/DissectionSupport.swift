@@ -37,16 +37,3 @@ enum HexFormat {
         String(format: "0x%04x", value)
     }
 }
-
-extension TransportProtocol {
-    /// A short display name for the protocol, e.g. "TCP".
-    var displayName: String {
-        switch self {
-        case .tcp: "TCP"
-        case .udp: "UDP"
-        case .icmpv4: "ICMP"
-        case .icmpv6: "ICMPv6"
-        case let .other(number): "IP proto \(number)"
-        }
-    }
-}
