@@ -10,11 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-06-26
+## [0.1.0] - 2026-06-27
 
 First Developer ID-signed, notarized build.
 
 ### Added
+- **In-app auto-update** via Sparkle, with EdDSA-signed updates served from the
+  GitHub "latest release" appcast; on-demand and daily background checks.
+- **Automatic GeoIP refresh** — the country database updates in the background
+  from the monthly DB-IP dataset (published by a scheduled CI job), preferring a
+  downloaded copy over the bundled one.
+- **Localization into 7 languages** (Simplified & Traditional Chinese, Japanese,
+  Korean, French, German, Spanish; English source), following the system
+  language, with CI enforcing full translation coverage.
+- **Live throughput & session totals** — per-direction byte rate plus monotonic
+  session totals that survive connection close, surfaced in the Overview, menu
+  bar, and widget.
 - **Connection monitoring** — system-wide, per-app live connection tracking via
   the kernel `NetworkStatistics` mechanism: process attribution, 5-tuple, remote
   host/IP, byte and packet counters, and connection lifecycle. Requires no

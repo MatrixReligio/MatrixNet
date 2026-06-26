@@ -75,7 +75,7 @@ flowchart TB
         DIS --- XPCC
     end
     subgraph Helper["com.matrixreligio.matrixnet.helper — root daemon · SMAppService"]
-        CAP["PKTAP / BPF capture ONLY<br/>en0 + utun* · no parsing"]
+        CAP["PKTAP / BPF capture ONLY<br/>all interfaces (en0 · utun* · lo0) · no parsing"]
     end
     XPCC <==>|"XPC: raw packet stream + control"| CAP
 ```
@@ -91,6 +91,28 @@ flowchart TB
 - The two processes communicate over **XPC**: the app sends control commands
   (start/stop, interface selection, BPF filter); the helper streams raw packets
   (with per-packet PID, process name, direction, and interface) back.
+
+### PKTAP capture recipe (verified on macOS 26)
+
+`pktap` is a *cloning* pseudo-interface, and getting per-packet process
+attribution from it requires a specific, non-obvious sequence (cross-checked
+against Apple's open-source `libpcap`/`pcap-darwin.c` and `xnu`
+`bsd/net/bpf_private.h`, then confirmed on-device):
+
+1. **Create** a `pktap` instance with `SIOCIFCREATE` — the kernel returns the
+   unit name (e.g. `pktap0`). Binding BPF to the bare name `pktap` fails with
+   `ENXIO`. Destroy it with `SIOCIFDESTROY` on teardown.
+2. Open `/dev/bpfN`, enlarge the buffer (`BIOCSBLEN`), then set
+   **`BIOCSWANTPKTAP = 1`** *before* binding — without it the kernel delivers
+   plain `DLT_RAW` with no process info.
+3. `BIOCSETIF` the created interface; the kernel then reports link type **149**
+   (its internal pktap DLT, not libpcap's userspace `258`), so `BIOCSDLT(258)`
+   returns `EINVAL` and is intentionally ignored.
+4. A single, unfiltered pktap taps **all** interfaces at once (`en0`, `utun*`,
+   `lo0`), each packet prefixed with a `pktap_header` carrying the PID and
+   process name — so no separate `en0` + `utun*` double-capture is needed.
+
+See `docs/superpowers/notes/capture-spike.md` for the measured evidence.
 
 ## Modules
 
