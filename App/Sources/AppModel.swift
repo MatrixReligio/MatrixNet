@@ -66,10 +66,23 @@ public final class AppModel {
         self.monitor = monitor
         isMonitoring = true
 
+        // Clear any state from a previous session before the new stream begins
+        // (the monitor reassigns ids on restart, so stale entries would linger).
+        sessionBytesIn = 0
+        sessionBytesOut = 0
+        throughputIn = 0
+        throughputOut = 0
+        lastRateSampleAt = .distantPast
+        lastRateBytesIn = 0
+        lastRateBytesOut = 0
+
         let stream = monitor.start()
         let aggregator = aggregator
         let resolver = resolver
-        pumpTask = Task { await aggregator.consume(stream) }
+        pumpTask = Task {
+            await aggregator.reset()
+            await aggregator.consume(stream)
+        }
         refreshTask = Task { [weak self] in
             while !Task.isCancelled {
                 let snapshot = await aggregator.snapshot()

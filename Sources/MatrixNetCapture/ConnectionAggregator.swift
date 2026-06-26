@@ -39,6 +39,17 @@ public actor ConnectionAggregator {
         (sessionBytesIn, sessionBytesOut)
     }
 
+    /// Clears all live and session state so a stopped-then-restarted monitor
+    /// starts from a clean slate (the monitor reassigns ids on restart, so old
+    /// entries would otherwise never receive `.removed` and linger as ghosts).
+    public func reset() {
+        connections.removeAll()
+        lastSeenIn.removeAll()
+        lastSeenOut.removeAll()
+        sessionBytesIn = 0
+        sessionBytesOut = 0
+    }
+
     /// Applies a single connection event.
     public func apply(_ event: ConnectionEvent) async {
         switch event {

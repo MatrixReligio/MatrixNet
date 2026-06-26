@@ -130,6 +130,22 @@ struct ConnectionAggregatorTests {
         #expect(totals.bytesOut == 0)
     }
 
+    @Test("reset clears connections and session totals for a fresh session")
+    func resetClears() async throws {
+        let aggregator = ConnectionAggregator()
+        let connection = try connection(50013)
+        await aggregator.apply(.added(connection))
+        await aggregator.apply(.counts(
+            id: connection.id,
+            ConnectionCounts(bytesIn: 7000, bytesOut: 3000, packetsIn: 0, packetsOut: 0, timestamp: Date())
+        ))
+        await aggregator.reset()
+        #expect(await aggregator.snapshot().isEmpty)
+        let totals = await aggregator.sessionTotals()
+        #expect(totals.bytesIn == 0)
+        #expect(totals.bytesOut == 0)
+    }
+
     @Test("packet correlation resolves registered connections by flow key")
     func packetCorrelation() async throws {
         let aggregator = ConnectionAggregator()
