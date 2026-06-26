@@ -22,7 +22,22 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install tools
-        run: brew install xcodegen create-dmg sparkle
+        run: brew install xcodegen create-dmg
+
+      - name: Fetch Sparkle tools (generate_appcast, sign_update)
+        env:
+          SPARKLE_VERSION: "2.9.3"
+        run: |
+          set -euo pipefail
+          # The Homebrew "sparkle" cask is the Test App (deprecated, no Gatekeeper
+          # pass) and ships no CLI tools. Use Sparkle's official release tarball,
+          # which contains bin/generate_appcast and bin/sign_update.
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o sparkle.tar.xz \
+            "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+          mkdir -p sparkle && tar -xf sparkle.tar.xz -C sparkle
+          echo "SPARKLE_BIN=$RUNNER_TEMP/sparkle/bin" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/sparkle/bin/generate_appcast" --version || true
 
       - name: Import Developer ID certificate
         env:
@@ -55,11 +70,13 @@ jobs:
       - name: Build, sign, notarize, staple, package, appcast
         env:
           VERSION: ${{ github.event.inputs.version }}
-          # Homebrew installs Sparkle's tools under the formula's bin.
-          SPARKLE_BIN: /opt/homebrew/bin
+          # SPARKLE_BIN is exported by the "Fetch Sparkle tools" step.
           # EdDSA private key for signing the auto-update appcast.
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: ./scripts/release.sh "$VERSION"
+
+      - name: Verify appcast was produced
+        run: test -s dist/appcast.xml && echo "appcast OK" || { echo "appcast.xml missing"; exit 1; }
 
       - name: Upload release artifacts (DMG + appcast)
         uses: softprops/action-gh-release@v3

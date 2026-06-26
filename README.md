@@ -61,6 +61,11 @@ proxy, filter, or VPN you already use without fighting it.
   up/down throughput, session totals, and the top talking apps — right on your
   desktop or in Notification Center.
 
+### 🌍 Speaks Your Language
+- Fully localized into **8 languages** — English, Simplified & Traditional
+  Chinese, Japanese, Korean, French, German, and Spanish — following your macOS
+  system language automatically. Translation coverage is enforced in CI.
+
 ### 🔄 Stays Current
 - **In-app auto-update** via [Sparkle](https://sparkle-project.org), with EdDSA-
   signed updates served from GitHub Releases. Check on demand or let it check
