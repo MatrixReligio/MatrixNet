@@ -31,6 +31,14 @@ NStatSourceSetRemovedBlock(source, ()->Void)                   // 连接关闭
 ### counts 字典（NStatSourceSetCountsBlock）
 携带 rx/tx bytes/packets 的最新累计值（用于增量刷新连接计数）。
 
+### ⚠️ 每连接字节几乎都是 0（2026-06-27 真机复测，关键）
+用户报「流量排行/历史全是 0 B」。真机 spike(`Tools/nstat-spike` 同款 dlsym 脚手架)实测:
+- 任一时刻,**~740 个 source 里只有约 12 个的 `rxBytes/txBytes`(=`rxWiFiBytes`)非零**;其余(含 443/993/80 等真实远端口的连接)恒为 0。
+- 字节只记在物理接口桶(`rxWiFiBytes/rxWiredBytes/rxCellularBytes`,`rxBytes` 即其和);**走 utun 隧道(Loon 等代理)路由的 app 连接,字节不进任何物理桶 → 每连接为 0**;真正带字节的是代理自身到上游的连接(`LoonTunnelProvider`)、`syspolicyd`、偶发的 `DingTalk/Claude` 等,且**短命**(传完即被 `removed`,从 live 快照消失)。
+- 因此「对*当前连接*瞬时字节求和」永远≈0,而**会话总量正确**(它累加跨连接关闭存活的正增量)。
+- **修复**:在 `ConnectionAggregator` 按 app(displayName)累加正增量(`trafficByApp`),survive removal;Overview/widget 的「流量排行」改读它。已真机验证:topApps 显示 LoonTunnelProvider 1.9MB / Spark Mail / apsd / OrbStack 等真实值。
+- 历史(per app+host+proto)目前仍记瞬时字节 → 同样偏 0;若要修,需让 Store 也按 (app,host,proto) 累加 delta(待办)。
+
 ## 待真机验证（root）
 - PKTAP：以 `bsd/net/pktap.h` 为准，验证"单个 pktap 会话即覆盖 en0+utun*，每包带 pth_ifname+pth_pid"（review M7：双抓很可能多余）。
 - 公证（review H1）：`AuthKey_F6M57PP394` 需确认是否 Team Key；notarytool 必须 Team Key + issuer UUID（Individual Key 不被 Notary API 接受）。
