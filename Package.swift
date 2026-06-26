@@ -22,6 +22,7 @@ let package = Package(
         .library(name: "MatrixNetCapture", targets: ["MatrixNetCapture"]),
         .library(name: "MatrixNetPcap", targets: ["MatrixNetPcap"]),
         .library(name: "MatrixNetXPC", targets: ["MatrixNetXPC"]),
+        .library(name: "MatrixNetStore", targets: ["MatrixNetStore"]),
     ],
     targets: [
         .target(
@@ -47,6 +48,10 @@ let package = Package(
             name: "MatrixNetXPC",
             path: "Sources/MatrixNetXPC"
         ),
+        .target(
+            name: "MatrixNetStore",
+            path: "Sources/MatrixNetStore"
+        ),
         .testTarget(
             name: "MatrixNetModelTests",
             dependencies: ["MatrixNetModel"],
@@ -71,6 +76,11 @@ let package = Package(
             name: "MatrixNetXPCTests",
             dependencies: ["MatrixNetXPC"],
             path: "Tests/MatrixNetXPCTests"
+        ),
+        .testTarget(
+            name: "MatrixNetStoreTests",
+            dependencies: ["MatrixNetStore"],
+            path: "Tests/MatrixNetStoreTests"
         ),
         .executableTarget(
             name: "matrixnet-smoke",

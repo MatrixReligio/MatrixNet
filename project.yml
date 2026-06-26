@@ -40,6 +40,8 @@ targets:
         product: MatrixNetPcap
       - package: MatrixNetCore
         product: MatrixNetXPC
+      - package: MatrixNetCore
+        product: MatrixNetStore
       - target: MatrixNetWidget
         embed: true
       - target: MatrixNetHelper

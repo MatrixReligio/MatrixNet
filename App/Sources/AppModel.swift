@@ -1,6 +1,7 @@
 import Foundation
 import MatrixNetCapture
 import MatrixNetModel
+import MatrixNetStore
 import Observation
 
 /// Top-level observable state for the connection monitor. Bridges the passive,
@@ -20,9 +21,11 @@ public final class AppModel {
     private var monitor: NetworkStatisticsMonitor?
     private let aggregator = ConnectionAggregator()
     private let resolver = HostnameResolver()
+    private let historyStore = try? HistoryStore.persistent()
     private var pumpTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
     private var lastMetricsWrite = Date.distantPast
+    private var lastHistoryWrite = Date.distantPast
 
     public init() {}
 
@@ -97,6 +100,31 @@ public final class AppModel {
                 return lhs.lastActivityAt > rhs.lastActivityAt
             }
         publishWidgetMetrics()
+        recordHistory()
+    }
+
+    /// The most recent persisted connection-history records.
+    public func recentHistory(limit: Int = 200) -> [ConnectionHistoryRecord] {
+        (try? historyStore?.recent(limit: limit)) ?? []
+    }
+
+    /// Persists the current connections to history (throttled).
+    private func recordHistory() {
+        let now = Date()
+        guard let historyStore, now.timeIntervalSince(lastHistoryWrite) >= 5 else { return }
+        lastHistoryWrite = now
+
+        let summaries = connections.map { connection in
+            ConnectionSummary(
+                appName: connection.app.displayName,
+                remoteHost: connection.remoteHostname ?? connection.fiveTuple.destination.address.description,
+                proto: connection.fiveTuple.proto.displayName,
+                bytesIn: Int(min(connection.bytesIn, UInt64(Int.max))),
+                bytesOut: Int(min(connection.bytesOut, UInt64(Int.max))),
+                at: connection.lastActivityAt
+            )
+        }
+        try? historyStore.record(summaries)
     }
 
     /// Publishes a compact metrics snapshot to the shared App Group container for

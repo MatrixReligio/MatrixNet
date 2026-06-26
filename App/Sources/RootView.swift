@@ -9,6 +9,7 @@ struct RootView: View {
         case overview
         case connections
         case packets
+        case history
 
         var id: String {
             rawValue
@@ -19,6 +20,7 @@ struct RootView: View {
             case .overview: "Overview"
             case .connections: "Connections"
             case .packets: "Packets"
+            case .history: "History"
             }
         }
 
@@ -27,6 +29,7 @@ struct RootView: View {
             case .overview: "chart.bar.xaxis.ascending"
             case .connections: "point.3.connected.trianglepath.dotted"
             case .packets: "scope"
+            case .history: "clock.arrow.circlepath"
             }
         }
     }
@@ -44,6 +47,7 @@ struct RootView: View {
             case .overview: OverviewView()
             case .connections: ConnectionsView()
             case .packets: PacketsView()
+            case .history: HistoryView()
             }
         }
     }
