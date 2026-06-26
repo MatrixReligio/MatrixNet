@@ -22,6 +22,7 @@ struct ConnectionInspector: View {
                     if let host = connection.remoteHostname {
                         LabeledContent("Host") { mono(host) }
                     }
+                    LabeledContent("Scope", value: connection.fiveTuple.destination.address.scope.label)
                 }
                 Section("Traffic") {
                     LabeledContent("Received") { mono(Format.bytes(connection.bytesIn)) }
