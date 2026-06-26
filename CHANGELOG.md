@@ -20,9 +20,10 @@ First Developer ID-signed, notarized build.
 - **Automatic GeoIP refresh** — the country database updates in the background
   from the monthly DB-IP dataset (published by a scheduled CI job), preferring a
   downloaded copy over the bundled one.
-- **Localization into 7 languages** (Simplified & Traditional Chinese, Japanese,
-  Korean, French, German, Spanish; English source), following the system
-  language, with CI enforcing full translation coverage.
+- **Localization into 8 languages** — English plus Simplified & Traditional
+  Chinese, Japanese, Korean, French, German, and Spanish — across the app and the
+  widget, following the macOS system language, with CI enforcing full translation
+  coverage.
 - **Live throughput & session totals** — per-direction byte rate plus monotonic
   session totals that survive connection close, surfaced in the Overview, menu
   bar, and widget.
@@ -32,11 +33,16 @@ First Developer ID-signed, notarized build.
   privilege or special authorization, and coexists with any VPN/proxy/filter.
 - **Reverse-DNS hostnames**, **address-scope classification** (private/public/
   loopback/…), and **country geolocation with flags** (DB-IP, CC-BY).
-- **Desktop widget** (WidgetKit) showing active connections and throughput.
+- **Desktop widget** (WidgetKit, small / medium / large) showing active and total
+  connection counts, up/down throughput, session totals, and the top talking apps,
+  refreshed live from the shared App Group container.
 - **Deep packet capture** — raw, per-packet capture via PKTAP/BPF where each
   packet carries its originating PID, performed by a minimal, capture-only
-  privileged helper registered through `SMAppService`. Captures the physical
-  interface and active tunnels (`en0` + `utun*`) when a VPN is present.
+  privileged helper registered through `SMAppService`. A single unfiltered pktap
+  clone covers every interface at once (`en0`, `utun*`, `lo0`). The Packets view
+  surfaces capture errors and offers a one-click helper reinstall (the
+  registered daemon otherwise keeps running an older helper binary after an
+  app update).
 
 - **Protocol dissection** — parsers for Ethernet, IPv4, IPv6, TCP, UDP, ICMP,
   DNS, TLS (handshake / SNI / certificate), and HTTP/1.1, with Follow Stream
