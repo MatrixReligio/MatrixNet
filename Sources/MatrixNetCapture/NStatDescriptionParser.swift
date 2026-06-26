@@ -21,16 +21,19 @@ enum NStatDescriptionParser {
             return nil
         }
 
-        // Skip listening sockets and half-open entries: they have no real remote
-        // peer (remote port 0), so they are not flows "talking to the network".
-        guard destination.port != 0 else { return nil }
-
         let pid = Int32(truncatingIfNeeded: intValue(description["processID"]) ?? -1)
         let name = description["processName"] as? String
         let bytesIn = uint64Value(description["rxBytes"])
         let bytesOut = uint64Value(description["txBytes"])
         let packetsIn = uint64Value(description["rxPackets"])
         let packetsOut = uint64Value(description["txPackets"])
+
+        // Skip idle listening sockets and half-open entries: a remote port of 0
+        // means no real peer. Connected-UDP and receiving sockets (mDNS, QUIC,
+        // multicast) also report remote port 0 but DO carry traffic, so keep a
+        // port-0 source whenever it has observed bytes — otherwise its traffic
+        // would never reach the byte counters or the session totals.
+        guard destination.port != 0 || bytesIn > 0 || bytesOut > 0 else { return nil }
 
         return Connection(
             id: id,

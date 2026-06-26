@@ -20,9 +20,24 @@ struct OverviewView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 HStack(spacing: 16) {
-                    StatTile(label: "Active", value: "\(model.activeCount)", tint: Theme.accent)
-                    StatTile(label: "Received", value: Format.bytes(model.totalBytesIn), tint: Theme.inbound)
-                    StatTile(label: "Sent", value: Format.bytes(model.totalBytesOut), tint: Theme.outbound)
+                    StatTile(
+                        label: "Active",
+                        value: "\(model.activeCount)",
+                        detail: "\(model.connections.count) total",
+                        tint: Theme.accent
+                    )
+                    StatTile(
+                        label: "Download",
+                        value: Format.rate(model.throughputIn),
+                        detail: "\(Format.bytes(model.sessionBytesIn)) this session",
+                        tint: Theme.inbound
+                    )
+                    StatTile(
+                        label: "Upload",
+                        value: Format.rate(model.throughputOut),
+                        detail: "\(Format.bytes(model.sessionBytesOut)) this session",
+                        tint: Theme.outbound
+                    )
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
@@ -50,6 +65,7 @@ struct OverviewView: View {
 private struct StatTile: View {
     let label: String
     let value: String
+    var detail: String?
     let tint: Color
 
     var body: some View {
@@ -61,6 +77,12 @@ private struct StatTile: View {
                 .font(Theme.mono(22, weight: .medium))
                 .monospacedDigit()
                 .contentTransition(.numericText())
+            if let detail {
+                Text(detail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)

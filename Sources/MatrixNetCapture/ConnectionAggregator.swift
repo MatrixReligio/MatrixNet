@@ -9,8 +9,34 @@ public actor ConnectionAggregator {
     private var connections: [UUID: Connection] = [:]
     private let correlator: FlowCorrelator
 
+    /// Session-cumulative byte totals. Unlike the live snapshot (which drops a
+    /// connection the moment it closes), these only ever grow, so the Overview
+    /// and widget can show meaningful "traffic since launch" and a throughput
+    /// rate even when high-traffic flows are short-lived. We add the positive
+    /// delta of each connection's monotonic counters as they advance; a
+    /// connection's first sighting establishes a baseline so pre-existing
+    /// lifetime bytes are not counted as session traffic.
+    private var sessionBytesIn: UInt64 = 0
+    private var sessionBytesOut: UInt64 = 0
+    private var lastSeenIn: [UUID: UInt64] = [:]
+    private var lastSeenOut: [UUID: UInt64] = [:]
+
     public init(correlator: FlowCorrelator = FlowCorrelator()) {
         self.correlator = correlator
+    }
+
+    /// Accumulates the positive growth of a connection's counters into the
+    /// session totals. The first call for an id only records a baseline.
+    private func accumulateSession(id: UUID, bytesIn: UInt64, bytesOut: UInt64) {
+        if let last = lastSeenIn[id], bytesIn > last { sessionBytesIn &+= bytesIn - last }
+        if let last = lastSeenOut[id], bytesOut > last { sessionBytesOut &+= bytesOut - last }
+        lastSeenIn[id] = bytesIn
+        lastSeenOut[id] = bytesOut
+    }
+
+    /// Session-cumulative byte totals (monotonic; survive connection removal).
+    public func sessionTotals() -> (bytesIn: UInt64, bytesOut: UInt64) {
+        (sessionBytesIn, sessionBytesOut)
     }
 
     /// Applies a single connection event.
@@ -28,6 +54,7 @@ public actor ConnectionAggregator {
                 resolved.packetsOut = max(connection.packetsOut, existing.packetsOut)
             }
             connections[connection.id] = resolved
+            accumulateSession(id: resolved.id, bytesIn: resolved.bytesIn, bytesOut: resolved.bytesOut)
             // Only (re)register new connections for packet correlation; the flow
             // key is stable, so re-describes need no extra cross-actor work.
             if existing == nil {
@@ -44,12 +71,17 @@ public actor ConnectionAggregator {
                 at: counts.timestamp
             )
             connections[id] = connection
+            accumulateSession(id: id, bytesIn: connection.bytesIn, bytesOut: connection.bytesOut)
 
         case let .removed(id):
             // Drop closed flows from the live snapshot so the view shows current
             // connections (nettop/Activity Monitor semantics). Historical flows
-            // are the persistence layer's concern.
+            // are the persistence layer's concern. Session totals deliberately
+            // retain this connection's contribution; only its per-id baseline is
+            // released so the maps don't grow unbounded.
             connections[id] = nil
+            lastSeenIn[id] = nil
+            lastSeenOut[id] = nil
             await correlator.remove(connectionID: id)
         }
     }

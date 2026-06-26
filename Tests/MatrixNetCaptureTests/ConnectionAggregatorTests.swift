@@ -78,6 +78,58 @@ struct ConnectionAggregatorTests {
         #expect(await aggregator.snapshot().first?.bytesIn == 5000)
     }
 
+    @Test("session totals accumulate growth across counts updates")
+    func sessionAccumulates() async throws {
+        let aggregator = ConnectionAggregator()
+        let connection = try connection(50010)
+        await aggregator.apply(.added(connection)) // baseline 0/0
+        await aggregator.apply(.counts(
+            id: connection.id,
+            ConnectionCounts(bytesIn: 300, bytesOut: 100, packetsIn: 0, packetsOut: 0, timestamp: Date())
+        ))
+        await aggregator.apply(.counts(
+            id: connection.id,
+            ConnectionCounts(bytesIn: 500, bytesOut: 100, packetsIn: 0, packetsOut: 0, timestamp: Date())
+        ))
+        let totals = await aggregator.sessionTotals()
+        #expect(totals.bytesIn == 500)
+        #expect(totals.bytesOut == 100)
+    }
+
+    @Test("session totals survive connection removal")
+    func sessionSurvivesRemoval() async throws {
+        let aggregator = ConnectionAggregator()
+        let connection = try connection(50011)
+        await aggregator.apply(.added(connection))
+        await aggregator.apply(.counts(
+            id: connection.id,
+            ConnectionCounts(bytesIn: 4096, bytesOut: 2048, packetsIn: 0, packetsOut: 0, timestamp: Date())
+        ))
+        await aggregator.apply(.removed(connection.id))
+        // The live snapshot drops it, but session totals must persist.
+        #expect(await aggregator.snapshot().isEmpty)
+        let totals = await aggregator.sessionTotals()
+        #expect(totals.bytesIn == 4096)
+        #expect(totals.bytesOut == 2048)
+    }
+
+    @Test("a connection first seen with bytes sets a baseline (no double counting)")
+    func sessionBaseline() async throws {
+        let aggregator = ConnectionAggregator()
+        var connection = try connection(50012)
+        connection.bytesIn = 1000 // already had lifetime traffic before first sight
+        connection.bytesOut = 500
+        await aggregator.apply(.added(connection))
+        // First sight establishes a baseline; only subsequent growth counts.
+        await aggregator.apply(.counts(
+            id: connection.id,
+            ConnectionCounts(bytesIn: 1200, bytesOut: 500, packetsIn: 0, packetsOut: 0, timestamp: Date())
+        ))
+        let totals = await aggregator.sessionTotals()
+        #expect(totals.bytesIn == 200) // 1200 - 1000 baseline
+        #expect(totals.bytesOut == 0)
+    }
+
     @Test("packet correlation resolves registered connections by flow key")
     func packetCorrelation() async throws {
         let aggregator = ConnectionAggregator()

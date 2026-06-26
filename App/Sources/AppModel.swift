@@ -3,6 +3,7 @@ import MatrixNetCapture
 import MatrixNetModel
 import MatrixNetStore
 import Observation
+import WidgetKit
 
 /// Top-level observable state for the connection monitor. Bridges the passive,
 /// actor-isolated capture pipeline to SwiftUI on the main actor: it drains the
@@ -18,6 +19,15 @@ public final class AppModel {
     /// Set when the NetworkStatistics framework is unavailable on this system.
     public private(set) var monitoringUnavailable = false
 
+    /// Session-cumulative bytes received since monitoring started (monotonic).
+    public private(set) var sessionBytesIn: UInt64 = 0
+    /// Session-cumulative bytes sent since monitoring started.
+    public private(set) var sessionBytesOut: UInt64 = 0
+    /// Current inbound throughput in bytes per second.
+    public private(set) var throughputIn: Double = 0
+    /// Current outbound throughput in bytes per second.
+    public private(set) var throughputOut: Double = 0
+
     private var monitor: NetworkStatisticsMonitor?
     private let aggregator = ConnectionAggregator()
     private let resolver = HostnameResolver()
@@ -26,6 +36,9 @@ public final class AppModel {
     private var refreshTask: Task<Void, Never>?
     private var lastMetricsWrite = Date.distantPast
     private var lastHistoryWrite = Date.distantPast
+    private var lastRateSampleAt = Date.distantPast
+    private var lastRateBytesIn: UInt64 = 0
+    private var lastRateBytesOut: UInt64 = 0
 
     public init() {}
 
@@ -60,9 +73,10 @@ public final class AppModel {
         refreshTask = Task { [weak self] in
             while !Task.isCancelled {
                 let snapshot = await aggregator.snapshot()
+                let session = await aggregator.sessionTotals()
                 await resolver.resolveIfNeeded(snapshot.map(\.fiveTuple.destination.address))
                 let hostnames = await resolver.snapshot()
-                self?.publish(snapshot, hostnames: hostnames)
+                self?.publish(snapshot, hostnames: hostnames, session: session)
                 try? await Task.sleep(for: .seconds(1))
             }
         }
@@ -77,9 +91,11 @@ public final class AppModel {
         pumpTask = nil
         refreshTask = nil
         isMonitoring = false
+        throughputIn = 0
+        throughputOut = 0
     }
 
-    private func publish(_ snapshot: [Connection], hostnames: [IPAddress: String]) {
+    private func publish(_ snapshot: [Connection], hostnames: [IPAddress: String], session: (bytesIn: UInt64, bytesOut: UInt64)) {
         // Resolve icons here (off the scroll path); cells then read the cache.
         AppIconResolver.shared.prewarm(snapshot.map(\.app))
         connections = snapshot
@@ -99,8 +115,27 @@ public final class AppModel {
                 }
                 return lhs.lastActivityAt > rhs.lastActivityAt
             }
+        updateThroughput(session: session)
         publishWidgetMetrics()
         recordHistory()
+    }
+
+    /// Updates the session totals and derives the throughput rate from the byte
+    /// delta since the last sample. Driven by the ~1s refresh tick.
+    private func updateThroughput(session: (bytesIn: UInt64, bytesOut: UInt64)) {
+        let now = Date()
+        sessionBytesIn = session.bytesIn
+        sessionBytesOut = session.bytesOut
+        let elapsed = now.timeIntervalSince(lastRateSampleAt)
+        if lastRateSampleAt != .distantPast, elapsed > 0.1 {
+            let deltaIn = session.bytesIn >= lastRateBytesIn ? session.bytesIn - lastRateBytesIn : 0
+            let deltaOut = session.bytesOut >= lastRateBytesOut ? session.bytesOut - lastRateBytesOut : 0
+            throughputIn = Double(deltaIn) / elapsed
+            throughputOut = Double(deltaOut) / elapsed
+        }
+        lastRateSampleAt = now
+        lastRateBytesIn = session.bytesIn
+        lastRateBytesOut = session.bytesOut
     }
 
     /// The most recent persisted connection-history records.
@@ -127,9 +162,9 @@ public final class AppModel {
         try? historyStore.record(summaries)
     }
 
-    /// Publishes a compact metrics snapshot to the shared App Group container for
-    /// the desktop widget. Throttled so the widget's data stays fresh without
-    /// thrashing the disk on every refresh.
+    /// Publishes a compact metrics snapshot to the shared App Group container and
+    /// asks WidgetKit to reload the widget's timeline. Throttled so the widget
+    /// stays fresh without thrashing the disk or the reload budget.
     private func publishWidgetMetrics() {
         let now = Date()
         guard now.timeIntervalSince(lastMetricsWrite) >= 2, let url = SharedMetricsStore.defaultURL() else {
@@ -140,15 +175,21 @@ public final class AppModel {
         let topApps = Dictionary(grouping: connections, by: \.app.displayName)
             .map { name, group in MetricsSnapshot.TopApp(name: name, bytes: group.reduce(0) { $0 &+ $1.totalBytes }) }
             .sorted { $0.bytes > $1.bytes }
-            .prefix(3)
+            .prefix(5)
 
         let snapshot = MetricsSnapshot(
             activeConnections: activeCount,
-            bytesIn: totalBytesIn,
-            bytesOut: totalBytesOut,
+            totalConnections: connections.count,
+            bytesIn: sessionBytesIn,
+            bytesOut: sessionBytesOut,
+            throughputIn: throughputIn,
+            throughputOut: throughputOut,
             topApps: Array(topApps),
             updatedAt: now
         )
-        SharedMetricsStore.write(snapshot, to: url)
+        guard SharedMetricsStore.write(snapshot, to: url) else { return }
+        // The app writes; the widget reads. Without this nudge the widget would
+        // only refresh on its own (slow) timeline policy and appear frozen.
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }

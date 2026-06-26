@@ -71,6 +71,30 @@ struct NStatDescriptionParserTests {
         #expect(connection.bytesOut == 1200)
     }
 
+    @Test("drops an idle listening socket (remote port 0, no traffic)")
+    func dropsIdleListener() {
+        var description = tcpDescription()
+        description["remoteAddress"] = sockaddrV4([0, 0, 0, 0], port: 0)
+        description["rxBytes"] = 0
+        description["txBytes"] = 0
+        #expect(NStatDescriptionParser.connection(from: description, id: UUID(), startedAt: start) == nil)
+    }
+
+    @Test("keeps a remote-port-0 flow that has observed traffic")
+    func keepsActivePortZeroFlow() throws {
+        var description = tcpDescription()
+        description["provider"] = "UDP"
+        description["TCPState"] = nil
+        description["remoteAddress"] = sockaddrV4([0, 0, 0, 0], port: 0)
+        description["rxBytes"] = 86
+        description["txBytes"] = 0
+        let connection = try #require(
+            NStatDescriptionParser.connection(from: description, id: UUID(), startedAt: start)
+        )
+        #expect(connection.bytesIn == 86)
+        #expect(connection.fiveTuple.destination.port == 0)
+    }
+
     @Test("returns nil when the protocol is missing")
     func missingProvider() {
         var description = tcpDescription()

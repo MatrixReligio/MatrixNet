@@ -12,28 +12,58 @@ public struct MetricsSnapshot: Codable, Sendable, Equatable {
         }
     }
 
+    /// Number of currently active (not closed) connections.
     public let activeConnections: Int
+    /// Total tracked connections (active plus recently closed in the snapshot).
+    public let totalConnections: Int
+    /// Session-cumulative bytes received (monotonic; survives connection close).
     public let bytesIn: UInt64
+    /// Session-cumulative bytes sent.
     public let bytesOut: UInt64
+    /// Current inbound throughput in bytes per second.
+    public let throughputIn: Double
+    /// Current outbound throughput in bytes per second.
+    public let throughputOut: Double
     public let topApps: [TopApp]
     public let updatedAt: Date
 
     public init(
         activeConnections: Int,
+        totalConnections: Int = 0,
         bytesIn: UInt64,
         bytesOut: UInt64,
+        throughputIn: Double = 0,
+        throughputOut: Double = 0,
         topApps: [TopApp],
         updatedAt: Date
     ) {
         self.activeConnections = activeConnections
+        self.totalConnections = totalConnections
         self.bytesIn = bytesIn
         self.bytesOut = bytesOut
+        self.throughputIn = throughputIn
+        self.throughputOut = throughputOut
         self.topApps = topApps
         self.updatedAt = updatedAt
     }
 
+    // Tolerant decoding: snapshots written by an older app version omit the
+    // newer fields, so default them rather than failing the whole read.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        activeConnections = try container.decode(Int.self, forKey: .activeConnections)
+        totalConnections = try container.decodeIfPresent(Int.self, forKey: .totalConnections) ?? 0
+        bytesIn = try container.decode(UInt64.self, forKey: .bytesIn)
+        bytesOut = try container.decode(UInt64.self, forKey: .bytesOut)
+        throughputIn = try container.decodeIfPresent(Double.self, forKey: .throughputIn) ?? 0
+        throughputOut = try container.decodeIfPresent(Double.self, forKey: .throughputOut) ?? 0
+        topApps = try container.decodeIfPresent([TopApp].self, forKey: .topApps) ?? []
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+    }
+
     public static let empty = MetricsSnapshot(
-        activeConnections: 0, bytesIn: 0, bytesOut: 0, topApps: [], updatedAt: .distantPast
+        activeConnections: 0, totalConnections: 0, bytesIn: 0, bytesOut: 0,
+        throughputIn: 0, throughputOut: 0, topApps: [], updatedAt: .distantPast
     )
 }
 
