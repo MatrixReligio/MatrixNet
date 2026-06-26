@@ -108,7 +108,11 @@ public final class AppModel {
         throughputOut = 0
     }
 
-    private func publish(_ snapshot: [Connection], hostnames: [IPAddress: String], session: (bytesIn: UInt64, bytesOut: UInt64)) {
+    private func publish(
+        _ snapshot: [Connection],
+        hostnames: [IPAddress: String],
+        session: (bytesIn: UInt64, bytesOut: UInt64)
+    ) {
         // Resolve icons here (off the scroll path); cells then read the cache.
         AppIconResolver.shared.prewarm(snapshot.map(\.app))
         connections = snapshot

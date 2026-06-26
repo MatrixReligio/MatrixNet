@@ -12,6 +12,10 @@
 --enable sortImports
 
 --disable wrapMultilineConditionalAssignment
+# Keep opening braces on the condition line (matches SwiftLint's opening_brace).
+--disable wrapMultilineStatementBraces
+# Leave modifier ordering to SwiftLint's modifier_order to avoid a tug-of-war.
+--disable modifierOrder
 
 # Options
 --indent 4

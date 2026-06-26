@@ -216,7 +216,7 @@ private extension ifreq {
     var interfaceName: String {
         var copy = self
         return withUnsafeBytes(of: &copy.ifr_name) { raw in
-            String(decoding: raw.prefix { $0 != 0 }, as: UTF8.self)
+            String(bytes: raw.prefix { $0 != 0 }, encoding: .utf8) ?? ""
         }
     }
 }

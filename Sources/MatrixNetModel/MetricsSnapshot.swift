@@ -47,8 +47,8 @@ public struct MetricsSnapshot: Codable, Sendable, Equatable {
         self.updatedAt = updatedAt
     }
 
-    // Tolerant decoding: snapshots written by an older app version omit the
-    // newer fields, so default them rather than failing the whole read.
+    /// Tolerant decoding: snapshots written by an older app version omit the
+    /// newer fields, so default them rather than failing the whole read.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         activeConnections = try container.decode(Int.self, forKey: .activeConnections)
@@ -62,8 +62,14 @@ public struct MetricsSnapshot: Codable, Sendable, Equatable {
     }
 
     public static let empty = MetricsSnapshot(
-        activeConnections: 0, totalConnections: 0, bytesIn: 0, bytesOut: 0,
-        throughputIn: 0, throughputOut: 0, topApps: [], updatedAt: .distantPast
+        activeConnections: 0,
+        totalConnections: 0,
+        bytesIn: 0,
+        bytesOut: 0,
+        throughputIn: 0,
+        throughputOut: 0,
+        topApps: [],
+        updatedAt: .distantPast
     )
 }
 

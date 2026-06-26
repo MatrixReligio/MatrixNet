@@ -3,15 +3,22 @@ import SwiftUI
 import WidgetKit
 
 // MARK: - Palette (mirrors the app's phosphor instrument theme; the widget is a
+
 // separate target and cannot import the app's design system).
 
 private enum Palette {
-    static let accent = Color(light: Color(red: 0.06, green: 0.46, blue: 0.34),
-                              dark: Color(red: 0.32, green: 0.82, blue: 0.58))
-    static let inbound = Color(light: Color(red: 0.18, green: 0.42, blue: 0.60),
-                               dark: Color(red: 0.46, green: 0.70, blue: 0.92))
-    static let outbound = Color(light: Color(red: 0.72, green: 0.45, blue: 0.14),
-                                dark: Color(red: 0.94, green: 0.72, blue: 0.38))
+    static let accent = Color(
+        light: Color(red: 0.06, green: 0.46, blue: 0.34),
+        dark: Color(red: 0.32, green: 0.82, blue: 0.58)
+    )
+    static let inbound = Color(
+        light: Color(red: 0.18, green: 0.42, blue: 0.60),
+        dark: Color(red: 0.46, green: 0.70, blue: 0.92)
+    )
+    static let outbound = Color(
+        light: Color(red: 0.72, green: 0.45, blue: 0.14),
+        dark: Color(red: 0.94, green: 0.72, blue: 0.38)
+    )
 }
 
 private extension Color {
@@ -35,7 +42,10 @@ private enum Fmt {
     static func bytes(_ value: UInt64) -> String {
         var scaled = Double(value)
         var unit = 0
-        while scaled >= 1024, unit < units.count - 1 { scaled /= 1024; unit += 1 }
+        while scaled >= 1024, unit < units.count - 1 {
+            scaled /= 1024
+            unit += 1
+        }
         return unit == 0 ? "\(value) B" : String(format: scaled >= 100 ? "%.0f %@" : "%.1f %@", scaled, units[unit])
     }
 
@@ -88,7 +98,9 @@ private extension MetricsSnapshot {
         updatedAt: Date()
     )
 
-    var isLive: Bool { activeConnections > 0 || throughputIn > 0 || throughputOut > 0 }
+    var isLive: Bool {
+        activeConnections > 0 || throughputIn > 0 || throughputOut > 0
+    }
 }
 
 // MARK: - Shared components
@@ -193,11 +205,19 @@ private struct SmallWidget: View {
             Divider().opacity(0.4)
             Spacer(minLength: 6)
             HStack {
-                RateView(systemImage: "arrow.down", rate: snapshot.throughputIn,
-                         session: snapshot.bytesIn, tint: Palette.inbound)
+                RateView(
+                    systemImage: "arrow.down",
+                    rate: snapshot.throughputIn,
+                    session: snapshot.bytesIn,
+                    tint: Palette.inbound
+                )
                 Spacer(minLength: 8)
-                RateView(systemImage: "arrow.up", rate: snapshot.throughputOut,
-                         session: snapshot.bytesOut, tint: Palette.outbound)
+                RateView(
+                    systemImage: "arrow.up",
+                    rate: snapshot.throughputOut,
+                    session: snapshot.bytesOut,
+                    tint: Palette.outbound
+                )
             }
         }
     }
@@ -213,11 +233,19 @@ private struct MediumWidget: View {
                 Spacer(minLength: 6)
                 CountBlock(value: snapshot.activeConnections, total: snapshot.totalConnections)
                 Spacer(minLength: 8)
-                RateView(systemImage: "arrow.down", rate: snapshot.throughputIn,
-                         session: snapshot.bytesIn, tint: Palette.inbound)
+                RateView(
+                    systemImage: "arrow.down",
+                    rate: snapshot.throughputIn,
+                    session: snapshot.bytesIn,
+                    tint: Palette.inbound
+                )
                 Spacer(minLength: 4)
-                RateView(systemImage: "arrow.up", rate: snapshot.throughputOut,
-                         session: snapshot.bytesOut, tint: Palette.outbound)
+                RateView(
+                    systemImage: "arrow.up",
+                    rate: snapshot.throughputOut,
+                    session: snapshot.bytesOut,
+                    tint: Palette.outbound
+                )
             }
             .frame(width: 118)
 
@@ -250,10 +278,18 @@ private struct LargeWidget: View {
             HStack(spacing: 12) {
                 CountBlock(value: snapshot.activeConnections, total: snapshot.totalConnections)
                 Spacer()
-                RateView(systemImage: "arrow.down", rate: snapshot.throughputIn,
-                         session: snapshot.bytesIn, tint: Palette.inbound)
-                RateView(systemImage: "arrow.up", rate: snapshot.throughputOut,
-                         session: snapshot.bytesOut, tint: Palette.outbound)
+                RateView(
+                    systemImage: "arrow.down",
+                    rate: snapshot.throughputIn,
+                    session: snapshot.bytesIn,
+                    tint: Palette.inbound
+                )
+                RateView(
+                    systemImage: "arrow.up",
+                    rate: snapshot.throughputOut,
+                    session: snapshot.bytesOut,
+                    tint: Palette.outbound
+                )
             }
             Divider().opacity(0.4)
             Text("TOP TALKERS").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary).tracking(0.5)

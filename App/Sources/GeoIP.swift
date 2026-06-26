@@ -13,8 +13,29 @@ import os
 /// Lookups are synchronous and called from the UI; the database is swapped
 /// atomically under a lock after a successful download, so reads never tear.
 enum GeoIP {
-    private static let lock = NSLock()
-    nonisolated(unsafe) private static var database: GeoIPDatabase? = loadBest()
+    /// Thread-safe holder for the active database. Using an immutable `let` of a
+    /// locked class avoids a `nonisolated(unsafe)` mutable static.
+    private final class Storage: @unchecked Sendable {
+        private let lock = NSLock()
+        private var database: GeoIPDatabase?
+        init(_ database: GeoIPDatabase?) {
+            self.database = database
+        }
+
+        func country(for address: IPAddress) -> String? {
+            lock.lock()
+            defer { lock.unlock() }
+            return database?.country(for: address)
+        }
+
+        func replace(with database: GeoIPDatabase) {
+            lock.lock()
+            self.database = database
+            lock.unlock()
+        }
+    }
+
+    private static let storage = Storage(loadBest())
     private static let log = Logger(subsystem: "com.matrixreligio.matrixnet", category: "geoip")
 
     /// Stable URL of the auto-updated dataset (published monthly by CI).
@@ -24,14 +45,7 @@ enum GeoIP {
     private static let lastCheckedKey = "GeoIPLastChecked"
 
     static func country(for address: IPAddress) -> String? {
-        lock.lock(); defer { lock.unlock() }
-        return database?.country(for: address)
-    }
-
-    /// Swaps in a new database under the lock. A synchronous helper so it is
-    /// callable from the async updater (NSLock cannot be held across `await`).
-    private static func setDatabase(_ db: GeoIPDatabase) {
-        lock.lock(); database = db; lock.unlock()
+        storage.country(for: address)
     }
 
     /// Flag emoji for an address's country, or `nil` if unknown.
@@ -48,10 +62,11 @@ enum GeoIP {
             .appendingPathComponent("geoip.dat")
     }
 
-    /// Loads the freshest valid database: the downloaded copy if present, else
-    /// the bundled one.
+    /// Loads the freshest valid database: the downloaded copy if present and
+    /// valid, else the bundled one.
     private static func loadBest() -> GeoIPDatabase? {
-        if let url = downloadedURL, let data = try? Data(contentsOf: url),
+        if let url = downloadedURL,
+           let data = try? Data(contentsOf: url),
            GeoIPUpdatePolicy.isValidDatabase(data) {
             return GeoIPDatabase(data: data)
         }
@@ -86,7 +101,7 @@ enum GeoIP {
             )
             try data.write(to: destination, options: .atomic)
             if let fresh = GeoIPDatabase(data: data) {
-                setDatabase(fresh)
+                storage.replace(with: fresh)
                 log.info("GeoIP database updated (\(data.count) bytes).")
             }
         } catch {
