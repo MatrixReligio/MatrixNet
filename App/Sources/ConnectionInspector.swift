@@ -23,6 +23,10 @@ struct ConnectionInspector: View {
                         LabeledContent("Host") { mono(host) }
                     }
                     LabeledContent("Scope", value: connection.fiveTuple.destination.address.scope.label)
+                    if let country = GeoIP.country(for: connection.fiveTuple.destination.address) {
+                        let flag = GeoIP.flag(for: connection.fiveTuple.destination.address) ?? ""
+                        LabeledContent("Country", value: "\(flag) \(country)")
+                    }
                 }
                 Section("Traffic") {
                     LabeledContent("Received") { mono(Format.bytes(connection.bytesIn)) }

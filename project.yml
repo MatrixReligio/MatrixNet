@@ -42,6 +42,8 @@ targets:
         product: MatrixNetXPC
       - package: MatrixNetCore
         product: MatrixNetStore
+      - package: MatrixNetCore
+        product: MatrixNetGeoIP
       - target: MatrixNetWidget
         embed: true
       - target: MatrixNetHelper

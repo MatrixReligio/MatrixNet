@@ -37,3 +37,9 @@ Additional third-party components bundled with MatrixNet (for example, a local
 GeoIP database and any open-source dependencies) are listed, together with their
 respective licenses, in the application's About / acknowledgements view and the
 source tree as they are introduced.
+
+------------------------------------------------------------------------
+IP geolocation data (optional, bundled at build time via
+scripts/build-geoip.sh) is provided by DB-IP (https://db-ip.com) under the
+Creative Commons Attribution 4.0 International License (CC-BY-4.0):
+"IP Geolocation by DB-IP".

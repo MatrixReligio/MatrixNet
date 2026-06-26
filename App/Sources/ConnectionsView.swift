@@ -53,11 +53,16 @@ struct ConnectionsView: View {
             .width(52)
 
             TableColumn("Remote") { connection in
-                Text(remoteLabel(connection))
-                    .font(Theme.mono(11))
-                    .textSelection(.enabled)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                HStack(spacing: 5) {
+                    if let flag = GeoIP.flag(for: connection.fiveTuple.destination.address) {
+                        Text(flag)
+                    }
+                    Text(remoteLabel(connection))
+                        .font(Theme.mono(11))
+                        .textSelection(.enabled)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
             .width(min: 160, ideal: 220)
 
