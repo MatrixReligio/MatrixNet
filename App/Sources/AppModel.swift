@@ -28,6 +28,12 @@ public final class AppModel {
     /// Current outbound throughput in bytes per second.
     public private(set) var throughputOut: Double = 0
 
+    /// Session-cumulative per-app traffic, sorted by total bytes (most first).
+    /// The Overview and widget "top talkers" read this rather than summing the
+    /// live snapshot's instantaneous per-connection bytes (which are ~0 for the
+    /// many idle keep-alive sockets, and lost when short-lived flows close).
+    public private(set) var topApps: [AppTraffic] = []
+
     private var monitor: NetworkStatisticsMonitor?
     private let aggregator = ConnectionAggregator()
     private let resolver = HostnameResolver()
@@ -35,6 +41,7 @@ public final class AppModel {
     private var pumpTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
     private var lastMetricsWrite = Date.distantPast
+    private var lastWidgetReload = Date.distantPast
     private var lastHistoryWrite = Date.distantPast
     private var lastRateSampleAt = Date.distantPast
     private var lastRateBytesIn: UInt64 = 0
@@ -87,9 +94,10 @@ public final class AppModel {
             while !Task.isCancelled {
                 let snapshot = await aggregator.snapshot()
                 let session = await aggregator.sessionTotals()
+                let apps = await aggregator.appTraffic()
                 await resolver.resolveIfNeeded(snapshot.map(\.fiveTuple.destination.address))
                 let hostnames = await resolver.snapshot()
-                self?.publish(snapshot, hostnames: hostnames, session: session)
+                self?.publish(snapshot, hostnames: hostnames, session: session, apps: apps)
                 try? await Task.sleep(for: .seconds(1))
             }
         }
@@ -111,8 +119,10 @@ public final class AppModel {
     private func publish(
         _ snapshot: [Connection],
         hostnames: [IPAddress: String],
-        session: (bytesIn: UInt64, bytesOut: UInt64)
+        session: (bytesIn: UInt64, bytesOut: UInt64),
+        apps: [AppTraffic]
     ) {
+        topApps = apps.sorted { $0.bytes > $1.bytes }
         // Resolve icons here (off the scroll path); cells then read the cache.
         AppIconResolver.shared.prewarm(snapshot.map(\.app))
         connections = snapshot
@@ -189,10 +199,7 @@ public final class AppModel {
         }
         lastMetricsWrite = now
 
-        let topApps = Dictionary(grouping: connections, by: \.app.displayName)
-            .map { name, group in MetricsSnapshot.TopApp(name: name, bytes: group.reduce(0) { $0 &+ $1.totalBytes }) }
-            .sorted { $0.bytes > $1.bytes }
-            .prefix(5)
+        let widgetApps = topApps.prefix(5).map { MetricsSnapshot.TopApp(name: $0.app.displayName, bytes: $0.bytes) }
 
         let snapshot = MetricsSnapshot(
             activeConnections: activeCount,
@@ -201,12 +208,18 @@ public final class AppModel {
             bytesOut: sessionBytesOut,
             throughputIn: throughputIn,
             throughputOut: throughputOut,
-            topApps: Array(topApps),
+            topApps: Array(widgetApps),
             updatedAt: now
         )
         guard SharedMetricsStore.write(snapshot, to: url) else { return }
-        // The app writes; the widget reads. Without this nudge the widget would
-        // only refresh on its own (slow) timeline policy and appear frozen.
-        WidgetCenter.shared.reloadAllTimelines()
+        // The app writes; the widget reads. Nudge WidgetKit to refresh — but
+        // sparingly: reloadAllTimelines has a system budget, and calling it every
+        // couple of seconds exhausts it so later reloads are silently dropped and
+        // the widget appears frozen. ~20s keeps it live without burning the budget
+        // (the widget's own timeline policy refreshes it between nudges).
+        if now.timeIntervalSince(lastWidgetReload) >= 20 {
+            lastWidgetReload = now
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 }

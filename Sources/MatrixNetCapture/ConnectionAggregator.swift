@@ -21,22 +21,50 @@ public actor ConnectionAggregator {
     private var lastSeenIn: [UUID: UInt64] = [:]
     private var lastSeenOut: [UUID: UInt64] = [:]
 
+    /// Session-cumulative traffic bucketed by app, keyed by display name. Built
+    /// from the same positive deltas as the global session totals, so it stays
+    /// meaningful even though most live connections report 0 instantaneous bytes
+    /// (idle keep-alives) and high-traffic flows are short-lived. This is what
+    /// the Overview and widget "top talkers" read — summing the live snapshot's
+    /// instantaneous per-connection bytes would show ~0 for everything.
+    private var trafficByApp: [String: AppTraffic] = [:]
+
     public init(correlator: FlowCorrelator = FlowCorrelator()) {
         self.correlator = correlator
     }
 
-    /// Accumulates the positive growth of a connection's counters into the
-    /// session totals. The first call for an id only records a baseline.
-    private func accumulateSession(id: UUID, bytesIn: UInt64, bytesOut: UInt64) {
-        if let last = lastSeenIn[id], bytesIn > last { sessionBytesIn &+= bytesIn - last }
-        if let last = lastSeenOut[id], bytesOut > last { sessionBytesOut &+= bytesOut - last }
-        lastSeenIn[id] = bytesIn
-        lastSeenOut[id] = bytesOut
+    /// Accumulates the positive growth of a connection's counters into the global
+    /// session totals and the per-app totals. The first call for a connection
+    /// only records a baseline (so pre-existing lifetime bytes are not counted).
+    private func accumulateSession(for connection: Connection) {
+        let id = connection.id
+        var deltaIn: UInt64 = 0
+        var deltaOut: UInt64 = 0
+        if let last = lastSeenIn[id], connection.bytesIn > last { deltaIn = connection.bytesIn - last }
+        if let last = lastSeenOut[id], connection.bytesOut > last { deltaOut = connection.bytesOut - last }
+        lastSeenIn[id] = connection.bytesIn
+        lastSeenOut[id] = connection.bytesOut
+
+        guard deltaIn > 0 || deltaOut > 0 else { return }
+        sessionBytesIn &+= deltaIn
+        sessionBytesOut &+= deltaOut
+
+        let key = connection.app.displayName
+        var traffic = trafficByApp[key] ?? AppTraffic(app: connection.app)
+        traffic.app = connection.app // keep the latest pid/path for icon lookup
+        traffic.bytesIn &+= deltaIn
+        traffic.bytesOut &+= deltaOut
+        trafficByApp[key] = traffic
     }
 
     /// Session-cumulative byte totals (monotonic; survive connection removal).
     public func sessionTotals() -> (bytesIn: UInt64, bytesOut: UInt64) {
         (sessionBytesIn, sessionBytesOut)
+    }
+
+    /// Session-cumulative per-app traffic (monotonic; survives connection removal).
+    public func appTraffic() -> [AppTraffic] {
+        Array(trafficByApp.values)
     }
 
     /// Clears all live and session state so a stopped-then-restarted monitor
@@ -46,6 +74,7 @@ public actor ConnectionAggregator {
         connections.removeAll()
         lastSeenIn.removeAll()
         lastSeenOut.removeAll()
+        trafficByApp.removeAll()
         sessionBytesIn = 0
         sessionBytesOut = 0
     }
@@ -65,7 +94,7 @@ public actor ConnectionAggregator {
                 resolved.packetsOut = max(connection.packetsOut, existing.packetsOut)
             }
             connections[connection.id] = resolved
-            accumulateSession(id: resolved.id, bytesIn: resolved.bytesIn, bytesOut: resolved.bytesOut)
+            accumulateSession(for: resolved)
             // Only (re)register new connections for packet correlation; the flow
             // key is stable, so re-describes need no extra cross-actor work.
             if existing == nil {
@@ -82,7 +111,7 @@ public actor ConnectionAggregator {
                 at: counts.timestamp
             )
             connections[id] = connection
-            accumulateSession(id: id, bytesIn: connection.bytesIn, bytesOut: connection.bytesOut)
+            accumulateSession(for: connection)
 
         case let .removed(id):
             // Drop closed flows from the live snapshot so the view shows current

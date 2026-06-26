@@ -5,15 +5,8 @@ import SwiftUI
 struct OverviewView: View {
     @Environment(AppModel.self) private var model
 
-    private var topApps: [(app: AppIdentity, bytes: UInt64)] {
-        Dictionary(grouping: model.connections, by: \.app.pid)
-            .compactMap { _, group -> (AppIdentity, UInt64)? in
-                guard let app = group.first?.app else { return nil }
-                return (app, group.reduce(0) { $0 &+ $1.totalBytes })
-            }
-            .sorted { $0.1 > $1.1 }
-            .prefix(8)
-            .map { (app: $0.0, bytes: $0.1) }
+    private var topApps: [AppTraffic] {
+        Array(model.topApps.prefix(8))
     }
 
     var body: some View {
@@ -48,7 +41,7 @@ struct OverviewView: View {
                             .foregroundStyle(.secondary)
                             .padding(.vertical, 8)
                     } else {
-                        ForEach(topApps, id: \.app.pid) { entry in
+                        ForEach(topApps) { entry in
                             TopTalkerRow(app: entry.app, bytes: entry.bytes, maxBytes: topApps.first?.bytes ?? 1)
                         }
                     }

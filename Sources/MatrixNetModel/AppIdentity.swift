@@ -41,3 +41,25 @@ public struct AppIdentity: Hashable, Sendable, Identifiable {
     /// A placeholder identity for traffic that cannot be attributed to a process.
     public static let unknown = AppIdentity(pid: -1, displayName: "Unknown")
 }
+
+/// Session-cumulative traffic attributed to one app.
+///
+/// Unlike a live connection's instantaneous counters — which are 0 for the many
+/// idle keep-alive sockets and are lost the moment a short-lived flow closes —
+/// this accumulates the positive growth of every connection's counters bucketed
+/// by app, and survives connection removal. It is what the Overview and widget
+/// "top talkers" should display, so they stay meaningful instead of showing 0.
+public struct AppTraffic: Sendable, Equatable, Identifiable {
+    public var app: AppIdentity
+    public var bytesIn: UInt64
+    public var bytesOut: UInt64
+
+    public var id: String { app.displayName }
+    public var bytes: UInt64 { bytesIn &+ bytesOut }
+
+    public init(app: AppIdentity, bytesIn: UInt64 = 0, bytesOut: UInt64 = 0) {
+        self.app = app
+        self.bytesIn = bytesIn
+        self.bytesOut = bytesOut
+    }
+}

@@ -144,6 +144,48 @@ struct ConnectionAggregatorTests {
         let totals = await aggregator.sessionTotals()
         #expect(totals.bytesIn == 0)
         #expect(totals.bytesOut == 0)
+        #expect(await aggregator.appTraffic().isEmpty)
+    }
+
+    @Test("per-app traffic accumulates the growth of a connection's counters")
+    func appTrafficAccumulates() async throws {
+        let aggregator = ConnectionAggregator()
+        let connection = try connection(50020, pid: 1)
+        await aggregator.apply(.added(connection)) // baseline 0/0
+        await aggregator.apply(.counts(
+            id: connection.id,
+            ConnectionCounts(bytesIn: 300, bytesOut: 100, packetsIn: 0, packetsOut: 0, timestamp: Date())
+        ))
+        let traffic = await aggregator.appTraffic()
+        #expect(traffic.count == 1)
+        #expect(traffic.first?.bytesIn == 300)
+        #expect(traffic.first?.bytesOut == 100)
+        #expect(traffic.first?.bytes == 400)
+        #expect(traffic.first?.app.displayName == "PID 1")
+    }
+
+    @Test("per-app traffic sums across an app's connections and survives removal")
+    func appTrafficSumsAndSurvives() async throws {
+        let aggregator = ConnectionAggregator()
+        // Two connections owned by the same process (same display name).
+        let first = try connection(50021, pid: 7)
+        let second = try connection(50022, pid: 7)
+        await aggregator.apply(.added(first))
+        await aggregator.apply(.added(second))
+        await aggregator.apply(.counts(
+            id: first.id,
+            ConnectionCounts(bytesIn: 1000, bytesOut: 0, packetsIn: 0, packetsOut: 0, timestamp: Date())
+        ))
+        await aggregator.apply(.counts(
+            id: second.id,
+            ConnectionCounts(bytesIn: 500, bytesOut: 0, packetsIn: 0, packetsOut: 0, timestamp: Date())
+        ))
+        // Closing the first flow must not lose its contribution to the app total.
+        await aggregator.apply(.removed(first.id))
+        let traffic = await aggregator.appTraffic()
+        #expect(traffic.count == 1)
+        #expect(traffic.first?.app.displayName == "PID 7")
+        #expect(traffic.first?.bytesIn == 1500)
     }
 
     @Test("packet correlation resolves registered connections by flow key")
