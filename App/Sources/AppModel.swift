@@ -22,6 +22,7 @@ public final class AppModel {
     private let resolver = HostnameResolver()
     private var pumpTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
+    private var lastMetricsWrite = Date.distantPast
 
     public init() {}
 
@@ -95,5 +96,31 @@ public final class AppModel {
                 }
                 return lhs.lastActivityAt > rhs.lastActivityAt
             }
+        publishWidgetMetrics()
+    }
+
+    /// Publishes a compact metrics snapshot to the shared App Group container for
+    /// the desktop widget. Throttled so the widget's data stays fresh without
+    /// thrashing the disk on every refresh.
+    private func publishWidgetMetrics() {
+        let now = Date()
+        guard now.timeIntervalSince(lastMetricsWrite) >= 2, let url = SharedMetricsStore.defaultURL() else {
+            return
+        }
+        lastMetricsWrite = now
+
+        let topApps = Dictionary(grouping: connections, by: \.app.displayName)
+            .map { name, group in MetricsSnapshot.TopApp(name: name, bytes: group.reduce(0) { $0 &+ $1.totalBytes }) }
+            .sorted { $0.bytes > $1.bytes }
+            .prefix(3)
+
+        let snapshot = MetricsSnapshot(
+            activeConnections: activeCount,
+            bytesIn: totalBytesIn,
+            bytesOut: totalBytesOut,
+            topApps: Array(topApps),
+            updatedAt: now
+        )
+        SharedMetricsStore.write(snapshot, to: url)
     }
 }

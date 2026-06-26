@@ -42,7 +42,7 @@ print("snapshot: \(snapshot.count) live connections\n")
 for connection in snapshot.prefix(15) {
     let remote = "\(connection.fiveTuple.destination.address):\(connection.fiveTuple.destination.port)"
     let state = connection.state == .active ? "active" : "closed"
-    print("  \(connection.app.displayName)  \(connection.fiveTuple.proto.displayName)  \(remote)  \(state)")
+    print("  \(connection.app.displayName)  \(remote)  \(state)  in=\(connection.bytesIn) out=\(connection.bytesOut)")
 }
 
 monitor.stop()

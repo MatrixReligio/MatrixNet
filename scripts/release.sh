@@ -20,11 +20,13 @@ echo "==> Generating Xcode project"
 xcodegen generate
 
 echo "==> Building $SCHEME ($VERSION)"
+# Build unsigned, then sign inside-out: the App Group capability makes Xcode's
+# managed signing demand a provisioning profile, which Developer ID does not need.
 xcodebuild -project MatrixNet.xcodeproj -scheme "$SCHEME" -configuration Release \
-  -derivedDataPath build clean build
+  -derivedDataPath build CODE_SIGNING_ALLOWED=NO clean build
 
-echo "==> Verifying signature"
-codesign --verify --deep --strict --verbose=2 "$APP"
+echo "==> Signing (Developer ID, inside-out)"
+./scripts/sign.sh "$APP"
 
 mkdir -p "$DIST"
 ZIP="$DIST/MatrixNet.zip"
