@@ -15,7 +15,7 @@ final class AppIconResolver {
     /// Cached icon for a process, or `nil` if unknown/uncached. Never performs a
     /// lookup, so it is safe to call during view rendering.
     func cachedIcon(for app: AppIdentity) -> NSImage? {
-        cache[app.pid].flatMap { $0 }
+        cache[app.pid].flatMap(\.self)
     }
 
     /// Resolves icons for any not-yet-seen PIDs. Call from the periodic refresh,
