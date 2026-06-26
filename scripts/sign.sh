@@ -11,6 +11,10 @@ set -euo pipefail
 
 APP="${1:-build/Build/Products/Release/MatrixNet.app}"
 IDENTITY="${SIGN_IDENTITY:-Developer ID Application: MatrixReligio LLC (4DUQGD879H)}"
+# Secure timestamp by default (required for notarization). A local-only install
+# can pass TIMESTAMP=--timestamp=none to avoid contacting Apple's timestamp
+# server (e.g. when a VPN/proxy blocks it); such a build is NOT notarizable.
+TS="${TIMESTAMP:---timestamp}"
 WIDGET="$APP/Contents/PlugIns/MatrixNetWidget.appex"
 HELPER="$APP/Contents/MacOS/MatrixNetHelper"
 SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"

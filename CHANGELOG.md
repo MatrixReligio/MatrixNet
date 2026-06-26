@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Top Talkers and the widget now show real per-app traffic.** They summed the
+  live snapshot's instantaneous per-connection byte counters, which the kernel
+  reports as 0 for the many idle keep-alive sockets and for proxied/loopback
+  flows, so every app showed `0 B`. Traffic is now accumulated per app from the
+  same positive byte deltas as the session totals (surviving connection close),
+  so the figures stay meaningful.
+- **Widget no longer appears frozen.** The app nudged WidgetKit to reload every
+  couple of seconds, exhausting the system reload budget so later refreshes were
+  dropped; reloads are now throttled.
+
 ## [0.1.0] - 2026-06-27
 
 First Developer ID-signed, notarized build.
