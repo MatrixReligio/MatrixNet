@@ -130,7 +130,14 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
             let dissector = PacketDissector()
             let rows = WirePacketBatch.decode(batch).map { packet -> DissectedRow in
                 let bytes = [UInt8](packet.data)
-                let linkType: LinkLayerType = packet.dlt == 1 ? .ethernet : .rawIP
+                // pktap reports each packet's inner link type: 1 = Ethernet
+                // (en*), 0 = BSD loopback/NULL (lo0), everything else (e.g. 12 =
+                // raw IP on utun*) is a bare IP packet.
+                let linkType: LinkLayerType = switch packet.dlt {
+                case 1: .ethernet
+                case 0: .nullLoopback
+                default: .rawIP
+                }
                 return DissectedRow(
                     packet: packet,
                     bytes: bytes,
