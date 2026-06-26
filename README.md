@@ -1,5 +1,7 @@
 # MatrixNet
 
+**English** · [简体中文](./README.zh-CN.md)
+
 **See which app is talking to which IP — then dig any flow down to the packet.**
 
 A 100% native SwiftUI network monitor and deep packet analyzer for macOS. As
@@ -53,6 +55,18 @@ proxy, filter, or VPN you already use without fighting it.
 - Filter packets down to a single app or a single connection.
 - Export selected packets or whole sessions to **pcapng** — including per-packet
   process metadata — to hand off to Wireshark.
+
+### 🖥️ Desktop Widget
+- A WidgetKit widget (small / medium / large) shows live active-connection count,
+  up/down throughput, session totals, and the top talking apps — right on your
+  desktop or in Notification Center.
+
+### 🔄 Stays Current
+- **In-app auto-update** via [Sparkle](https://sparkle-project.org), with EdDSA-
+  signed updates served from GitHub Releases. Check on demand or let it check
+  daily in the background.
+- The **GeoIP database refreshes automatically** in the background from the
+  monthly DB-IP dataset, so country attribution stays accurate over time.
 
 ### 🛡️ Privacy & Zero-Conflict
 - **Zero conflict by design.** MatrixNet is fully passive: it uses no
@@ -133,13 +147,11 @@ module dependency graph, and data flows.
 
 ## Installation
 
-> No public release is available yet. The notarized build below is the intended
-> distribution channel once Phase 1 reaches a releasable state.
-
 Download the notarized `.dmg` from the
 [GitHub Releases](https://github.com/MatrixReligio/MatrixNet/releases) page, open
 it, and drag MatrixNet to your Applications folder. Builds are signed with a
-Developer ID and notarized by Apple.
+Developer ID and notarized by Apple, so Gatekeeper opens them without warnings.
+Once installed, MatrixNet keeps itself up to date — no need to revisit this page.
 
 MatrixNet is **not** distributed through the Mac App Store: BPF/PKTAP capture and
 the `NetworkStatistics` framework are not available to sandboxed apps. Direct,
