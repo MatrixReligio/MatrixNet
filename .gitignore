@@ -1,0 +1,43 @@
+# macOS
+.DS_Store
+*.swp
+
+# Xcode
+build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserstate
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+
+# XcodeGen generates the project; do not commit it
+MatrixNet.xcodeproj/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Signing / secrets — never commit
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+*.provisionprofile
+Config/Secrets.xcconfig
+Config/Local.xcconfig
+ExportOptions.local.plist
+notary-*.json
+
+# Build / release artifacts
+dist/
+*.dmg
+*.zip
+*.app
+
+# Code coverage
+*.profraw
+*.profdata
+coverage/
