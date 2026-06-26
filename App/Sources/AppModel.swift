@@ -19,6 +19,7 @@ public final class AppModel {
 
     private var monitor: NetworkStatisticsMonitor?
     private let aggregator = ConnectionAggregator()
+    private let resolver = HostnameResolver()
     private var pumpTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
 
@@ -50,11 +51,14 @@ public final class AppModel {
 
         let stream = monitor.start()
         let aggregator = aggregator
+        let resolver = resolver
         pumpTask = Task { await aggregator.consume(stream) }
         refreshTask = Task { [weak self] in
             while !Task.isCancelled {
                 let snapshot = await aggregator.snapshot()
-                self?.publish(snapshot)
+                await resolver.resolveIfNeeded(snapshot.map(\.fiveTuple.destination.address))
+                let hostnames = await resolver.snapshot()
+                self?.publish(snapshot, hostnames: hostnames)
                 try? await Task.sleep(for: .milliseconds(700))
             }
         }
@@ -71,14 +75,25 @@ public final class AppModel {
         isMonitoring = false
     }
 
-    private func publish(_ snapshot: [Connection]) {
+    private func publish(_ snapshot: [Connection], hostnames: [IPAddress: String]) {
         // Resolve icons here (off the scroll path); cells then read the cache.
         AppIconResolver.shared.prewarm(snapshot.map(\.app))
-        connections = snapshot.sorted { lhs, rhs in
-            if (lhs.state == .active) != (rhs.state == .active) {
-                return lhs.state == .active // active connections first
+        connections = snapshot
+            .map { connection in
+                guard connection.remoteHostname == nil,
+                      let hostname = hostnames[connection.fiveTuple.destination.address]
+                else {
+                    return connection
+                }
+                var enriched = connection
+                enriched.remoteHostname = hostname
+                return enriched
             }
-            return lhs.lastActivityAt > rhs.lastActivityAt
-        }
+            .sorted { lhs, rhs in
+                if (lhs.state == .active) != (rhs.state == .active) {
+                    return lhs.state == .active // active connections first
+                }
+                return lhs.lastActivityAt > rhs.lastActivityAt
+            }
     }
 }
