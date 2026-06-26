@@ -60,7 +60,7 @@ public final class AppModel {
                 await resolver.resolveIfNeeded(snapshot.map(\.fiveTuple.destination.address))
                 let hostnames = await resolver.snapshot()
                 self?.publish(snapshot, hostnames: hostnames)
-                try? await Task.sleep(for: .milliseconds(700))
+                try? await Task.sleep(for: .seconds(1))
             }
         }
     }

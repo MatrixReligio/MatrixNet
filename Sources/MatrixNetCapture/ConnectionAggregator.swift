@@ -19,15 +19,20 @@ public actor ConnectionAggregator {
         case let .added(connection):
             // A re-described connection refreshes identity/state but must not
             // regress its (monotonic) byte/packet counters.
+            let existing = connections[connection.id]
             var resolved = connection
-            if let existing = connections[connection.id] {
+            if let existing {
                 resolved.bytesIn = max(connection.bytesIn, existing.bytesIn)
                 resolved.bytesOut = max(connection.bytesOut, existing.bytesOut)
                 resolved.packetsIn = max(connection.packetsIn, existing.packetsIn)
                 resolved.packetsOut = max(connection.packetsOut, existing.packetsOut)
             }
             connections[connection.id] = resolved
-            await correlator.register(resolved)
+            // Only (re)register new connections for packet correlation; the flow
+            // key is stable, so re-describes need no extra cross-actor work.
+            if existing == nil {
+                await correlator.register(resolved)
+            }
 
         case let .counts(id, counts):
             guard var connection = connections[id] else { return }
