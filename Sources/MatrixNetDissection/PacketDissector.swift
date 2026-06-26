@@ -56,6 +56,12 @@ public struct PacketDissector: Sendable {
         if ports.source == 53 || ports.destination == 53 {
             return (try? DNSDissector.dissect(bytes, at: offset))?.node
         }
+        if ports.source == 443 || ports.destination == 443 || TLSDissector.looksLikeTLS(bytes, at: offset) {
+            return (try? TLSDissector.dissect(bytes, at: offset))?.node
+        }
+        if ports.source == 80 || ports.destination == 80 || HTTPDissector.looksLikeHTTP(bytes, at: offset) {
+            return try? HTTPDissector.dissect(bytes, at: offset)
+        }
         return nil
     }
 
