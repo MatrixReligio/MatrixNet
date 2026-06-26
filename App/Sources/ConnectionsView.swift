@@ -100,7 +100,7 @@ struct ConnectionsView: View {
                 model.isMonitoring ? model.stop() : model.start()
             } label: {
                 Label(
-                    model.isMonitoring ? "Pause" : "Monitor",
+                    model.isMonitoring ? LocalizedStringKey("Pause") : LocalizedStringKey("Monitor"),
                     systemImage: model.isMonitoring ? "pause.fill" : "play.fill"
                 )
             }
@@ -144,7 +144,7 @@ private struct AppCell: View {
 
             Text(app.displayName).lineLimit(1)
             Spacer(minLength: 4)
-            Text("\(app.pid)")
+            Text(verbatim: "\(app.pid)")
                 .font(Theme.mono(10)).monospacedDigit()
                 .foregroundStyle(.tertiary)
         }
@@ -155,7 +155,7 @@ private struct StateBadge: View {
     let state: ConnectionState
 
     var body: some View {
-        Text(state == .active ? "Active" : "Closed")
+        Text(state == .active ? LocalizedStringKey("Active") : LocalizedStringKey("Closed"))
             .font(.caption2.weight(.medium))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
@@ -173,15 +173,15 @@ private struct ThroughputSummary: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            metric("IN", Format.bytes(model.totalBytesIn), Theme.inbound)
-            metric("OUT", Format.bytes(model.totalBytesOut), Theme.outbound)
+            metric("IN", Format.rate(model.throughputIn), Theme.inbound)
+            metric("OUT", Format.rate(model.throughputOut), Theme.outbound)
         }
     }
 
-    private func metric(_ label: String, _ value: String, _ color: Color) -> some View {
+    private func metric(_ label: LocalizedStringKey, _ value: String, _ color: Color) -> some View {
         HStack(spacing: 5) {
             Text(label).font(.caption2.weight(.semibold)).foregroundStyle(color)
-            Text(value).font(Theme.mono(11)).monospacedDigit().foregroundStyle(.primary)
+            Text(verbatim: value).font(Theme.mono(11)).monospacedDigit().foregroundStyle(.primary)
         }
     }
 }

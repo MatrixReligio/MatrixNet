@@ -139,10 +139,10 @@ private struct RateView: View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 3) {
                 Image(systemName: systemImage).font(.system(size: 9, weight: .bold)).foregroundStyle(tint)
-                Text(Fmt.rate(rate)).font(mono(12, .medium)).foregroundStyle(.primary)
+                Text(verbatim: Fmt.rate(rate)).font(mono(12, .medium)).foregroundStyle(.primary)
             }
             if showSession {
-                Text(Fmt.bytes(session)).font(mono(9)).foregroundStyle(.secondary)
+                Text(verbatim: Fmt.bytes(session)).font(mono(9)).foregroundStyle(.secondary)
             }
         }
     }
@@ -154,7 +154,7 @@ private struct CountBlock: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text("\(value)")
+            Text(verbatim: "\(value)")
                 .font(mono(30, .semibold)).foregroundStyle(Palette.accent)
                 .minimumScaleFactor(0.6).lineLimit(1)
             VStack(alignment: .leading, spacing: 0) {
@@ -171,7 +171,7 @@ private struct TopAppRow: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Text(app.name).font(.system(size: 10)).lineLimit(1).frame(width: 78, alignment: .leading)
+            Text(verbatim: app.name).font(.system(size: 10)).lineLimit(1).frame(width: 78, alignment: .leading)
             GeometryReader { geo in
                 Capsule().fill(Palette.accent.opacity(0.15))
                     .overlay(alignment: .leading) {
@@ -180,7 +180,7 @@ private struct TopAppRow: View {
                     }
             }
             .frame(height: 4)
-            Text(Fmt.bytes(app.bytes)).font(mono(9)).foregroundStyle(.secondary)
+            Text(verbatim: Fmt.bytes(app.bytes)).font(mono(9)).foregroundStyle(.secondary)
                 .frame(width: 52, alignment: .trailing)
         }
     }

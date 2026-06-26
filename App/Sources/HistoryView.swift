@@ -32,8 +32,10 @@ struct HistoryView: View {
                     TableColumn("Proto") { Text($0.proto).font(Theme.mono(11)).foregroundStyle(.secondary) }.width(52)
                     TableColumn("In") { Text(Format.bytes(UInt64($0.bytesIn))).font(Theme.mono(11)) }.width(72)
                     TableColumn("Out") { Text(Format.bytes(UInt64($0.bytesOut))).font(Theme.mono(11)) }.width(72)
-                    TableColumn("Seen") { Text("\($0.sightings)×").font(Theme.mono(11)).foregroundStyle(.secondary) }
-                        .width(56)
+                    TableColumn("Seen") {
+                        Text(verbatim: "\($0.sightings)×").font(Theme.mono(11)).foregroundStyle(.secondary)
+                    }
+                    .width(56)
                     TableColumn("Last") { Text($0.lastSeen, format: .dateTime.month().day().hour().minute()) }
                         .width(120)
                 }

@@ -67,10 +67,10 @@ struct MenuBarView: View {
         .frame(width: 280)
     }
 
-    private func metric(_ label: String, _ value: String, _ color: Color) -> some View {
+    private func metric(_ label: LocalizedStringKey, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label.uppercased()).font(.caption2.weight(.semibold)).foregroundStyle(color)
-            Text(value).font(Theme.mono(12)).monospacedDigit()
+            Text(label).font(.caption2.weight(.semibold)).textCase(.uppercase).foregroundStyle(color)
+            Text(verbatim: value).font(Theme.mono(12)).monospacedDigit()
         }
     }
 }

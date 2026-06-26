@@ -63,17 +63,18 @@ struct OverviewView: View {
 }
 
 private struct StatTile: View {
-    let label: String
+    let label: LocalizedStringKey
     let value: String
-    var detail: String?
+    var detail: LocalizedStringKey?
     let tint: Color
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label.uppercased())
+            Text(label)
                 .font(.caption2.weight(.semibold))
+                .textCase(.uppercase)
                 .foregroundStyle(tint)
-            Text(value)
+            Text(verbatim: value)
                 .font(Theme.mono(22, weight: .medium))
                 .monospacedDigit()
                 .contentTransition(.numericText())

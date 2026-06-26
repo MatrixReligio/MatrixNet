@@ -6,6 +6,7 @@ options:
     macOS: "26.0"
   createIntermediateGroups: true
   groupSortPosition: top
+  developmentLanguage: en
 
 packages:
   MatrixNetCore:
@@ -79,6 +80,7 @@ targets:
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         LSMinimumSystemVersion: "26.0"
+        CFBundleLocalizations: [en, zh-Hans, zh-Hant, ja, ko, fr, de, es]
         # Sparkle auto-update. Appcast is published as a stable GitHub "latest
         # release" asset; the EdDSA public key verifies every downloaded update.
         SUFeedURL: "https://github.com/MatrixReligio/MatrixNet/releases/latest/download/appcast.xml"
@@ -110,6 +112,7 @@ targets:
     platform: macOS
     sources:
       - path: Widget/Sources
+      - path: Widget/Resources
     dependencies:
       - package: MatrixNetCore
         product: MatrixNetModel

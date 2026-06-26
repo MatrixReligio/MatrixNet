@@ -15,7 +15,7 @@ struct RootView: View {
             rawValue
         }
 
-        var title: String {
+        var title: LocalizedStringKey {
             switch self {
             case .overview: "Overview"
             case .connections: "Connections"
@@ -63,7 +63,7 @@ private struct MonitorStatusBar: View {
                 .fill(model.isMonitoring ? Theme.accent : Color.secondary)
                 .frame(width: 8, height: 8)
                 .shadow(color: model.isMonitoring ? Theme.accent.opacity(0.6) : .clear, radius: 4)
-            Text(model.isMonitoring ? "Monitoring" : "Paused")
+            Text(model.isMonitoring ? LocalizedStringKey("Monitoring") : LocalizedStringKey("Paused"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()

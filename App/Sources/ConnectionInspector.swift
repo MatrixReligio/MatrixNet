@@ -63,8 +63,11 @@ struct EmptyStateView: View {
             Label("Watching the Network", systemImage: "dot.radiowaves.left.and.right")
         } description: {
             Text(model.isMonitoring
-                ? "Listening for connections. Activity from every app will appear here."
-                : "Start monitoring to see which apps are talking to the network — no special permissions required.")
+                ? LocalizedStringKey("Listening for connections. Activity from every app will appear here.")
+                :
+                LocalizedStringKey(
+                    "Start monitoring to see which apps are talking to the network — no special permissions required."
+                ))
         } actions: {
             if !model.isMonitoring {
                 Button("Start Monitoring") { model.start() }
