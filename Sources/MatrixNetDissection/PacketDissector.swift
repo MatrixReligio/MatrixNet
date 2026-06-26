@@ -33,7 +33,30 @@ public struct PacketDissector: Sendable {
             source: Endpoint(address: network.source, port: transport.sourcePort),
             destination: Endpoint(address: network.destination, port: transport.destinationPort)
         )
+
+        if let application = parseApplicationLayer(
+            bytes,
+            ports: (transport.sourcePort, transport.destinationPort),
+            at: transport.payloadOffset
+        ) {
+            layers.append(application)
+        }
+
         return DissectedPacket(layers: layers, fiveTuple: fiveTuple, summary: summarize(layers, fiveTuple: fiveTuple))
+    }
+
+    /// Best-effort application-layer dissection, chosen by well-known port. Any
+    /// failure simply omits the application layer (never throws).
+    private func parseApplicationLayer(
+        _ bytes: [UInt8],
+        ports: (source: UInt16, destination: UInt16),
+        at offset: Int
+    ) -> DissectionNode? {
+        guard offset < bytes.count else { return nil }
+        if ports.source == 53 || ports.destination == 53 {
+            return (try? DNSDissector.dissect(bytes, at: offset))?.node
+        }
+        return nil
     }
 
     /// Returns the ethertype identifying the network layer and the offset where

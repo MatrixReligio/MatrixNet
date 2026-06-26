@@ -19,7 +19,7 @@ struct PacketDissectorTests {
     aabbccddeeff 112233445566 0800
     45 00 003c 0001 0000 40 11 0000 c0a80105 08080808
     c000 0035 0028 0000
-    1234 0100 0001 0000 0000 0000 0365 78 61 6d 70 6c 65 03 63 6f 6d 00 0001 0001
+    1234 0100 0001 0000 0000 0000 07 6578616d706c65 03 636f6d 00 0001 0001
     """
 
     /// IPv6(40) + TCP(20) over Ethernet: 2001:db8::1 -> 2606:4700::1111 port 51000->443.
@@ -66,10 +66,11 @@ struct PacketDissectorTests {
     @Test("dissects Ethernet → IPv4 → UDP")
     func udpOverIPv4() throws {
         let packet = dissector.dissect(hex(dnsQueryOverEthernet), linkType: .ethernet)
-        #expect(packet.protocolPath.prefix(3) == ["Ethernet", "IPv4", "UDP"])
+        #expect(packet.protocolPath == ["Ethernet", "IPv4", "UDP", "DNS"])
         let tuple = try #require(packet.fiveTuple)
         #expect(tuple.proto == .udp)
         #expect(tuple.destination.port == 53)
+        #expect(packet.highestProtocol == "DNS")
     }
 
     @Test("dissects Ethernet → IPv6 → TCP and extracts the five-tuple")
