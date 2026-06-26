@@ -140,4 +140,69 @@ struct FlowCorrelatorTests {
         }
         #expect(resolvedCount == count)
     }
+
+    @Test("PID fallback survives removal of a newer connection for the same PID")
+    func pidFallbackSurvivesNewerRemoval() async throws {
+        let correlator = FlowCorrelator()
+        let older = try makeConnection(50010, pid: 501) // flow key FK1
+        let newer = try makeConnection(50011, pid: 501) // flow key FK2 (different port)
+        await correlator.register(older)
+        await correlator.register(newer)
+        await correlator.remove(connectionID: newer.id)
+
+        // `older` is still live; the PID fallback must still resolve to it.
+        let unrelated = try FiveTuple(
+            proto: .udp,
+            source: endpoint("10.0.0.9", 9999),
+            destination: endpoint("8.8.8.8", 53)
+        )
+        let resolved = await correlator.connectionID(forPacketFlow: unrelated.flowKey, pid: 501)
+        #expect(resolved == older.id)
+    }
+
+    @Test("removing all same-PID connections clears the PID fallback")
+    func pidFallbackClearedWhenAllRemoved() async throws {
+        let correlator = FlowCorrelator()
+        let first = try makeConnection(50020, pid: 700)
+        let second = try makeConnection(50021, pid: 700)
+        await correlator.register(first)
+        await correlator.register(second)
+        await correlator.remove(connectionID: first.id)
+        await correlator.remove(connectionID: second.id)
+
+        let unrelated = try FiveTuple(
+            proto: .udp,
+            source: endpoint("10.0.0.9", 9999),
+            destination: endpoint("8.8.8.8", 53)
+        )
+        let resolved = await correlator.connectionID(forPacketFlow: unrelated.flowKey, pid: 700)
+        #expect(resolved == nil)
+    }
+
+    @Test("stays consistent under concurrent register and remove")
+    func concurrentRegisterAndRemove() async {
+        let correlator = FlowCorrelator()
+        let count = 1500
+
+        // Register everything, removing the odd-indexed ones concurrently.
+        await withTaskGroup(of: Void.self) { group in
+            for index in 0 ..< count {
+                group.addTask {
+                    guard let connection = try? makeConnection(UInt16(20000 + index), pid: Int32(index)) else { return }
+                    await correlator.register(connection)
+                    if index.isMultiple(of: 2) == false {
+                        await correlator.remove(connectionID: connection.id)
+                    }
+                }
+            }
+        }
+
+        let all = await correlator.allConnections
+        // Exactly the even-indexed connections survive; no dangling entries.
+        #expect(all.count == (count + 1) / 2)
+        for connection in all {
+            let found = await correlator.connection(for: connection.fiveTuple.flowKey)
+            #expect(found?.id == connection.id)
+        }
+    }
 }

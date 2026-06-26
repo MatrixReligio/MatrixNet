@@ -30,4 +30,10 @@ struct PacketTests {
     func emptyNotTruncated() {
         #expect(!makePacket(captured: 0, original: 0).isTruncated)
     }
+
+    @Test("captured data longer than the wire length is not reported as truncated")
+    func overlongIsNotTruncated() {
+        // Documents the boundary: isTruncated only flags captured < original.
+        #expect(!makePacket(captured: 100, original: 80).isTruncated)
+    }
 }

@@ -9,7 +9,10 @@ import Foundation
 public actor FlowCorrelator {
     private var connectionsByID: [UUID: Connection] = [:]
     private var connectionIDByFlowKey: [FlowKey: UUID] = [:]
-    private var latestConnectionIDByPID: [Int32: UUID] = [:]
+    /// All live connection ids per PID, most recent last. Keeping every live id
+    /// (not just the latest) means removing one connection never blinds the PID
+    /// fallback to the process's other still-open connections.
+    private var connectionIDsByPID: [Int32: [UUID]] = [:]
     private var hostnamesByIP: [IPAddress: String] = [:]
 
     public init() {}
@@ -17,9 +20,12 @@ public actor FlowCorrelator {
     /// Registers or replaces a connection. A newer connection sharing a flow key
     /// (e.g. port reuse) takes over that key for future packet lookups.
     public func register(_ connection: Connection) {
+        let isNew = connectionsByID[connection.id] == nil
         connectionsByID[connection.id] = connection
         connectionIDByFlowKey[connection.fiveTuple.flowKey] = connection.id
-        latestConnectionIDByPID[connection.app.pid] = connection.id
+        if isNew {
+            connectionIDsByPID[connection.app.pid, default: []].append(connection.id)
+        }
     }
 
     /// Removes a connection and any index entry that still points to it.
@@ -28,8 +34,10 @@ public actor FlowCorrelator {
         if connectionIDByFlowKey[connection.fiveTuple.flowKey] == connectionID {
             connectionIDByFlowKey[connection.fiveTuple.flowKey] = nil
         }
-        if latestConnectionIDByPID[connection.app.pid] == connectionID {
-            latestConnectionIDByPID[connection.app.pid] = nil
+        let pid = connection.app.pid
+        if var ids = connectionIDsByPID[pid] {
+            ids.removeAll { $0 == connectionID }
+            connectionIDsByPID[pid] = ids.isEmpty ? nil : ids
         }
     }
 
@@ -45,8 +53,9 @@ public actor FlowCorrelator {
         if let id = connectionIDByFlowKey[flowKey] {
             return id
         }
-        if let pid, let id = latestConnectionIDByPID[pid], connectionsByID[id] != nil {
-            return id
+        if let pid, let ids = connectionIDsByPID[pid] {
+            // Most recent live connection for this PID.
+            return ids.last { connectionsByID[$0] != nil }
         }
         return nil
     }

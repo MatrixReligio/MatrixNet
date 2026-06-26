@@ -51,24 +51,39 @@ public struct Connection: Sendable, Identifiable {
     }
 
     /// Total bytes transferred in both directions.
+    /// Wrapping addition; in practice neither counter approaches `UInt64.max`.
     public var totalBytes: UInt64 {
         bytesIn &+ bytesOut
     }
 
-    /// Applies the latest cumulative counters from the kernel. Counters are
-    /// clamped to be monotonic (a stale, smaller sample never lowers them) and
-    /// `lastActivityAt` advances only when the counters actually grow, so idle
-    /// refreshes do not mark the connection as active.
+    /// Applies the latest cumulative counters from the kernel. Byte and (optional)
+    /// packet counters are clamped to be monotonic (a stale, smaller sample never
+    /// lowers them) and `lastActivityAt` advances only when some counter actually
+    /// grows, so idle refreshes do not mark the connection as active.
     public mutating func updateCumulativeCounts(
         bytesIn newBytesIn: UInt64,
         bytesOut newBytesOut: UInt64,
+        packetsIn newPacketsIn: UInt64? = nil,
+        packetsOut newPacketsOut: UInt64? = nil,
         at timestamp: Date
     ) {
-        let clampedIn = max(newBytesIn, bytesIn)
-        let clampedOut = max(newBytesOut, bytesOut)
-        let advanced = clampedIn > bytesIn || clampedOut > bytesOut
-        bytesIn = clampedIn
-        bytesOut = clampedOut
+        let clampedBytesIn = max(newBytesIn, bytesIn)
+        let clampedBytesOut = max(newBytesOut, bytesOut)
+        var advanced = clampedBytesIn > bytesIn || clampedBytesOut > bytesOut
+        bytesIn = clampedBytesIn
+        bytesOut = clampedBytesOut
+
+        if let newPacketsIn {
+            let clamped = max(newPacketsIn, packetsIn)
+            advanced = advanced || clamped > packetsIn
+            packetsIn = clamped
+        }
+        if let newPacketsOut {
+            let clamped = max(newPacketsOut, packetsOut)
+            advanced = advanced || clamped > packetsOut
+            packetsOut = clamped
+        }
+
         if advanced {
             lastActivityAt = timestamp
         }

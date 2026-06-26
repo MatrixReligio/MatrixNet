@@ -43,10 +43,33 @@ struct IPAddressTests {
         "2001:db8:::1",
         "12345::",
         " 1.2.3.4",
-        "1.2.3.4 "
+        "1.2.3.4 ",
+        "fe80::1%en0", // zone IDs are not supported; strip before parsing
+        "fe80::1%"
     ])
     func rejectsMalformed(_ text: String) {
         #expect(IPAddress(text) == nil, "should reject \(text)")
+    }
+
+    @Test("parses IPv4-mapped IPv6 as a distinct v6 address")
+    func ipv4MappedIsDistinct() throws {
+        let mapped = try #require(IPAddress("::ffff:192.0.2.1"))
+        #expect(mapped.isIPv6)
+        // By design the mapped and plain forms are NOT equal; normalising them
+        // is the capture layer's responsibility via `unmappedIPv4`.
+        #expect(mapped != IPAddress("192.0.2.1"))
+    }
+
+    @Test("unmappedIPv4 normalises IPv4-mapped addresses and leaves others alone")
+    func unmappedIPv4Normalisation() throws {
+        let mapped = try #require(IPAddress("::ffff:192.0.2.1"))
+        #expect(mapped.unmappedIPv4 == IPAddress("192.0.2.1"))
+
+        let plainV4 = try #require(IPAddress("10.0.0.1"))
+        #expect(plainV4.unmappedIPv4 == plainV4)
+
+        let realV6 = try #require(IPAddress("2001:db8::1"))
+        #expect(realV6.unmappedIPv4 == realV6)
     }
 
     @Test("round-trips through raw bytes")

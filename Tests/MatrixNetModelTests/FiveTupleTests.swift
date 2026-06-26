@@ -48,6 +48,28 @@ struct FiveTupleTests {
         #expect(one.flowKey != two.flowKey)
     }
 
+    @Test("flow key is direction-insensitive at the port boundaries", arguments: [
+        (UInt16(0), UInt16(0)),
+        (0, 65535),
+        (65535, 65535)
+    ])
+    func flowKeyPortBoundaries(_ localPort: UInt16, _ remotePort: UInt16) throws {
+        let local = try endpoint("10.0.0.1", localPort)
+        let remote = try endpoint("10.0.0.2", remotePort)
+        let outbound = FiveTuple(proto: .udp, source: local, destination: remote)
+        let inbound = FiveTuple(proto: .udp, source: remote, destination: local)
+        #expect(outbound.flowKey == inbound.flowKey)
+    }
+
+    @Test("self-connection (identical endpoints) has a stable flow key")
+    func flowKeySelfConnection() throws {
+        let same = try endpoint("127.0.0.1", 8080)
+        let tuple = FiveTuple(proto: .tcp, source: same, destination: same)
+        #expect(tuple.flowKey == tuple.flowKey)
+        let reversed = FiveTuple(proto: .tcp, source: same, destination: same)
+        #expect(tuple.flowKey == reversed.flowKey)
+    }
+
     @Test("transport protocol maps to and from IANA numbers", arguments: [
         (TransportProtocol.tcp, UInt8(6)),
         (.udp, 17),

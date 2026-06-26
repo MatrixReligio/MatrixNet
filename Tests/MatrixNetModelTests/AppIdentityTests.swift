@@ -31,4 +31,11 @@ struct AppIdentityTests {
     func identifiableByPID() {
         #expect(AppIdentity(pid: 100).id == 100)
     }
+
+    @Test("the unknown sentinel represents unattributable traffic")
+    func unknownSentinel() {
+        #expect(AppIdentity.unknown.pid == -1)
+        #expect(AppIdentity.unknown.displayName == "Unknown")
+        #expect(AppIdentity.unknown.bundleIdentifier == nil)
+    }
 }

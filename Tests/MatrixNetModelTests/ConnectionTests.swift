@@ -57,4 +57,39 @@ struct ConnectionTests {
         #expect(connection.bytesIn == 500)
         #expect(connection.bytesOut == 500)
     }
+
+    @Test("packet counters update monotonically and advance activity")
+    func packetCountersMonotonic() throws {
+        let start = Date(timeIntervalSince1970: 0)
+        var connection = try makeConnection(start: start)
+        connection.updateCumulativeCounts(
+            bytesIn: 0,
+            bytesOut: 0,
+            packetsIn: 4,
+            packetsOut: 3,
+            at: Date(timeIntervalSince1970: 5)
+        )
+        #expect(connection.packetsIn == 4)
+        #expect(connection.packetsOut == 3)
+        #expect(connection.lastActivityAt == Date(timeIntervalSince1970: 5))
+
+        // Stale smaller packet sample must not regress.
+        connection.updateCumulativeCounts(
+            bytesIn: 0,
+            bytesOut: 0,
+            packetsIn: 1,
+            packetsOut: 1,
+            at: Date(timeIntervalSince1970: 9)
+        )
+        #expect(connection.packetsIn == 4)
+        #expect(connection.packetsOut == 3)
+    }
+
+    @Test("totalBytes uses documented wrapping semantics at the UInt64 boundary")
+    func totalBytesWraps() throws {
+        var connection = try makeConnection(start: Date(timeIntervalSince1970: 0))
+        connection.bytesIn = .max
+        connection.bytesOut = 1
+        #expect(connection.totalBytes == 0)
+    }
 }

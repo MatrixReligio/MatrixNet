@@ -18,8 +18,14 @@ public enum IPAddress: Hashable, Sendable {
     ///
     /// IPv4 is attempted first, then IPv6, so unambiguous text maps to the
     /// expected family. Leading/trailing whitespace and out-of-range octets are
-    /// rejected by `inet_pton`.
+    /// rejected by `inet_pton`. Zone IDs (e.g. `fe80::1%en0`) are not supported;
+    /// strip them before parsing.
     public init?(_ string: String) {
+        // Reject zone IDs explicitly: `inet_pton` on macOS does not reliably
+        // reject `fe80::1%en0` and may even mis-parse it. A '%' never appears in
+        // a valid textual IPv4/IPv6 address, so this gives deterministic results.
+        guard !string.contains("%") else { return nil }
+
         var v4Bytes = [UInt8](repeating: 0, count: 4)
         if inet_pton(AF_INET, string, &v4Bytes) == 1 {
             self = .v4(Self.packV4(v4Bytes))
@@ -63,6 +69,16 @@ public enum IPAddress: Hashable, Sendable {
     public var isIPv6: Bool {
         if case .v6 = self { return true }
         return false
+    }
+
+    /// Normalises an IPv4-mapped IPv6 address (`::ffff:a.b.c.d`) to the plain
+    /// IPv4 address; returns `self` otherwise. Dual-stack capture sources report
+    /// the same endpoint either way, so callers normalise before correlating.
+    public var unmappedIPv4: IPAddress {
+        guard case let .v6(high, low) = self, high == 0, low >> 32 == 0x0000_FFFF else {
+            return self
+        }
+        return .v4(UInt32(truncatingIfNeeded: low))
     }
 
     private static func packV4(_ bytes: [UInt8]) -> UInt32 {
