@@ -36,8 +36,23 @@ targets:
         product: MatrixNetCapture
       - package: MatrixNetCore
         product: MatrixNetDissection
+      - package: MatrixNetCore
+        product: MatrixNetPcap
+      - package: MatrixNetCore
+        product: MatrixNetXPC
       - target: MatrixNetWidget
         embed: true
+      - target: MatrixNetHelper
+        embed: true
+        copy:
+          destination: executables
+    postBuildScripts:
+      - name: Embed SMAppService daemon plist
+        script: |
+          DEST="$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/Library/LaunchDaemons"
+          mkdir -p "$DEST"
+          cp "$SRCROOT/Helper/com.matrixreligio.matrixnet.helper.plist" "$DEST/"
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.matrixreligio.matrixnet
@@ -55,6 +70,25 @@ targets:
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         LSMinimumSystemVersion: "26.0"
+
+  MatrixNetHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Helper/Sources
+    dependencies:
+      - package: MatrixNetCore
+        product: MatrixNetModel
+      - package: MatrixNetCore
+        product: MatrixNetCapture
+      - package: MatrixNetCore
+        product: MatrixNetXPC
+    settings:
+      base:
+        PRODUCT_NAME: MatrixNetHelper
+        PRODUCT_BUNDLE_IDENTIFIER: com.matrixreligio.matrixnet.helper
+        ENABLE_HARDENED_RUNTIME: YES
+        SKIP_INSTALL: YES
 
   MatrixNetWidget:
     type: app-extension

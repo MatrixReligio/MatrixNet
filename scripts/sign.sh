@@ -12,6 +12,10 @@ set -euo pipefail
 APP="${1:-build/Build/Products/Release/MatrixNet.app}"
 IDENTITY="${SIGN_IDENTITY:-Developer ID Application: MatrixReligio LLC (4DUQGD879H)}"
 WIDGET="$APP/Contents/PlugIns/MatrixNetWidget.appex"
+HELPER="$APP/Contents/MacOS/MatrixNetHelper"
+
+echo "==> Signing privileged helper"
+codesign --force --timestamp --options runtime --sign "$IDENTITY" "$HELPER"
 
 echo "==> Signing widget extension"
 codesign --force --timestamp --options runtime \

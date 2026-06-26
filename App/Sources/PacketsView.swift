@@ -1,0 +1,164 @@
+import MatrixNetDissection
+import MatrixNetModel
+import MatrixNetPcap
+import SwiftUI
+import UniformTypeIdentifiers
+
+/// Wireshark-style deep packet analyzer: a live packet list, a protocol-detail
+/// tree, and a hex view — fed by the privileged PKTAP helper. Opt-in: until the
+/// helper is enabled, an explanatory call-to-action is shown instead.
+struct PacketsView: View {
+    @Environment(PacketCaptureModel.self) private var capture
+    @State private var selection: UInt64?
+
+    private var selectedPacket: PacketRow? {
+        capture.packets.first { $0.id == selection }
+    }
+
+    var body: some View {
+        Group {
+            if capture.helperState != .enabled, !capture.isCapturing {
+                enableState
+            } else {
+                analyzer
+            }
+        }
+        .navigationTitle("Packets")
+        .toolbar { toolbarContent }
+        .onAppear { capture.refreshState() }
+    }
+
+    private var analyzer: some View {
+        HSplitView {
+            packetList
+                .frame(minWidth: 360)
+            ScrollView {
+                if let packet = selectedPacket {
+                    PacketDetail(packet: packet)
+                } else {
+                    ContentUnavailableView("No Packet Selected", systemImage: "doc.text.magnifyingglass")
+                }
+            }
+            .frame(minWidth: 280)
+        }
+    }
+
+    private var packetList: some View {
+        Table(capture.packets, selection: $selection) {
+            TableColumn("Time") { Text($0.timestamp, format: .dateTime.hour().minute().second()) }
+                .width(70)
+            TableColumn("Process") { Text($0.processName).lineLimit(1) }.width(min: 90, ideal: 120)
+            TableColumn("Proto") { Text($0.highestProtocol).font(Theme.mono(11)).foregroundStyle(Theme.accent) }
+                .width(56)
+            TableColumn("Summary") { Text($0.summary).font(Theme.mono(11)).lineLimit(1) }
+        }
+    }
+
+    private var enableState: some View {
+        ContentUnavailableView {
+            Label("Deep Packet Analysis", systemImage: "scope")
+        } description: {
+            Text(
+                """
+                Capture raw packets — each attributed to the app that sent it — and inspect them \
+                down to the byte. This installs a small privileged helper you approve once in \
+                System Settings.
+                """
+            )
+        } actions: {
+            Button("Enable Packet Capture") { capture.enableHelper() }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.accent)
+            if capture.helperState == .requiresApproval {
+                Text("Approve “MatrixNet” in System Settings → General → Login Items & Extensions, then press Start.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                capture.isCapturing ? capture.stopCapture() : capture.startCapture()
+            } label: {
+                Label(
+                    capture.isCapturing ? "Stop" : "Start",
+                    systemImage: capture.isCapturing ? "stop.fill" : "play.fill"
+                )
+            }
+            .tint(Theme.accent)
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button { capture.clear() } label: { Label("Clear", systemImage: "trash") }
+                .disabled(capture.packets.isEmpty)
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button { exportPcap() } label: { Label("Export", systemImage: "square.and.arrow.up") }
+                .disabled(capture.packets.isEmpty)
+        }
+    }
+
+    private func exportPcap() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "capture.pcapng"
+        panel.allowedContentTypes = [UTType(filenameExtension: "pcapng") ?? .data]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        let writer = PcapNGWriter(linkType: PcapLinkType.ethernet)
+        var data = Data(writer.header())
+        for packet in capture.packets {
+            let record = CapturedRecord(
+                timestampMicros: UInt64(packet.timestamp.timeIntervalSince1970 * 1_000_000),
+                originalLength: packet.bytes.count,
+                data: packet.bytes
+            )
+            data.append(contentsOf: writer.packet(record))
+        }
+        try? data.write(to: url)
+    }
+}
+
+/// The protocol-detail tree and hex dump for one packet.
+private struct PacketDetail: View {
+    let packet: PacketRow
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(Array(packet.layers.enumerated()), id: \.offset) { _, layer in
+                DisclosureGroup {
+                    ForEach(Array(layer.fields.enumerated()), id: \.offset) { _, field in
+                        HStack(alignment: .top) {
+                            Text(field.name).foregroundStyle(.secondary)
+                            Spacer()
+                            Text(field.value).font(Theme.mono(11)).textSelection(.enabled)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        .font(.caption)
+                    }
+                } label: {
+                    Text(layer.label).font(.callout.weight(.medium))
+                }
+            }
+
+            Divider()
+            Text("Hex").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Text(hexDump(packet.bytes))
+                .font(Theme.mono(10))
+                .textSelection(.enabled)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func hexDump(_ bytes: [UInt8]) -> String {
+        var lines = [String]()
+        for offset in stride(from: 0, to: bytes.count, by: 16) {
+            let chunk = bytes[offset ..< min(offset + 16, bytes.count)]
+            let hex = chunk.map { String(format: "%02x", $0) }.joined(separator: " ")
+            let ascii = chunk.map { (0x20 ... 0x7E).contains($0) ? String(UnicodeScalar($0)) : "." }.joined()
+            lines.append(String(format: "%04x  %-47@  %@", offset, hex as NSString, ascii as NSString))
+        }
+        return lines.joined(separator: "\n")
+    }
+}
