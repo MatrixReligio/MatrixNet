@@ -1,0 +1,41 @@
+name: Update threat list
+
+# IPsum (https://github.com/stamparm/ipsum, public domain / Unlicense) rebuilds
+# its aggregated blocklists daily. This job recompiles the compact threatlist.dat
+# from level 3 (IPs on 3+ independent blocklists) and republishes it as the
+# stable `threatlist-latest` release asset, which the app downloads in the
+# background. Runs weekly (Mondays) and on demand.
+on:
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    name: Build and publish threatlist.dat
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build threatlist.dat from the latest IPsum level 3
+        run: |
+          set -euo pipefail
+          ./scripts/build-threatlist.sh 3
+          ls -la App/Resources/threatlist.dat
+
+      - name: Publish to the threatlist-latest release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: threatlist-latest
+          name: Threat list (rolling)
+          body: |
+            Rolling threat-IP list for MatrixNet's in-app auto-update.
+
+            Source: IPsum (https://github.com/stamparm/ipsum), released under the
+            Unlicense (public domain). Level 3 — addresses present on three or
+            more independent public blocklists. Rebuilt automatically.
+          files: App/Resources/threatlist.dat
+          make_latest: false

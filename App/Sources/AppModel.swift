@@ -34,6 +34,10 @@ public final class AppModel {
     /// many idle keep-alive sockets, and lost when short-lived flows close).
     public private(set) var topApps: [AppTraffic] = []
 
+    /// Number of currently active connections whose remote IP is on the threat
+    /// list. Surfaced in the app and widget; advisory only (never blocks).
+    public private(set) var threatCount: Int = 0
+
     private var monitor: NetworkStatisticsMonitor?
     /// Shared with the packet pipeline so captured packets are attributed to the
     /// same connections (the aggregator is built for both sources).
@@ -144,6 +148,9 @@ public final class AppModel {
                 }
                 return lhs.lastActivityAt > rhs.lastActivityAt
             }
+        threatCount = connections.lazy
+            .count(where: { $0.state == .active && Threat.isThreat($0.fiveTuple.destination.address) })
+
         updateThroughput(session: session)
         publishWidgetMetrics()
         recordHistory()
@@ -211,6 +218,7 @@ public final class AppModel {
             throughputIn: throughputIn,
             throughputOut: throughputOut,
             topApps: Array(widgetApps),
+            threatCount: threatCount,
             updatedAt: now
         )
         guard SharedMetricsStore.write(snapshot, to: url) else { return }

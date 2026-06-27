@@ -70,7 +70,11 @@ struct MenuBarView: View {
     private func metric(_ label: LocalizedStringKey, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(.caption2.weight(.semibold)).textCase(.uppercase).foregroundStyle(color)
-            Text(verbatim: value).font(Theme.mono(12)).monospacedDigit()
+            // Fixed-width value keeps the columns from shifting as numbers change.
+            Text(verbatim: value)
+                .font(Theme.mono(12)).monospacedDigit()
+                .lineLimit(1)
+                .frame(width: 76, alignment: .leading)
         }
     }
 }

@@ -25,6 +25,9 @@ public struct MetricsSnapshot: Codable, Sendable, Equatable {
     /// Current outbound throughput in bytes per second.
     public let throughputOut: Double
     public let topApps: [TopApp]
+    /// Number of currently active connections whose remote IP is on the threat
+    /// list. Advisory only; `0` when the list is absent or nothing matches.
+    public let threatCount: Int
     public let updatedAt: Date
 
     public init(
@@ -35,6 +38,7 @@ public struct MetricsSnapshot: Codable, Sendable, Equatable {
         throughputIn: Double = 0,
         throughputOut: Double = 0,
         topApps: [TopApp],
+        threatCount: Int = 0,
         updatedAt: Date
     ) {
         self.activeConnections = activeConnections
@@ -44,6 +48,7 @@ public struct MetricsSnapshot: Codable, Sendable, Equatable {
         self.throughputIn = throughputIn
         self.throughputOut = throughputOut
         self.topApps = topApps
+        self.threatCount = threatCount
         self.updatedAt = updatedAt
     }
 
@@ -58,6 +63,7 @@ public struct MetricsSnapshot: Codable, Sendable, Equatable {
         throughputIn = try container.decodeIfPresent(Double.self, forKey: .throughputIn) ?? 0
         throughputOut = try container.decodeIfPresent(Double.self, forKey: .throughputOut) ?? 0
         topApps = try container.decodeIfPresent([TopApp].self, forKey: .topApps) ?? []
+        threatCount = try container.decodeIfPresent(Int.self, forKey: .threatCount) ?? 0
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
     }
 

@@ -28,6 +28,13 @@ enum Theme {
         dark: Color(red: 0.92, green: 0.74, blue: 0.40)
     )
 
+    /// Restrained red for threat/danger signals (threat-list hits). Clear but
+    /// not alarming, in keeping with the calm palette.
+    static let danger = Color(
+        light: Color(red: 0.72, green: 0.18, blue: 0.16),
+        dark: Color(red: 0.94, green: 0.46, blue: 0.42)
+    )
+
     /// Monospaced face for IPs, ports, and byte counts (tabular numerals).
     static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight, design: .monospaced)

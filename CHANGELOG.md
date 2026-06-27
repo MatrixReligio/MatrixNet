@@ -10,6 +10,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-06-27
+
+### Added
+- **Threat-IP awareness.** Remote addresses on a public threat-intelligence
+  blocklist are flagged with a ⚠️ badge in the Connections list and detail
+  inspector, and the desktop widget shows a count of active connections reaching
+  flagged addresses. The list is built from the public-domain
+  [IPsum](https://github.com/stamparm/ipsum) aggregate (level 3 — addresses on
+  three or more independent blocklists), refreshed in the background from a
+  CI-published rolling release. It is **advisory only** — MatrixNet labels, it
+  never blocks — and the app only ever contacts its own release asset, never the
+  upstream feeds.
+- **Client/server role.** A new Role column infers, from the ports, whether the
+  local host is the client (it dialed out) or the server (it accepted a
+  connection) of each flow.
+- **Proxy and VPN/tunnel labelling.** Connections whose remote is your
+  configured or local proxy are marked “→ proxy”, and processes that carry other
+  apps' traffic (NetworkExtension VPN/tunnel/proxy engines) are badged, so it is
+  clear when traffic is being relayed.
+- **Packet filtering.** The Packets view gains a search field to filter the live
+  packet list by process, protocol, or address.
+
+### Changed
+- **Steadier readouts.** The toolbar and menu-bar throughput figures no longer
+  jump around as the numbers change width, and the widget's throughput/total
+  figures stay on one line instead of wrapping.
+- Long application and host names that are truncated in tables now show their
+  full value on hover, and the History “Seen” column explains what its count
+  means.
+
 ## [0.1.4] - 2026-06-27
 
 ### Added
@@ -123,7 +153,8 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.5
 [0.1.4]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.4
 [0.1.3]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.3
 [0.1.2]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.2

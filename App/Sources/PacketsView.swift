@@ -10,6 +10,7 @@ import UniformTypeIdentifiers
 struct PacketsView: View {
     @Environment(PacketCaptureModel.self) private var capture
     @State private var selection: UInt64?
+    @State private var search = ""
     @State private var sortOrder = [KeyPathComparator(\PacketRow.timestamp, order: .forward)]
     @State private var columns = TableColumnCustomization<PacketRow>()
 
@@ -18,7 +19,18 @@ struct PacketsView: View {
     }
 
     private var sortedPackets: [PacketRow] {
-        capture.packets.sorted(using: sortOrder)
+        let base = search.isEmpty ? capture.packets : capture.packets.filter { matches($0, search) }
+        return base.sorted(using: sortOrder)
+    }
+
+    /// Matches a packet against the filter by process, protocol, or summary
+    /// (which carries the addresses and ports).
+    private func matches(_ packet: PacketRow, _ query: String) -> Bool {
+        let needle = query.lowercased()
+        if packet.processName.lowercased().contains(needle) { return true }
+        if packet.highestProtocol.lowercased().contains(needle) { return true }
+        if packet.summary.lowercased().contains(needle) { return true }
+        return false
     }
 
     var body: some View {
@@ -30,6 +42,7 @@ struct PacketsView: View {
             }
         }
         .navigationTitle("Packets")
+        .searchable(text: $search, placement: .toolbar, prompt: "Filter by process, protocol, or address")
         .toolbar { toolbarContent }
         .onAppear { capture.refreshState() }
     }
@@ -99,7 +112,7 @@ struct PacketsView: View {
             }
             .width(min: 96, ideal: 112, max: 150)
             .customizationID("time")
-            TableColumn("Process", value: \.processName) { Text($0.processName).lineLimit(1) }
+            TableColumn("Process", value: \.processName) { Text($0.processName).lineLimit(1).help($0.processName) }
                 .width(min: 80, ideal: 120)
                 .customizationID("process")
             TableColumn("Proto", value: \.highestProtocol) {
@@ -107,8 +120,10 @@ struct PacketsView: View {
             }
             .width(min: 48, ideal: 56, max: 90)
             .customizationID("proto")
-            TableColumn("Summary", value: \.summary) { Text($0.summary).font(Theme.mono(11)).lineLimit(1) }
-                .customizationID("summary")
+            TableColumn("Summary", value: \.summary) {
+                Text($0.summary).font(Theme.mono(11)).lineLimit(1).help($0.summary)
+            }
+            .customizationID("summary")
         }
         .persistTableColumns($columns, key: "table.packets")
     }

@@ -59,12 +59,14 @@ struct HistoryView: View {
 
     private var table: some View {
         Table(filtered, selection: $selection, sortOrder: $sortOrder, columnCustomization: $columns) {
-            TableColumn("Application", value: \.appName) { Text($0.appName).lineLimit(1) }
+            TableColumn("Application", value: \.appName) { Text($0.appName).lineLimit(1).help($0.appName) }
                 .width(min: 120, ideal: 180)
                 .customizationID("application")
-            TableColumn("Remote", value: \.remoteHost) { Text($0.remoteHost).font(Theme.mono(11)).lineLimit(1) }
-                .width(min: 140, ideal: 220)
-                .customizationID("remote")
+            TableColumn("Remote", value: \.remoteHost) {
+                Text($0.remoteHost).font(Theme.mono(11)).lineLimit(1).truncationMode(.middle).help($0.remoteHost)
+            }
+            .width(min: 140, ideal: 220)
+            .customizationID("remote")
             TableColumn("Proto", value: \.proto) {
                 Text($0.proto).font(Theme.mono(11)).foregroundStyle(.secondary)
             }
@@ -79,7 +81,9 @@ struct HistoryView: View {
             .width(min: 56, ideal: 76, max: 140)
             .customizationID("out")
             TableColumn("Seen", value: \.sightings) {
-                Text(verbatim: "\($0.sightings)×").font(Theme.mono(11)).foregroundStyle(.secondary)
+                Text(verbatim: "\($0.sightings)×")
+                    .font(Theme.mono(11)).foregroundStyle(.secondary)
+                    .help("Times this app↔host↔protocol entry was observed (sampled about every 5 seconds).")
             }
             .width(min: 48, ideal: 60, max: 90)
             .customizationID("seen")

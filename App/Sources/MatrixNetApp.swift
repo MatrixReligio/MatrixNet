@@ -20,7 +20,9 @@ struct MatrixNetApp: App {
                 .onAppear {
                     capture.attribution = model.aggregator
                     model.start()
+                    ProxyInfo.refresh()
                     Task.detached(priority: .background) { await GeoIP.updateIfNeeded() }
+                    Task.detached(priority: .background) { await Threat.updateIfNeeded() }
                 }
         }
         .windowToolbarStyle(.unified)

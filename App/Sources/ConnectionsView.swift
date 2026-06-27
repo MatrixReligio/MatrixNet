@@ -55,8 +55,20 @@ struct ConnectionsView: View {
             .width(min: 44, ideal: 52, max: 90)
             .customizationID("proto")
 
+            TableColumn("Role", value: \.fiveTuple.role.rawValue) { connection in
+                RoleBadge(role: connection.fiveTuple.role)
+            }
+            .width(min: 56, ideal: 72, max: 110)
+            .customizationID("role")
+
             TableColumn("Remote", value: \.fiveTuple.destination.address.description) { connection in
                 HStack(spacing: 5) {
+                    if Threat.isThreat(connection.fiveTuple.destination.address) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(Theme.danger)
+                            .help("On a public threat-intelligence blocklist (IPsum).")
+                    }
                     if let flag = GeoIP.flag(for: connection.fiveTuple.destination.address) {
                         Text(flag)
                     }
@@ -65,7 +77,14 @@ struct ConnectionsView: View {
                         .textSelection(.enabled)
                         .lineLimit(1)
                         .truncationMode(.middle)
+                    if ProxyInfo.routesThroughProxy(connection.fiveTuple.destination) {
+                        Image(systemName: "arrow.triangle.branch")
+                            .font(.caption2)
+                            .foregroundStyle(Theme.advisory)
+                            .help("Routed through your local/configured proxy.")
+                    }
                 }
+                .help(remoteLabel(connection))
             }
             .width(min: 160, ideal: 220)
             .customizationID("remote")
@@ -151,11 +170,43 @@ private struct AppCell: View {
             .frame(width: 18, height: 18)
 
             Text(app.displayName).lineLimit(1)
+            if ProxyInfo.isTunnel(app.displayName) {
+                Image(systemName: "shield.lefthalf.filled")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.accent)
+                    .help("VPN/proxy tunnel — relays other apps' traffic.")
+            }
             Spacer(minLength: 4)
             Text(verbatim: "\(app.pid)")
                 .font(Theme.mono(10)).monospacedDigit()
                 .foregroundStyle(.tertiary)
         }
+        .help(app.displayName)
+    }
+}
+
+/// Shows whether the local host is the client or server side of a connection,
+/// inferred heuristically from the ports.
+private struct RoleBadge: View {
+    let role: ConnectionRole
+
+    var body: some View {
+        switch role {
+        case .client:
+            label("Client", systemImage: "arrow.up.forward", color: Theme.outbound)
+        case .server:
+            label("Server", systemImage: "arrow.down.backward", color: Theme.inbound)
+        case .unknown:
+            Text(verbatim: "—").foregroundStyle(.tertiary)
+        }
+    }
+
+    private func label(_ title: LocalizedStringKey, systemImage: String, color: Color) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: systemImage).font(.caption2)
+            Text(title).font(.caption2.weight(.medium))
+        }
+        .foregroundStyle(color)
     }
 }
 
@@ -189,7 +240,12 @@ private struct ThroughputSummary: View {
     private func metric(_ label: LocalizedStringKey, _ value: String, _ color: Color) -> some View {
         HStack(spacing: 5) {
             Text(label).font(.caption2.weight(.semibold)).foregroundStyle(color)
-            Text(verbatim: value).font(Theme.mono(11)).monospacedDigit().foregroundStyle(.primary)
+            // Fixed-width value so the toolbar readout doesn't jump as the rate's
+            // digit count and unit change.
+            Text(verbatim: value)
+                .font(Theme.mono(11)).monospacedDigit().foregroundStyle(.primary)
+                .lineLimit(1)
+                .frame(width: 74, alignment: .leading)
         }
     }
 }

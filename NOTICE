@@ -43,3 +43,12 @@ IP geolocation data (optional, bundled at build time via
 scripts/build-geoip.sh) is provided by DB-IP (https://db-ip.com) under the
 Creative Commons Attribution 4.0 International License (CC-BY-4.0):
 "IP Geolocation by DB-IP".
+
+------------------------------------------------------------------------
+Threat-IP data (optional, bundled at build time via
+scripts/build-threatlist.sh) is derived from IPsum
+(https://github.com/stamparm/ipsum), released into the public domain under
+the Unlicense. IPsum aggregates publicly available blocklists; MatrixNet
+uses level 3 (addresses present on three or more independent lists). The
+list is advisory only — MatrixNet labels matching remote addresses and
+never blocks traffic.

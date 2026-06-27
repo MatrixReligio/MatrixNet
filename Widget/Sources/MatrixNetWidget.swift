@@ -19,6 +19,10 @@ private enum Palette {
         light: Color(red: 0.72, green: 0.45, blue: 0.14),
         dark: Color(red: 0.94, green: 0.72, blue: 0.38)
     )
+    static let danger = Color(
+        light: Color(red: 0.72, green: 0.18, blue: 0.16),
+        dark: Color(red: 0.94, green: 0.46, blue: 0.42)
+    )
 }
 
 private extension Color {
@@ -118,12 +122,34 @@ private struct Header: View {
                 .font(.system(size: compact ? 11 : 12, weight: .semibold))
                 .tracking(0.3)
             Spacer(minLength: 0)
+            if snapshot.threatCount > 0 {
+                ThreatChip(count: snapshot.threatCount)
+            }
             if !compact {
                 Image(systemName: "dot.radiowaves.left.and.right")
                     .font(.system(size: 11))
                     .foregroundStyle(Palette.accent)
             }
         }
+    }
+}
+
+/// A small warning chip shown in the header when active connections reach
+/// addresses on the threat list.
+private struct ThreatChip: View {
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 9, weight: .bold))
+            Text(verbatim: "\(count)").font(mono(10, .semibold)).monospacedDigit()
+        }
+        .foregroundStyle(Palette.danger)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 1)
+        .background(Palette.danger.opacity(0.14), in: Capsule())
+        .accessibilityLabel(Text("Threats"))
+        .accessibilityValue(Text(verbatim: "\(count)"))
     }
 }
 
@@ -139,12 +165,17 @@ private struct RateView: View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 3) {
                 Image(systemName: systemImage).font(.system(size: 9, weight: .bold)).foregroundStyle(tint)
-                Text(verbatim: Fmt.rate(rate)).font(mono(12, .medium)).foregroundStyle(.primary)
+                Text(verbatim: Fmt.rate(rate))
+                    .font(mono(12, .medium)).foregroundStyle(.primary)
+                    .lineLimit(1).minimumScaleFactor(0.7)
             }
             if showSession {
-                Text(verbatim: Fmt.bytes(session)).font(mono(9)).foregroundStyle(.secondary)
+                Text(verbatim: Fmt.bytes(session))
+                    .font(mono(9)).foregroundStyle(.secondary)
+                    .lineLimit(1).minimumScaleFactor(0.7)
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 

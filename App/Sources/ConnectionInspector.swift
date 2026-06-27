@@ -22,17 +22,34 @@ struct ConnectionInspector: View {
                     if let host = connection.remoteHostname {
                         LabeledContent("Host") { mono(host) }
                     }
-                    LabeledContent("Scope", value: connection.fiveTuple.destination.address.scope.label)
+                    LabeledContent("Scope") {
+                        Text(LocalizedStringKey(connection.fiveTuple.destination.address.scope.label))
+                    }
+                    roleContent(connection.fiveTuple.role)
+                    if ProxyInfo.routesThroughProxy(connection.fiveTuple.destination) {
+                        LabeledContent("Routing") { Text("Through proxy") }
+                    } else if ProxyInfo.isTunnel(connection.app.displayName) {
+                        LabeledContent("Routing") { Text("VPN/proxy tunnel") }
+                    }
                     if let country = GeoIP.country(for: connection.fiveTuple.destination.address) {
                         let flag = GeoIP.flag(for: connection.fiveTuple.destination.address) ?? ""
                         LabeledContent("Country", value: "\(flag) \(country)")
+                    }
+                    if Threat.isThreat(connection.fiveTuple.destination.address) {
+                        LabeledContent("Threat") {
+                            Label("On threat blocklist", systemImage: "exclamationmark.triangle.fill")
+                                .foregroundStyle(Theme.danger)
+                                .font(.callout.weight(.medium))
+                        }
                     }
                 }
                 Section("Traffic") {
                     LabeledContent("Received") { mono(Format.bytes(connection.bytesIn)) }
                     LabeledContent("Sent") { mono(Format.bytes(connection.bytesOut)) }
                     LabeledContent("Packets") { mono("\(connection.packetsIn) / \(connection.packetsOut)") }
-                    LabeledContent("State", value: connection.state == .active ? "Active" : "Closed")
+                    LabeledContent("State") {
+                        Text(connection.state == .active ? LocalizedStringKey("Active") : LocalizedStringKey("Closed"))
+                    }
                 }
             }
             .formStyle(.grouped)
@@ -42,6 +59,15 @@ struct ConnectionInspector: View {
                 systemImage: "hand.point.up.left",
                 description: Text("Select a connection to inspect its endpoints and traffic.")
             )
+        }
+    }
+
+    @ViewBuilder
+    private func roleContent(_ role: ConnectionRole) -> some View {
+        switch role {
+        case .client: LabeledContent("Role") { Text("Client") }
+        case .server: LabeledContent("Role") { Text("Server") }
+        case .unknown: EmptyView()
         }
     }
 

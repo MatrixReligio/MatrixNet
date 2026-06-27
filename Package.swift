@@ -24,6 +24,7 @@ let package = Package(
         .library(name: "MatrixNetXPC", targets: ["MatrixNetXPC"]),
         .library(name: "MatrixNetStore", targets: ["MatrixNetStore"]),
         .library(name: "MatrixNetGeoIP", targets: ["MatrixNetGeoIP"]),
+        .library(name: "MatrixNetThreat", targets: ["MatrixNetThreat"]),
     ],
     targets: [
         .target(
@@ -57,6 +58,11 @@ let package = Package(
             name: "MatrixNetGeoIP",
             dependencies: ["MatrixNetModel"],
             path: "Sources/MatrixNetGeoIP"
+        ),
+        .target(
+            name: "MatrixNetThreat",
+            dependencies: ["MatrixNetModel"],
+            path: "Sources/MatrixNetThreat"
         ),
         .testTarget(
             name: "MatrixNetModelTests",
@@ -92,6 +98,11 @@ let package = Package(
             name: "MatrixNetGeoIPTests",
             dependencies: ["MatrixNetGeoIP", "MatrixNetModel"],
             path: "Tests/MatrixNetGeoIPTests"
+        ),
+        .testTarget(
+            name: "MatrixNetThreatTests",
+            dependencies: ["MatrixNetThreat", "MatrixNetModel"],
+            path: "Tests/MatrixNetThreatTests"
         ),
         .executableTarget(
             name: "matrixnet-smoke",

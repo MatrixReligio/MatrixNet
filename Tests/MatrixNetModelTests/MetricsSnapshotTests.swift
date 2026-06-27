@@ -17,6 +17,7 @@ struct MetricsSnapshotTests {
         throughputIn: 2048,
         throughputOut: 512,
         topApps: [.init(name: "Safari", bytes: 9000), .init(name: "curl", bytes: 100)],
+        threatCount: 2,
         updatedAt: Date(timeIntervalSince1970: 1_700_000_000)
     )
 
@@ -30,6 +31,7 @@ struct MetricsSnapshotTests {
         #expect(loaded.totalConnections == 42)
         #expect(loaded.throughputIn == 2048)
         #expect(loaded.throughputOut == 512)
+        #expect(loaded.threatCount == 2)
     }
 
     @Test("decodes a legacy snapshot missing the newer fields (defaults to zero)")
@@ -46,6 +48,7 @@ struct MetricsSnapshotTests {
         #expect(loaded.totalConnections == 0)
         #expect(loaded.throughputIn == 0)
         #expect(loaded.throughputOut == 0)
+        #expect(loaded.threatCount == 0)
     }
 
     @Test("reading a missing file returns nil")
