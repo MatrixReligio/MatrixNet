@@ -61,6 +61,9 @@ proxy, filter, or VPN you already use without fighting it.
   blocklist are flagged with a ⚠️ badge (advisory only — MatrixNet labels, it
   never blocks).
 - DNS enrichment maps observed IPs back to hostnames.
+- A **Map tab** plots a real-world, offline dotted globe (Natural Earth, no map
+  tiles) with glowing arcs from this Mac to every country it is talking to —
+  node size by connection count, threat destinations in red.
 - Connection history you can look back through ("which app connected where
   yesterday").
 
@@ -281,9 +284,11 @@ norm. Thanks to the **Wireshark** and **tcpdump/libpcap** projects for decades o
 protocol dissection and capture work, and to **Little Snitch** and **LuLu** for
 showing what per-app network awareness on macOS can be.
 
-Bundled data: country geolocation by [DB-IP](https://db-ip.com) (CC-BY-4.0) and
-the threat-IP list derived from [IPsum](https://github.com/stamparm/ipsum)
-(public domain). See [`NOTICE`](./NOTICE) for full attributions.
+Bundled data: country geolocation by [DB-IP](https://db-ip.com) (CC-BY-4.0), the
+threat-IP list derived from [IPsum](https://github.com/stamparm/ipsum) (public
+domain), and the Map tab's world geometry from
+[Natural Earth](https://www.naturalearthdata.com) (public domain). See
+[`NOTICE`](./NOTICE) for full attributions.
 
 ---
 

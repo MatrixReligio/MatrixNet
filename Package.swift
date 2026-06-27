@@ -25,6 +25,7 @@ let package = Package(
         .library(name: "MatrixNetStore", targets: ["MatrixNetStore"]),
         .library(name: "MatrixNetGeoIP", targets: ["MatrixNetGeoIP"]),
         .library(name: "MatrixNetThreat", targets: ["MatrixNetThreat"]),
+        .library(name: "MatrixNetMap", targets: ["MatrixNetMap"]),
     ],
     targets: [
         .target(
@@ -63,6 +64,10 @@ let package = Package(
             name: "MatrixNetThreat",
             dependencies: ["MatrixNetModel"],
             path: "Sources/MatrixNetThreat"
+        ),
+        .target(
+            name: "MatrixNetMap",
+            path: "Sources/MatrixNetMap"
         ),
         .testTarget(
             name: "MatrixNetModelTests",
@@ -104,10 +109,20 @@ let package = Package(
             dependencies: ["MatrixNetThreat", "MatrixNetModel"],
             path: "Tests/MatrixNetThreatTests"
         ),
+        .testTarget(
+            name: "MatrixNetMapTests",
+            dependencies: ["MatrixNetMap"],
+            path: "Tests/MatrixNetMapTests"
+        ),
         .executableTarget(
             name: "matrixnet-smoke",
             dependencies: ["MatrixNetCapture", "MatrixNetModel"],
             path: "Tools/SmokeNStat"
+        ),
+        .executableTarget(
+            name: "MapConvert",
+            dependencies: ["MatrixNetMap"],
+            path: "Tools/MapConvert"
         ),
     ]
 )

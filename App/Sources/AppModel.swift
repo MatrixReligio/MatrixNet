@@ -50,6 +50,8 @@ public final class AppModel {
     public private(set) var protocolMix: [ProtocolShare] = []
     /// Active connections grouped by destination country (most connections first).
     public private(set) var destinationCountries: [CountryActivity] = []
+    /// Countries that currently host at least one threat-flagged active remote.
+    public private(set) var threatCountries: Set<String> = []
     /// The busiest apps, enriched with live connection count, country flag, and
     /// threat/tunnel markers for the Overview "Top Talkers" list.
     private(set) var topTalkers: [TopTalker] = []
@@ -188,6 +190,7 @@ public final class AppModel {
         proxyShare = OverviewStats.proxyShare(connections) { ProxyInfo.routesThroughProxy($0) }
         protocolMix = OverviewStats.protocolMix(connections)
         destinationCountries = OverviewStats.destinationCountries(connections) { GeoIP.country(for: $0) }
+        threatCountries = Set(threats.compactMap { GeoIP.country(for: $0.fiveTuple.destination.address) })
         topTalkers = makeTopTalkers(connections: connections)
 
         updateThroughput(session: session)

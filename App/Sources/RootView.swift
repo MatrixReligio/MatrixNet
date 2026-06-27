@@ -8,6 +8,7 @@ struct RootView: View {
     enum Section: String, CaseIterable, Identifiable {
         case overview
         case connections
+        case map
         case packets
         case history
 
@@ -19,6 +20,7 @@ struct RootView: View {
             switch self {
             case .overview: "Overview"
             case .connections: "Connections"
+            case .map: "Map"
             case .packets: "Packets"
             case .history: "History"
             }
@@ -28,6 +30,7 @@ struct RootView: View {
             switch self {
             case .overview: "chart.bar.xaxis.ascending"
             case .connections: "point.3.connected.trianglepath.dotted"
+            case .map: "globe"
             case .packets: "scope"
             case .history: "clock.arrow.circlepath"
             }
@@ -46,6 +49,7 @@ struct RootView: View {
             switch selection {
             case .overview: OverviewView()
             case .connections: ConnectionsView()
+            case .map: GlobeView()
             case .packets: PacketsView()
             case .history: HistoryView()
             }

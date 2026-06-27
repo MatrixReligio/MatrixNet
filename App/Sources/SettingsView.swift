@@ -1,4 +1,5 @@
 import MatrixNetModel
+import ServiceManagement
 import SwiftUI
 
 /// MatrixNet preferences window (Cmd-,), grouped into General, Updates and Data.
@@ -36,13 +37,17 @@ private struct GeneralSettings: View {
             Section {
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, newValue in applyLaunchAtLogin(newValue) }
+                Button("Manage in System Settings…") {
+                    SMAppService.openSystemSettingsLoginItems()
+                }
+                .controlSize(.small)
                 if let loginError {
                     Text(loginError)
                         .font(.caption)
                         .foregroundStyle(Theme.danger)
                 }
             } footer: {
-                Text("Start MatrixNet automatically when you log in.")
+                Text("Start MatrixNet at login — added silently; verify under Login Items.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

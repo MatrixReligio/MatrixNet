@@ -52,3 +52,10 @@ the Unlicense. IPsum aggregates publicly available blocklists; MatrixNet
 uses level 3 (addresses present on three or more independent lists). The
 list is advisory only — MatrixNet labels matching remote addresses and
 never blocks traffic.
+
+------------------------------------------------------------------------
+World map geometry (the dotted base map and per-country centroids on the Map
+tab, bundled at build time via scripts/build-worldmap.sh) is derived from
+Natural Earth (https://www.naturalearthdata.com), 1:110m admin-0 countries,
+which is in the public domain ("no rights reserved"). The map is drawn
+entirely offline from this bundled dataset; MatrixNet never fetches map tiles.

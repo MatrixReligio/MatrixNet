@@ -50,12 +50,17 @@ struct MatrixNetApp: App {
     }
 }
 
-/// The menu-bar status item label: live down/up throughput. Reading the model's
-/// rates here is what makes the menu-bar title update as traffic changes.
+/// The menu-bar status item label: the brand icon plus live down/up throughput.
+/// The icon keeps the item recognizable in a crowded menu bar (and findable when
+/// the app runs Dock-less); reading the model's rates makes the text update live.
 private struct MenuBarTitle: View {
     let model: AppModel
 
     var body: some View {
-        Text(MenuBarRateFormatter.compact(in: model.throughputIn, out: model.throughputOut))
+        Label {
+            Text(MenuBarRateFormatter.compact(in: model.throughputIn, out: model.throughputOut))
+        } icon: {
+            Image(systemName: "dot.radiowaves.left.and.right")
+        }
     }
 }

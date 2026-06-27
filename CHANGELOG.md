@@ -10,6 +10,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-06-27
+
+### Added
+- **Map tab — a live world globe.** A new sidebar section renders a real-world
+  dotted map (from the public-domain Natural Earth 1:110m dataset, drawn entirely
+  offline — no map tiles) with glowing arcs from this Mac to every country it is
+  currently talking to. Node size grows with the connection count, threat
+  destinations pulse red, and a side list plus hover tooltip name each
+  destination. A Live/History switch and a "Threats only" filter are included.
+
+### Fixed
+- **The menu-bar item shows its icon again** alongside the live ↓/↑ rate, so it
+  stays recognizable in a crowded menu bar (and findable when running Dock-less).
+- **Launch at login** gains a "Manage in System Settings…" button and clearer
+  wording: `SMAppService` adds the login item silently (no prompt), so this lets
+  you verify it under Login Items.
+
 ## [0.1.10] - 2026-06-27
 
 ### Fixed
@@ -230,7 +247,8 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.10...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.11...HEAD
+[0.1.11]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.11
 [0.1.10]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.10
 [0.1.9]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.9
 [0.1.8]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.8
