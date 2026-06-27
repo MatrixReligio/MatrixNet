@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-27
+
 ### Fixed
 - **Top Talkers and the widget now show real per-app traffic.** They summed the
   live snapshot's instantaneous per-connection byte counters, which the kernel
@@ -80,5 +82,6 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.1
 [0.1.0]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.0
