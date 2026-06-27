@@ -157,7 +157,7 @@ private struct HistoryDetail: View {
                     row("Outbound", Format.bytes(UInt64(record.bytesOut)), mono: true)
                     row("Sightings", "\(record.sightings)", mono: true)
                     Divider()
-                    row("First Seen", record.firstSeen.formatted(date: .abbreviated, time: .shortened))
+                    row("First Seen", record.firstSeen.formatted(date: .abbreviated, time: .standard))
                     row("Last Seen", record.lastSeen.formatted(date: .abbreviated, time: .standard))
                 }
                 .padding(16)

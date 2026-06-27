@@ -50,6 +50,25 @@ struct HistoryStoreTests {
         #expect(record.firstSeen == Date(timeIntervalSince1970: 1000))
     }
 
+    @Test("collapses duplicate tuples within one batch: one sighting, summed bytes")
+    func collapsesWithinBatch() throws {
+        let store = try HistoryStore.inMemory()
+        // Three concurrent sockets to the same app+host+proto, recorded together.
+        try store.record([
+            summary("Spark", "198.0.0.11", bytesIn: 100, bytesOut: 10, at: Date(timeIntervalSince1970: 1000)),
+            summary("Spark", "198.0.0.11", bytesIn: 200, bytesOut: 20, at: Date(timeIntervalSince1970: 1002)),
+            summary("Spark", "198.0.0.11", bytesIn: 300, bytesOut: 30, at: Date(timeIntervalSince1970: 1004))
+        ])
+        let records = try store.recent()
+        #expect(records.count == 1)
+        let record = try #require(records.first)
+        #expect(record.sightings == 1) // one sample, not three
+        #expect(record.bytesIn == 600) // summed across concurrent sockets
+        #expect(record.bytesOut == 60)
+        #expect(record.firstSeen == Date(timeIntervalSince1970: 1000)) // earliest in batch
+        #expect(record.lastSeen == Date(timeIntervalSince1970: 1004)) // latest in batch
+    }
+
     @Test("returns records newest-first and honours the limit")
     func recentOrderAndLimit() throws {
         let store = try HistoryStore.inMemory()

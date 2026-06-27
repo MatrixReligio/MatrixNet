@@ -10,6 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-06-27
+
+### Fixed
+- **History "Seen" count is now per-sample.** Observations sharing the same
+  app + host + protocol within one 5-second sample are collapsed, so the count
+  reflects how many samples a connection appeared in — no longer inflated by how
+  many concurrent sockets an app holds to that host. Per-host bytes are now the
+  sum across those sockets instead of the largest single one.
+- **History detail timestamps** use a consistent format (both "First Seen" and
+  "Last Seen" now show seconds).
+
+### Changed
+- **Small widget throughput** is laid out as two stacked full-width rows so both
+  rates render at one consistent size instead of one shrinking to fit.
+
 ## [0.1.6] - 2026-06-27
 
 ### Fixed
@@ -162,7 +177,8 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.7
 [0.1.6]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.6
 [0.1.5]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.5
 [0.1.4]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.4

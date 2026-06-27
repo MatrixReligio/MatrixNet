@@ -234,18 +234,26 @@ private struct SmallWidget: View {
             Spacer(minLength: 6)
             Divider().opacity(0.4)
             Spacer(minLength: 6)
-            HStack(spacing: 8) {
-                column("arrow.down", snapshot.throughputIn, snapshot.bytesIn, Palette.inbound)
-                column("arrow.up", snapshot.throughputOut, snapshot.bytesOut, Palette.outbound)
+            // Stacked full-width rows (rather than side-by-side) so each rate has
+            // room to render at one consistent size without auto-shrinking.
+            VStack(alignment: .leading, spacing: 5) {
+                rateRow("arrow.down", snapshot.throughputIn, snapshot.bytesIn, Palette.inbound)
+                rateRow("arrow.up", snapshot.throughputOut, snapshot.bytesOut, Palette.outbound)
             }
         }
     }
 
-    /// A throughput readout that takes an equal half of the widget's width, so
-    /// the two never crowd each other into wrapping.
-    private func column(_ image: String, _ rate: Double, _ session: UInt64, _ tint: Color) -> some View {
-        RateView(systemImage: image, rate: rate, session: session, tint: tint)
-            .frame(maxWidth: .infinity, alignment: .leading)
+    private func rateRow(_ image: String, _ rate: Double, _ session: UInt64, _ tint: Color) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: image).font(.system(size: 10, weight: .bold)).foregroundStyle(tint)
+            Text(verbatim: Fmt.rate(rate))
+                .font(mono(13, .medium)).foregroundStyle(.primary)
+                .lineLimit(1).minimumScaleFactor(0.8)
+            Spacer(minLength: 6)
+            Text(verbatim: Fmt.bytes(session))
+                .font(mono(9)).foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
     }
 }
 
