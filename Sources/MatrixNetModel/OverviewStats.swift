@@ -11,14 +11,17 @@ public struct ProtocolShare: Equatable, Sendable {
     }
 }
 
-/// Total bytes attributed to a destination country.
-public struct CountryTraffic: Equatable, Sendable {
+/// How many active connections reach a destination country. Ranked by count
+/// rather than bytes because the kernel reports 0 per-connection bytes for many
+/// sockets (idle keep-alives, proxied/loopback flows), which would leave the
+/// bars empty.
+public struct CountryActivity: Equatable, Sendable {
     public let country: String
-    public let bytes: UInt64
+    public let connections: Int
 
-    public init(country: String, bytes: UInt64) {
+    public init(country: String, connections: Int) {
         self.country = country
-        self.bytes = bytes
+        self.connections = connections
     }
 }
 
@@ -98,21 +101,21 @@ public enum OverviewStats {
             }
     }
 
-    /// Active traffic grouped by destination country, most bytes first.
+    /// Active connections grouped by destination country, most connections first.
     public static func destinationCountries(
         _ connections: [Connection],
         country: (IPAddress) -> String?
-    ) -> [CountryTraffic] {
-        var bytes: [String: UInt64] = [:]
+    ) -> [CountryActivity] {
+        var counts: [String: Int] = [:]
         for connection in active(connections) {
             if let code = country(connection.fiveTuple.destination.address) {
-                bytes[code, default: 0] &+= connection.totalBytes
+                counts[code, default: 0] += 1
             }
         }
-        return bytes
-            .map { CountryTraffic(country: $0.key, bytes: $0.value) }
+        return counts
+            .map { CountryActivity(country: $0.key, connections: $0.value) }
             .sorted { lhs, rhs in
-                lhs.bytes != rhs.bytes ? lhs.bytes > rhs.bytes : lhs.country < rhs.country
+                lhs.connections != rhs.connections ? lhs.connections > rhs.connections : lhs.country < rhs.country
             }
     }
 }

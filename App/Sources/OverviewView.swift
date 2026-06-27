@@ -83,6 +83,14 @@ private struct ThroughputChart: View {
     let samples: [ThroughputSample]
     let inRate: Double
     let outRate: Double
+    @State private var selectedTime: Date?
+
+    private var selectedSample: ThroughputSample? {
+        guard let selectedTime else { return nil }
+        return samples.min {
+            abs($0.time.timeIntervalSince(selectedTime)) < abs($1.time.timeIntervalSince(selectedTime))
+        }
+    }
 
     var body: some View {
         Panel {
@@ -101,10 +109,10 @@ private struct ThroughputChart: View {
                 Text("Gathering throughput…")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .frame(height: 150, alignment: .center)
+                    .frame(height: 160, alignment: .center)
                     .frame(maxWidth: .infinity)
             } else {
-                chart.frame(height: 150)
+                chart.frame(height: 160)
             }
         }
     }
@@ -112,31 +120,49 @@ private struct ThroughputChart: View {
     private var chart: some View {
         Chart {
             ForEach(samples, id: \.time) { sample in
-                AreaMark(
-                    x: .value("Time", sample.time),
-                    y: .value("Rate", sample.inRate)
-                )
-                .foregroundStyle(
-                    .linearGradient(
-                        colors: [Theme.inbound.opacity(0.28), Theme.inbound.opacity(0.02)],
-                        startPoint: .top,
-                        endPoint: .bottom
+                AreaMark(x: .value("Time", sample.time), y: .value("Down", sample.inRate))
+                    .foregroundStyle(
+                        .linearGradient(
+                            colors: [Theme.inbound.opacity(0.25), Theme.inbound.opacity(0.02)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                     )
-                )
-                .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
             }
             ForEach(samples, id: \.time) { sample in
-                LineMark(x: .value("Time", sample.time), y: .value("Rate", sample.inRate))
+                LineMark(x: .value("Time", sample.time), y: .value("Down", sample.inRate))
                     .foregroundStyle(Theme.inbound)
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
             }
             ForEach(samples, id: \.time) { sample in
-                LineMark(x: .value("Time", sample.time), y: .value("Rate", sample.outRate))
+                LineMark(x: .value("Time", sample.time), y: .value("Up", sample.outRate))
                     .foregroundStyle(Theme.outbound)
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
+            }
+            if let selectedSample {
+                RuleMark(x: .value("Time", selectedSample.time))
+                    .foregroundStyle(Color.secondary.opacity(0.35))
+                    .annotation(
+                        position: .top,
+                        spacing: 4,
+                        overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
+                    ) {
+                        tooltip(selectedSample)
+                    }
+                PointMark(x: .value("Time", selectedSample.time), y: .value("Down", selectedSample.inRate))
+                    .foregroundStyle(Theme.inbound)
+                PointMark(x: .value("Time", selectedSample.time), y: .value("Up", selectedSample.outRate))
+                    .foregroundStyle(Theme.outbound)
             }
         }
-        .chartXAxis(.hidden)
+        .chartXSelection(value: $selectedTime)
+        .chartXAxis {
+            AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                AxisGridLine()
+                AxisValueLabel(format: .dateTime.minute().second())
+            }
+        }
         .chartYAxis {
             AxisMarks(position: .leading) { value in
                 AxisGridLine()
@@ -147,6 +173,20 @@ private struct ThroughputChart: View {
                 }
             }
         }
+    }
+
+    private func tooltip(_ sample: ThroughputSample) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(sample.time, format: .dateTime.hour().minute().second())
+                .font(.caption2).foregroundStyle(.secondary)
+            Text(verbatim: "↓ \(Format.rate(sample.inRate))")
+                .foregroundStyle(Theme.inbound)
+            Text(verbatim: "↑ \(Format.rate(sample.outRate))")
+                .foregroundStyle(Theme.outbound)
+        }
+        .font(Theme.mono(11))
+        .padding(6)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }
 
@@ -292,7 +332,7 @@ private struct ProtocolMixPanel: View {
 // MARK: - Destination countries
 
 private struct DestinationCountriesPanel: View {
-    let countries: [CountryTraffic]
+    let countries: [CountryActivity]
 
     var body: some View {
         Panel {
@@ -301,29 +341,32 @@ private struct DestinationCountriesPanel: View {
                 Text("No located traffic.")
                     .font(.caption).foregroundStyle(.secondary).padding(.vertical, 6)
             } else {
-                let maxBytes = countries.first?.bytes ?? 1
+                let maxCount = countries.first?.connections ?? 1
                 ForEach(Array(countries.prefix(5)), id: \.country) { entry in
                     HStack(spacing: 8) {
                         Text(verbatim: GeoIPDatabase.flag(for: entry.country) ?? "🏳️")
                         Text(verbatim: Locale.current.localizedString(forRegionCode: entry.country) ?? entry.country)
-                            .font(.caption).lineLimit(1).frame(width: 90, alignment: .leading)
+                            .font(.caption).lineLimit(1).frame(width: 78, alignment: .leading)
                         GeometryReader { geometry in
                             Capsule().fill(Theme.inbound.opacity(0.16))
                                 .overlay(alignment: .leading) {
                                     Capsule().fill(Theme.inbound)
-                                        .frame(width: geometry.size.width * fraction(entry.bytes, maxBytes))
+                                        .frame(width: geometry.size.width * fraction(entry.connections, maxCount))
                                 }
                         }
                         .frame(height: 5)
+                        Text(verbatim: "\(entry.connections)")
+                            .font(Theme.mono(10)).foregroundStyle(.secondary)
+                            .frame(width: 22, alignment: .trailing)
                     }
                 }
             }
         }
     }
 
-    private func fraction(_ bytes: UInt64, _ maxBytes: UInt64) -> Double {
-        guard maxBytes > 0 else { return 0 }
-        return max(0.04, Double(bytes) / Double(maxBytes))
+    private func fraction(_ count: Int, _ maxCount: Int) -> Double {
+        guard maxCount > 0 else { return 0 }
+        return max(0.04, Double(count) / Double(maxCount))
     }
 }
 

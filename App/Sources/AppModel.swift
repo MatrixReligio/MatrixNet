@@ -48,8 +48,8 @@ public final class AppModel {
     public private(set) var proxyShare: Double = 0
     /// Active-connection share by application protocol (most common first).
     public private(set) var protocolMix: [ProtocolShare] = []
-    /// Active traffic grouped by destination country (most bytes first).
-    public private(set) var destinationCountries: [CountryTraffic] = []
+    /// Active connections grouped by destination country (most connections first).
+    public private(set) var destinationCountries: [CountryActivity] = []
     /// The busiest apps, enriched with live connection count, country flag, and
     /// threat/tunnel markers for the Overview "Top Talkers" list.
     private(set) var topTalkers: [TopTalker] = []

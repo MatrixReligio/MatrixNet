@@ -10,6 +10,13 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%2026%2B-black)](#系统要求)
 [![Swift](https://img.shields.io/badge/Swift-6-orange)](https://swift.org)
+[![Release](https://img.shields.io/github/v/release/MatrixReligio/MatrixNet?sort=semver&color=brightgreen&label=%E5%8F%91%E5%B8%83)](https://github.com/MatrixReligio/MatrixNet/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/MatrixReligio/MatrixNet/total?label=%E4%B8%8B%E8%BD%BD%E9%87%8F&color=success)](https://github.com/MatrixReligio/MatrixNet/releases)
+[![Stars](https://img.shields.io/github/stars/MatrixReligio/MatrixNet?color=yellow)](https://github.com/MatrixReligio/MatrixNet/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/MatrixReligio/MatrixNet?label=%E6%9C%80%E8%BF%91%E6%8F%90%E4%BA%A4)](https://github.com/MatrixReligio/MatrixNet/commits/main)
+[![Notarized](https://img.shields.io/badge/Developer%20ID-%E5%B7%B2%E5%85%AC%E8%AF%81-success?logo=apple&logoColor=white)](#安装)
+[![Passive](https://img.shields.io/badge/%E8%A2%AB%E5%8A%A8-%E9%9B%B6%E5%86%B2%E7%AA%81-8A2BE2)](#隐私)
+[![No telemetry](https://img.shields.io/badge/%E9%81%A5%E6%B5%8B-%E6%97%A0-success)](#隐私)
 
 > **状态:第一阶段,持续开发中。** MatrixNet 仍处于早期阶段。架构已确定,核心库以测试驱动方式构建,连接监控与深度抓包均已在真机跑通并签名公证,但功能尚未完全定型,接口与界面仍可能调整。
 

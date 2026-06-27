@@ -12,6 +12,13 @@ for *what is on the wire* — and every packet knows which app sent it.
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%2026%2B-black)](#requirements)
 [![Swift](https://img.shields.io/badge/Swift-6-orange)](https://swift.org)
+[![Release](https://img.shields.io/github/v/release/MatrixReligio/MatrixNet?sort=semver&color=brightgreen)](https://github.com/MatrixReligio/MatrixNet/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/MatrixReligio/MatrixNet/total?label=downloads&color=success)](https://github.com/MatrixReligio/MatrixNet/releases)
+[![Stars](https://img.shields.io/github/stars/MatrixReligio/MatrixNet?color=yellow)](https://github.com/MatrixReligio/MatrixNet/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/MatrixReligio/MatrixNet)](https://github.com/MatrixReligio/MatrixNet/commits/main)
+[![Notarized](https://img.shields.io/badge/Developer%20ID-notarized-success?logo=apple&logoColor=white)](#installation)
+[![Passive](https://img.shields.io/badge/passive-zero--conflict-8A2BE2)](#privacy)
+[![No telemetry](https://img.shields.io/badge/telemetry-none-success)](#privacy)
 
 > **Status: Phase 1, work in progress.** MatrixNet is an early-stage project
 > under active development. The architecture is settled and the core libraries

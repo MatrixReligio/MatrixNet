@@ -10,6 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-06-27
+
+### Fixed
+- **Overview throughput chart** no longer overshoots into stray loops below the
+  axis — it uses monotone interpolation. It now has a **time x-axis** and a
+  **hover readout**: move the pointer to see point markers and a tooltip with the
+  exact ↓/↑ rates at that moment.
+- **Overview "Destinations"** bars are populated again. They now rank countries by
+  **active connection count** (reliable) instead of per-connection bytes, which
+  the kernel reports as 0 for many sockets — leaving the bars empty.
+
+### Changed
+- Added project status badges to the README (latest release, downloads, stars,
+  last commit, notarized, passive · zero-conflict, no telemetry).
+
 ## [0.1.9] - 2026-06-27
 
 ### Changed
@@ -215,7 +230,8 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.9...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.10...HEAD
+[0.1.10]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.10
 [0.1.9]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.9
 [0.1.8]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.8
 [0.1.7]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.7

@@ -76,16 +76,17 @@ struct OverviewStatsTests {
         #expect(Set(mix.map(\.label)) == ["TLS", "DNS", "QUIC"])
     }
 
-    @Test("destination countries rank by total bytes")
+    @Test("destination countries rank by active connection count")
     func destinations() throws {
         let connections = try [
-            connection(pid: 1, dest: "93.184.216.34", bytes: 100),
-            connection(pid: 2, dest: "1.1.1.1", bytes: 50),
-            connection(pid: 3, dest: "8.8.8.8", bytes: 400)
+            connection(pid: 1, dest: "93.184.216.34"),
+            connection(pid: 2, dest: "1.1.1.1"),
+            connection(pid: 3, dest: "8.8.8.8"),
+            connection(pid: 4, dest: "9.9.9.9", state: .closed)
         ]
-        let map = ["93.184.216.34": "US", "1.1.1.1": "US", "8.8.8.8": "JP"]
+        let map = ["93.184.216.34": "US", "1.1.1.1": "US", "8.8.8.8": "JP", "9.9.9.9": "JP"]
         let ranked = OverviewStats.destinationCountries(connections) { map[$0.description] }
-        #expect(ranked.map(\.country) == ["JP", "US"]) // JP 400 > US 150
-        #expect(ranked.first?.bytes == 400)
+        #expect(ranked.map(\.country) == ["US", "JP"]) // US 2 active > JP 1 active
+        #expect(ranked.first?.connections == 2)
     }
 }
