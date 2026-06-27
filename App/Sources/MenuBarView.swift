@@ -16,13 +16,15 @@ struct MenuBarView: View {
                 Label("MatrixNet", systemImage: "dot.radiowaves.left.and.right")
                     .font(.headline)
                 Spacer()
-                Toggle("", isOn: Binding(
+                Toggle("Monitoring", isOn: Binding(
                     get: { model.isMonitoring },
                     set: { $0 ? model.start() : model.stop() }
                 ))
                 .toggleStyle(.switch)
                 .controlSize(.mini)
                 .tint(Theme.accent)
+                .font(.caption)
+                .help("Pause or resume passive monitoring")
             }
 
             HStack(spacing: 16) {
