@@ -77,7 +77,11 @@ public struct MetricsSnapshot: Codable, Sendable, Equatable {
 /// File access is injectable for testing; the default location is the shared
 /// App Group container so the sandboxed widget extension can read it.
 public enum SharedMetricsStore {
-    public static let appGroupIdentifier = "group.com.matrixreligio.matrixnet"
+    // Team-ID-prefixed App Group. macOS (Sequoia+) prompts "wants to access data
+    // from other apps" on every launch for a non-App-Store app that reaches a
+    // `group.*` container, but NOT one prefixed with the Team ID — so the app and
+    // its sandboxed widget share this container silently.
+    public static let appGroupIdentifier = "4DUQGD879H.com.matrixreligio.matrixnet"
     public static let fileName = "metrics.json"
 
     /// Default shared-container URL, or `nil` if the App Group is unavailable.

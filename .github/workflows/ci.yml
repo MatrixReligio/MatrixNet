@@ -41,7 +41,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install tools
-        run: brew install swiftlint swiftformat
+        # The runner image pre-taps aws/tap; newer Homebrew requires tap trust
+        # and warns on every invocation. Untap it so the logs stay clean.
+        run: |
+          brew untap aws/tap 2>/dev/null || true
+          brew install swiftlint swiftformat
       - name: SwiftLint (strict, warnings are errors)
         run: swiftlint lint --strict
       - name: SwiftFormat (lint mode)

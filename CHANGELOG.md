@@ -10,6 +10,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-06-27
+
+### Added
+- **Sortable, resizable, persistent table columns** across the Connections,
+  History, and Packets tables: click any header to sort, drag dividers to
+  resize, reorder or hide columns — the layout is remembered across launches.
+
+### Fixed
+- **No more "wants to access data from other apps" prompt on every launch.** The
+  shared App Group is now prefixed with the Team ID, which macOS does not gate
+  behind that per-launch privacy prompt for a Developer ID app — so the app and
+  its widget share live metrics silently.
+
+### Changed
+- The widget reload nudge is rate-limited so WidgetKit's refresh budget is not
+  exhausted (which had left the widget showing stale, empty data).
+
 ## [0.1.1] - 2026-06-27
 
 ### Fixed
@@ -82,6 +99,7 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.2
 [0.1.1]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.1
 [0.1.0]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.0

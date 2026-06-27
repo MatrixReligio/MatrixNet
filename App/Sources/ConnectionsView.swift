@@ -8,6 +8,7 @@ struct ConnectionsView: View {
     @State private var search = ""
     @State private var selection: Connection.ID?
     @State private var sortOrder = [KeyPathComparator(\Connection.lastActivityAt, order: .reverse)]
+    @State private var columns = TableColumnCustomization<Connection>()
     @State private var showInspector = true
 
     private var filtered: [Connection] {
@@ -39,20 +40,22 @@ struct ConnectionsView: View {
     }
 
     private var table: some View {
-        Table(filtered, selection: $selection, sortOrder: $sortOrder) {
-            TableColumn("Application") { connection in
+        Table(filtered, selection: $selection, sortOrder: $sortOrder, columnCustomization: $columns) {
+            TableColumn("Application", value: \.app.displayName) { connection in
                 AppCell(app: connection.app)
             }
-            .width(min: 180, ideal: 220)
+            .width(min: 160, ideal: 220)
+            .customizationID("application")
 
             TableColumn("Proto", value: \.fiveTuple.proto.displayName) { connection in
                 Text(connection.fiveTuple.proto.displayName)
                     .font(Theme.mono(11))
                     .foregroundStyle(.secondary)
             }
-            .width(52)
+            .width(min: 44, ideal: 52, max: 90)
+            .customizationID("proto")
 
-            TableColumn("Remote") { connection in
+            TableColumn("Remote", value: \.fiveTuple.destination.address.description) { connection in
                 HStack(spacing: 5) {
                     if let flag = GeoIP.flag(for: connection.fiveTuple.destination.address) {
                         Text(flag)
@@ -65,6 +68,7 @@ struct ConnectionsView: View {
                 }
             }
             .width(min: 160, ideal: 220)
+            .customizationID("remote")
 
             TableColumn("In", value: \.bytesIn) { connection in
                 Text(Format.bytes(connection.bytesIn))
@@ -72,7 +76,8 @@ struct ConnectionsView: View {
                     .foregroundStyle(Theme.inbound)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
-            .width(72)
+            .width(min: 56, ideal: 76, max: 140)
+            .customizationID("in")
 
             TableColumn("Out", value: \.bytesOut) { connection in
                 Text(Format.bytes(connection.bytesOut))
@@ -80,14 +85,17 @@ struct ConnectionsView: View {
                     .foregroundStyle(Theme.outbound)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
-            .width(72)
+            .width(min: 56, ideal: 76, max: 140)
+            .customizationID("out")
 
-            TableColumn("State") { connection in
+            TableColumn("State", value: \.state) { connection in
                 StateBadge(state: connection.state)
             }
-            .width(72)
+            .width(min: 60, ideal: 76, max: 120)
+            .customizationID("state")
         }
         .tableStyle(.inset)
+        .persistTableColumns($columns, key: "table.connections")
     }
 
     @ToolbarContentBuilder

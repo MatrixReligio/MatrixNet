@@ -10,9 +10,15 @@ import UniformTypeIdentifiers
 struct PacketsView: View {
     @Environment(PacketCaptureModel.self) private var capture
     @State private var selection: UInt64?
+    @State private var sortOrder = [KeyPathComparator(\PacketRow.timestamp, order: .forward)]
+    @State private var columns = TableColumnCustomization<PacketRow>()
 
     private var selectedPacket: PacketRow? {
         capture.packets.first { $0.id == selection }
+    }
+
+    private var sortedPackets: [PacketRow] {
+        capture.packets.sorted(using: sortOrder)
     }
 
     var body: some View {
@@ -87,14 +93,22 @@ struct PacketsView: View {
     }
 
     private var packetList: some View {
-        Table(capture.packets, selection: $selection) {
-            TableColumn("Time") { Text($0.timestamp, format: .dateTime.hour().minute().second()) }
-                .width(70)
-            TableColumn("Process") { Text($0.processName).lineLimit(1) }.width(min: 90, ideal: 120)
-            TableColumn("Proto") { Text($0.highestProtocol).font(Theme.mono(11)).foregroundStyle(Theme.accent) }
-                .width(56)
-            TableColumn("Summary") { Text($0.summary).font(Theme.mono(11)).lineLimit(1) }
+        Table(sortedPackets, selection: $selection, sortOrder: $sortOrder, columnCustomization: $columns) {
+            TableColumn("Time", value: \.timestamp) { Text($0.timestamp, format: .dateTime.hour().minute().second()) }
+                .width(min: 60, ideal: 70, max: 110)
+                .customizationID("time")
+            TableColumn("Process", value: \.processName) { Text($0.processName).lineLimit(1) }
+                .width(min: 80, ideal: 120)
+                .customizationID("process")
+            TableColumn("Proto", value: \.highestProtocol) {
+                Text($0.highestProtocol).font(Theme.mono(11)).foregroundStyle(Theme.accent)
+            }
+            .width(min: 48, ideal: 56, max: 90)
+            .customizationID("proto")
+            TableColumn("Summary", value: \.summary) { Text($0.summary).font(Theme.mono(11)).lineLimit(1) }
+                .customizationID("summary")
         }
+        .persistTableColumns($columns, key: "table.packets")
     }
 
     private var enableState: some View {

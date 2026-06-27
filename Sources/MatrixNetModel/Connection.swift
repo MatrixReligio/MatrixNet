@@ -1,7 +1,9 @@
 import Foundation
 
 /// The lifecycle state of a connection as observed passively.
-public enum ConnectionState: Sendable, Hashable {
+/// `Comparable` (active < closed, by declaration order) lets the connections
+/// table sort by state.
+public enum ConnectionState: Sendable, Hashable, Comparable {
     case active
     case closed
 }
