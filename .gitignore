@@ -47,3 +47,4 @@ coverage/
 
 # GeoIP database (CC-BY DB-IP; large + monthly; built via scripts/build-geoip.sh)
 App/Resources/geoip.dat
+.superpowers/
