@@ -69,9 +69,16 @@ public struct GeoIPDatabase: Sendable {
         return nil
     }
 
-    /// The flag emoji for an ISO country code (e.g. "US" -> 🇺🇸).
+    /// Placeholder/user-assigned codes that are not real countries; turning them
+    /// into regional-indicator pairs renders as missing-glyph boxes.
+    private static let placeholderCodes: Set<String> = ["ZZ", "XX", "??"]
+
+    /// The flag emoji for an ISO country code (e.g. "US" -> 🇺🇸). Returns `nil`
+    /// for placeholder codes like "ZZ" (DB-IP's marker for unknown/reserved
+    /// ranges) so they never show as tofu.
     public static func flag(for countryCode: String) -> String? {
         guard countryCode.count == 2 else { return nil }
+        guard !placeholderCodes.contains(countryCode.uppercased()) else { return nil }
         let base: UInt32 = 0x1F1E6
         var scalars = String.UnicodeScalarView()
         for character in countryCode.uppercased().unicodeScalars {

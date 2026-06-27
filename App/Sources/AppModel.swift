@@ -38,6 +38,22 @@ public final class AppModel {
     /// list. Surfaced in the app and widget; advisory only (never blocks).
     public private(set) var threatCount: Int = 0
 
+    /// Recent throughput samples (≈ last minute) for the Overview live chart.
+    public private(set) var throughputHistory = ThroughputHistory(capacity: 60)
+    /// Distinct processes with an active connection.
+    public private(set) var activeAppCount: Int = 0
+    /// Distinct known destination countries among active connections.
+    public private(set) var countriesReached: Int = 0
+    /// Fraction (0...1) of active connections routed through a proxy.
+    public private(set) var proxyShare: Double = 0
+    /// Active-connection share by application protocol (most common first).
+    public private(set) var protocolMix: [ProtocolShare] = []
+    /// Active traffic grouped by destination country (most bytes first).
+    public private(set) var destinationCountries: [CountryTraffic] = []
+    /// The busiest apps, enriched with live connection count, country flag, and
+    /// threat/tunnel markers for the Overview "Top Talkers" list.
+    private(set) var topTalkers: [TopTalker] = []
+
     /// Posts threat-connection notifications; set by the app delegate at launch.
     var threatNotifier: ThreatNotifier?
     private let preferences = Preferences(defaults: SharedMetricsStore.sharedDefaults ?? .standard)
@@ -167,9 +183,35 @@ public final class AppModel {
             enabled: preferences.threatNotificationsEnabled
         )
 
+        activeAppCount = OverviewStats.activeAppCount(connections)
+        countriesReached = OverviewStats.countriesReached(connections) { GeoIP.country(for: $0) }
+        proxyShare = OverviewStats.proxyShare(connections) { ProxyInfo.routesThroughProxy($0) }
+        protocolMix = OverviewStats.protocolMix(connections)
+        destinationCountries = OverviewStats.destinationCountries(connections) { GeoIP.country(for: $0) }
+        topTalkers = makeTopTalkers(connections: connections)
+
         updateThroughput(session: session)
         publishWidgetMetrics()
         recordHistory()
+    }
+
+    /// Builds the enriched "Top Talkers" rows from the busiest apps and their
+    /// current active connections (country flag, threat hit, tunnel role).
+    private func makeTopTalkers(connections: [Connection]) -> [TopTalker] {
+        let activeByApp = Dictionary(grouping: connections.filter { $0.state == .active }, by: \.app)
+        return topApps.prefix(8).map { entry in
+            let conns = activeByApp[entry.app] ?? []
+            let flag = conns.lazy.compactMap { GeoIP.flag(for: $0.fiveTuple.destination.address) }.first
+            let isThreat = conns.contains { Threat.isThreat($0.fiveTuple.destination.address) }
+            return TopTalker(
+                app: entry.app,
+                bytes: entry.bytes,
+                connectionCount: conns.count,
+                flag: flag,
+                isThreat: isThreat,
+                isTunnel: ProxyInfo.isTunnel(entry.app.displayName)
+            )
+        }
     }
 
     /// Updates the session totals and derives the throughput rate from the byte
@@ -188,6 +230,7 @@ public final class AppModel {
         lastRateSampleAt = now
         lastRateBytesIn = session.bytesIn
         lastRateBytesOut = session.bytesOut
+        throughputHistory.append(ThroughputSample(time: now, inRate: throughputIn, outRate: throughputOut))
     }
 
     /// The most recent persisted connection-history records.
@@ -247,5 +290,19 @@ public final class AppModel {
             lastWidgetReload = now
             WidgetCenter.shared.reloadAllTimelines()
         }
+    }
+}
+
+/// A busiest-app row for the Overview, enriched from the app's live connections.
+struct TopTalker: Identifiable {
+    let app: AppIdentity
+    let bytes: UInt64
+    let connectionCount: Int
+    let flag: String?
+    let isThreat: Bool
+    let isTunnel: Bool
+
+    var id: AppIdentity.ID {
+        app.id
     }
 }

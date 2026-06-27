@@ -10,6 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-06-27
+
+### Changed
+- **Redesigned Overview into a live dashboard.** A throughput chart (Swift Charts)
+  graphs the last minute of ↓/↑ rates; a richer metric strip adds session total,
+  active apps, **countries reached**, **threat connections**, and **share via
+  proxy**; new **Protocol mix** and **Destinations** panels break down active
+  traffic; and **Top Talkers** now show each app's country flag, live connection
+  count, and threat/tunnel markers.
+
+### Fixed
+- **Local, private, and loopback addresses no longer show a bogus flag.** They
+  have no country, so MatrixNet now shows none instead of the "🇿🇿" missing-glyph
+  boxes (placeholder country codes like `ZZ` are also rejected).
+
 ## [0.1.8] - 2026-06-27
 
 ### Added
@@ -200,7 +215,8 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.9
 [0.1.8]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.8
 [0.1.7]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.7
 [0.1.6]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.6

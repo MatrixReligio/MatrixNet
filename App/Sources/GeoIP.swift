@@ -45,7 +45,10 @@ enum GeoIP {
     private static let lastCheckedKey = "GeoIPLastChecked"
 
     static func country(for address: IPAddress) -> String? {
-        storage.country(for: address)
+        // Loopback/private/link-local addresses have no geographic country; the
+        // dataset marks them "ZZ", so skip the lookup entirely for non-global IPs.
+        guard address.scope == .global else { return nil }
+        return storage.country(for: address)
     }
 
     /// Flag emoji for an address's country, or `nil` if unknown.

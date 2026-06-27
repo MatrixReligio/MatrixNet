@@ -37,6 +37,10 @@ proxy, filter, or VPN you already use without fighting it.
 ## Features
 
 ### 🔭 Connection Monitoring
+- A live **Overview dashboard**: a throughput chart (last minute), headline
+  metrics (active connections, session total, active apps, countries reached,
+  threat connections, share via proxy), a protocol-mix breakdown, top
+  destination countries, and an enriched Top Talkers list.
 - System-wide, per-app live connection list: process, remote host/IP, country,
   up/down rate, cumulative bytes, and connection lifecycle.
 - Kernel-attributed process ownership — the same mechanism `nettop` and Activity

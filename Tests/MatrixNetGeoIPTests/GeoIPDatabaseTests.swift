@@ -39,6 +39,16 @@ struct GeoIPDatabaseTests {
         #expect(GeoIPDatabase.flag(for: "1!") == nil)
     }
 
+    @Test("placeholder country codes produce no flag (no ZZ tofu)")
+    func placeholderCodesHaveNoFlag() {
+        // DB-IP marks reserved/unknown ranges (e.g. loopback) "ZZ"; turning that
+        // into 🇿🇿 renders as missing-glyph boxes, so it must yield no flag.
+        #expect(GeoIPDatabase.flag(for: "ZZ") == nil)
+        #expect(GeoIPDatabase.flag(for: "zz") == nil)
+        #expect(GeoIPDatabase.flag(for: "XX") == nil)
+        #expect(GeoIPDatabase.flag(for: "??") == nil)
+    }
+
     @Test("loads from the compact binary format and looks up")
     func binaryRoundTrip() throws {
         var data = Data()
