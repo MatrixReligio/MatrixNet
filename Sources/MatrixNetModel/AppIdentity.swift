@@ -54,8 +54,13 @@ public struct AppTraffic: Sendable, Equatable, Identifiable {
     public var bytesIn: UInt64
     public var bytesOut: UInt64
 
-    public var id: String { app.displayName }
-    public var bytes: UInt64 { bytesIn &+ bytesOut }
+    public var id: String {
+        app.displayName
+    }
+
+    public var bytes: UInt64 {
+        bytesIn &+ bytesOut
+    }
 
     public init(app: AppIdentity, bytesIn: UInt64 = 0, bytesOut: UInt64 = 0) {
         self.app = app
