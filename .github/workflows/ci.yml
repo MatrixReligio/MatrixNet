@@ -13,11 +13,12 @@ concurrency:
 jobs:
   test:
     name: Build & Test
-    runs-on: macos-15
+    # macos-26 with its default Xcode 26 toolchain — matches the project's
+    # requirement (macOS 26 / Xcode 26 / Swift 6) and the release workflow, so CI
+    # validates under the same SDK we actually ship with.
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app || sudo xcode-select -s /Applications/Xcode.app
       - name: Swift version
         run: swift --version
       - name: Build
@@ -27,17 +28,15 @@ jobs:
 
   thread-sanitizer:
     name: Thread Sanitizer
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app || sudo xcode-select -s /Applications/Xcode.app
       - name: Concurrency tests under TSan
         run: swift test --sanitize=thread --filter "FlowCorrelator|ConnectionAggregator"
 
   lint:
     name: Lint & Format
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
       - name: Install tools
