@@ -3,6 +3,30 @@ import MatrixNetMap
 import MatrixNetModel
 import SwiftUI
 
+/// Shared map projection for the Globe view: an equirectangular world cropped to
+/// the populated latitudes so land fills the canvas (the empty polar oceans are
+/// trimmed). Every layer projects through this so dots, arcs and nodes align.
+enum MapProjection {
+    static let latitudeTop = 74.0
+    static let latitudeBottom = -56.0
+
+    static func point(_ coordinate: MapCoordinate, in size: CGSize) -> CGPoint {
+        EquirectangularProjection.point(
+            coordinate, in: size, latitudeTop: latitudeTop, latitudeBottom: latitudeBottom
+        )
+    }
+
+    static func point(longitude: Double, latitude: Double, in size: CGSize) -> CGPoint {
+        EquirectangularProjection.point(
+            longitude: longitude,
+            latitude: latitude,
+            in: size,
+            latitudeTop: latitudeTop,
+            latitudeBottom: latitudeBottom
+        )
+    }
+}
+
 /// The Map tab: an offline, real-world dotted globe with glowing arcs from this
 /// machine to every country it is currently talking to. Node size grows with the
 /// connection count; threat destinations pulse red. Fully offline — drawn from a
@@ -70,6 +94,10 @@ struct GlobeView: View {
             .sorted { $0.connections > $1.connections }
     }
 
+    private var locatedConnections: Int {
+        destinations.reduce(0) { $0 + $1.connections }
+    }
+
     // MARK: Toolbar
 
     private var toolbar: some View {
@@ -90,8 +118,12 @@ struct GlobeView: View {
 
             Spacer()
 
+            Text(verbatim: "↓ \(Format.rate(model.throughputIn))   ↑ \(Format.rate(model.throughputOut))")
+                .font(Theme.mono(11, weight: .medium))
+                .foregroundStyle(.secondary)
+
             chip("\(destinations.count)", "countries", Theme.accent)
-            chip("\(destinations.count)", "arcs", Theme.inbound)
+            chip("\(locatedConnections)", "connections", Theme.inbound)
             chip("\(destinations.filter(\.isThreat).count)", "threats", Theme.danger)
         }
     }
@@ -132,13 +164,13 @@ struct GlobeView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 470)
+        .frame(height: 520)
         .background(
             RadialGradient(
-                colors: [Color(red: 0.09, green: 0.14, blue: 0.24), Color(red: 0.05, green: 0.08, blue: 0.13)],
-                center: .top,
+                colors: [Color(red: 0.09, green: 0.14, blue: 0.24), Color(red: 0.04, green: 0.07, blue: 0.12)],
+                center: .center,
                 startRadius: 10,
-                endRadius: 620
+                endRadius: 760
             )
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -152,9 +184,9 @@ struct GlobeView: View {
         var best: GlobeHover?
         var bestDistance = CGFloat.greatestFiniteMagnitude
         for destination in destinations {
-            let point = EquirectangularProjection.point(destination.coordinate, in: size)
+            let point = MapProjection.point(destination.coordinate, in: size)
             let distance = hypot(point.x - location.x, point.y - location.y)
-            if distance < 22, distance < bestDistance {
+            if distance < 24, distance < bestDistance {
                 bestDistance = distance
                 best = GlobeHover(point: point, destination: destination)
             }
@@ -193,16 +225,36 @@ private struct GlobeHover {
 private struct GlobeBaseLayer: View {
     var body: some View {
         Canvas { context, size in
+            drawGraticule(&context, size: size)
             guard let world = WorldMapStore.shared else { return }
-            let color = GraphicsContext.Shading.color(Color(red: 0.20, green: 0.46, blue: 0.43))
-            let radius: CGFloat = 1.1
+            let color = GraphicsContext.Shading.color(Color(red: 0.22, green: 0.52, blue: 0.48))
+            let radius: CGFloat = 1.15
             for cell in world.landCells {
                 let lon = -180 + (Double(cell.col) + 0.5) * 360 / Double(world.gridWidth)
                 let lat = 90 - (Double(cell.row) + 0.5) * 180 / Double(world.gridHeight)
-                let point = EquirectangularProjection.point(longitude: lon, latitude: lat, in: size)
+                guard lat <= MapProjection.latitudeTop + 2, lat >= MapProjection.latitudeBottom - 2 else { continue }
+                let point = MapProjection.point(longitude: lon, latitude: lat, in: size)
                 let rect = CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2)
                 context.fill(Path(ellipseIn: rect), with: color)
             }
+        }
+    }
+
+    private func drawGraticule(_ context: inout GraphicsContext, size: CGSize) {
+        let line = GraphicsContext.Shading.color(Color.white.opacity(0.045))
+        for lat in stride(from: -40.0, through: 60.0, by: 20.0) {
+            let y = MapProjection.point(longitude: 0, latitude: lat, in: size).y
+            var path = Path()
+            path.move(to: CGPoint(x: 0, y: y))
+            path.addLine(to: CGPoint(x: size.width, y: y))
+            context.stroke(path, with: line, lineWidth: 0.5)
+        }
+        for lon in stride(from: -150.0, through: 150.0, by: 30.0) {
+            let x = MapProjection.point(longitude: lon, latitude: 0, in: size).x
+            var path = Path()
+            path.move(to: CGPoint(x: x, y: 0))
+            path.addLine(to: CGPoint(x: x, y: size.height))
+            context.stroke(path, with: line, lineWidth: 0.5)
         }
     }
 }
@@ -226,10 +278,10 @@ private struct GlobeArcsLayer: View {
 
     private func draw(_ context: inout GraphicsContext, size: CGSize, phase: Double) {
         guard let home else { return }
-        let homePoint = EquirectangularProjection.point(home, in: size)
+        let homePoint = MapProjection.point(home, in: size)
 
         for (index, destination) in destinations.enumerated() {
-            let destinationPoint = EquirectangularProjection.point(destination.coordinate, in: size)
+            let destinationPoint = MapProjection.point(destination.coordinate, in: size)
             let points = GlobeGeometry.arcPoints(from: homePoint, to: destinationPoint, samples: 48)
             var path = Path()
             path.addLines(points)
@@ -238,20 +290,17 @@ private struct GlobeArcsLayer: View {
             context.stroke(path, with: .color(color.opacity(0.16)), lineWidth: 4)
             context.stroke(path, with: .color(color.opacity(0.85)), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
 
-            // Comet head sweeping along the arc (looping, staggered per arc).
             let progress = (phase * 0.5 + Double(index) * 0.17).truncatingRemainder(dividingBy: 1)
             let cometIndex = min(points.count - 1, max(0, Int(progress * Double(points.count - 1))))
             let comet = points[cometIndex]
+            let cometColor = destination.isThreat
+                ? Color(red: 1, green: 0.82, blue: 0.80)
+                : Color(red: 0.68, green: 0.96, blue: 0.84)
             context.fill(
                 Path(ellipseIn: CGRect(x: comet.x - 2.4, y: comet.y - 2.4, width: 4.8, height: 4.8)),
-                with: .color(destination.isThreat ? Color(red: 1, green: 0.82, blue: 0.80) : Color(
-                    red: 0.68,
-                    green: 0.96,
-                    blue: 0.84
-                ))
+                with: .color(cometColor)
             )
 
-            // Destination node, sized by connection count.
             let radius = min(11, 4 + CGFloat(Double(destination.connections).squareRoot()) * 1.4)
             let rect = CGRect(
                 x: destinationPoint.x - radius,
@@ -265,7 +314,6 @@ private struct GlobeArcsLayer: View {
             }
         }
 
-        // Home anchor (white) with a steady pulse.
         context.fill(
             Path(ellipseIn: CGRect(x: homePoint.x - 4, y: homePoint.y - 4, width: 8, height: 8)),
             with: .color(.white)
@@ -333,6 +381,10 @@ private struct GlobeTooltip: View {
 private struct GlobeDestinationsList: View {
     let destinations: [GlobeDestination]
 
+    private var maxConnections: Int {
+        max(1, destinations.map(\.connections).max() ?? 1)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Active destinations")
@@ -351,25 +403,26 @@ private struct GlobeDestinationsList: View {
             }
             Spacer(minLength: 0)
         }
-        .frame(maxHeight: 470, alignment: .top)
+        .frame(maxHeight: 520, alignment: .top)
     }
 
     private func row(_ destination: GlobeDestination) -> some View {
         HStack(spacing: 9) {
             Text(verbatim: GeoIPDatabase.flag(for: destination.country) ?? "🏳️")
                 .font(.title3)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 4) {
                     Text(verbatim: destination.name).font(.callout).lineLimit(1)
                     if destination.isThreat {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.caption2).foregroundStyle(Theme.danger)
                     }
+                    Spacer()
+                    Text("\(destination.connections)")
+                        .font(Theme.mono(11)).foregroundStyle(.secondary)
                 }
-                Text("\(destination.connections) connections")
-                    .font(.caption2).foregroundStyle(.secondary)
+                bar(for: destination)
             }
-            Spacer()
         }
         .padding(9)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -377,5 +430,17 @@ private struct GlobeDestinationsList: View {
             destination.isThreat ? Theme.danger.opacity(0.1) : Color.primary.opacity(0.04),
             in: RoundedRectangle(cornerRadius: 10, style: .continuous)
         )
+    }
+
+    private func bar(for destination: GlobeDestination) -> some View {
+        let tint = destination.isThreat ? Theme.danger : Theme.accent
+        let fraction = max(0.04, Double(destination.connections) / Double(maxConnections))
+        return GeometryReader { geometry in
+            Capsule().fill(tint.opacity(0.16))
+                .overlay(alignment: .leading) {
+                    Capsule().fill(tint).frame(width: geometry.size.width * fraction)
+                }
+        }
+        .frame(height: 4)
     }
 }

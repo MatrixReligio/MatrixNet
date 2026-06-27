@@ -14,16 +14,37 @@ public struct MapCoordinate: Equatable, Sendable {
 
 /// The simple equirectangular (plate carrée) projection used to lay the world out
 /// on a flat canvas: longitude maps linearly to x, latitude to y.
+///
+/// `latitudeTop`/`latitudeBottom` let the caller crop the empty polar oceans so
+/// the land fills the canvas (the default full −90…90 keeps the whole globe).
 public enum EquirectangularProjection {
-    public static func point(longitude: Double, latitude: Double, in size: CGSize) -> CGPoint {
-        CGPoint(
+    public static func point(
+        longitude: Double,
+        latitude: Double,
+        in size: CGSize,
+        latitudeTop: Double = 90,
+        latitudeBottom: Double = -90
+    ) -> CGPoint {
+        let span = latitudeTop - latitudeBottom
+        return CGPoint(
             x: (longitude + 180) / 360 * size.width,
-            y: (90 - latitude) / 180 * size.height
+            y: (latitudeTop - latitude) / span * size.height
         )
     }
 
-    public static func point(_ coordinate: MapCoordinate, in size: CGSize) -> CGPoint {
-        point(longitude: coordinate.longitude, latitude: coordinate.latitude, in: size)
+    public static func point(
+        _ coordinate: MapCoordinate,
+        in size: CGSize,
+        latitudeTop: Double = 90,
+        latitudeBottom: Double = -90
+    ) -> CGPoint {
+        point(
+            longitude: coordinate.longitude,
+            latitude: coordinate.latitude,
+            in: size,
+            latitudeTop: latitudeTop,
+            latitudeBottom: latitudeBottom
+        )
     }
 }
 

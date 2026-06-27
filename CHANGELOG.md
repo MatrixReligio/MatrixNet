@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.14] - 2026-06-27
+
+### Changed
+- **The Map fills the card and looks sharper.** The world is cropped to the
+  populated latitudes (the empty polar oceans are trimmed) so land fills the
+  canvas, with a faint lat/long graticule behind the dots.
+- **Richer Map metrics.** The toolbar now shows live ↓/↑ throughput and counts
+  of countries, located connections, and threats; the destinations list gains a
+  per-country connection-count bar.
+
 ## [0.1.13] - 2026-06-27
 
 ### Changed
@@ -263,7 +273,8 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.13...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.14...HEAD
+[0.1.14]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.14
 [0.1.13]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.13
 [0.1.12]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.12
 [0.1.11]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.11
