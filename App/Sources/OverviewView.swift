@@ -118,27 +118,40 @@ private struct ThroughputChart: View {
     }
 
     private var chart: some View {
-        Chart {
+        let latest = samples.last?.time ?? Date()
+        let downLabel = String(localized: "Download")
+        let upLabel = String(localized: "Upload")
+        return Chart {
+            // Inbound area (no legend entry).
             ForEach(samples, id: \.time) { sample in
-                AreaMark(x: .value("Time", sample.time), y: .value("Down", sample.inRate))
+                AreaMark(x: .value("Time", sample.time), y: .value("Rate", sample.inRate))
                     .foregroundStyle(
                         .linearGradient(
-                            colors: [Theme.inbound.opacity(0.25), Theme.inbound.opacity(0.02)],
+                            colors: [Theme.inbound.opacity(0.22), Theme.inbound.opacity(0.02)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
                     )
                     .interpolationMethod(.monotone)
             }
+            // Two distinct series → distinct colors + a legend.
             ForEach(samples, id: \.time) { sample in
-                LineMark(x: .value("Time", sample.time), y: .value("Down", sample.inRate))
-                    .foregroundStyle(Theme.inbound)
-                    .interpolationMethod(.monotone)
+                LineMark(
+                    x: .value("Time", sample.time),
+                    y: .value("Rate", sample.inRate),
+                    series: .value("Direction", downLabel)
+                )
+                .foregroundStyle(by: .value("Direction", downLabel))
+                .interpolationMethod(.monotone)
             }
             ForEach(samples, id: \.time) { sample in
-                LineMark(x: .value("Time", sample.time), y: .value("Up", sample.outRate))
-                    .foregroundStyle(Theme.outbound)
-                    .interpolationMethod(.monotone)
+                LineMark(
+                    x: .value("Time", sample.time),
+                    y: .value("Rate", sample.outRate),
+                    series: .value("Direction", upLabel)
+                )
+                .foregroundStyle(by: .value("Direction", upLabel))
+                .interpolationMethod(.monotone)
             }
             if let selectedSample {
                 RuleMark(x: .value("Time", selectedSample.time))
@@ -150,17 +163,28 @@ private struct ThroughputChart: View {
                     ) {
                         tooltip(selectedSample)
                     }
-                PointMark(x: .value("Time", selectedSample.time), y: .value("Down", selectedSample.inRate))
+                PointMark(x: .value("Time", selectedSample.time), y: .value("Rate", selectedSample.inRate))
                     .foregroundStyle(Theme.inbound)
-                PointMark(x: .value("Time", selectedSample.time), y: .value("Up", selectedSample.outRate))
+                PointMark(x: .value("Time", selectedSample.time), y: .value("Rate", selectedSample.outRate))
                     .foregroundStyle(Theme.outbound)
             }
         }
+        .chartForegroundStyleScale([downLabel: Theme.inbound, upLabel: Theme.outbound])
+        .chartLegend(position: .top, alignment: .trailing, spacing: 4)
         .chartXSelection(value: $selectedTime)
         .chartXAxis {
-            AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+            AxisMarks(values: .automatic(desiredCount: 5)) { value in
                 AxisGridLine()
-                AxisValueLabel(format: .dateTime.minute().second())
+                AxisValueLabel {
+                    if let date = value.as(Date.self) {
+                        let seconds = Int(latest.timeIntervalSince(date).rounded())
+                        if seconds <= 0 {
+                            Text("now")
+                        } else {
+                            Text(verbatim: "-\(seconds)s")
+                        }
+                    }
+                }
             }
         }
         .chartYAxis {
