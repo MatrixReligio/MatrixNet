@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-06-27
+
+### Fixed
+- **Widget throughput no longer wraps.** The rate figures are now constrained to
+  a single line (scaling down to fit) and the two readouts share the small
+  widget's width evenly, so values like `10.4 KB/s` stay on one line.
+- **Toolbar throughput is inset** from its rounded background so the first label
+  no longer hugs the left edge.
+
 ## [0.1.5] - 2026-06-27
 
 ### Added
@@ -153,7 +162,8 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.6
 [0.1.5]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.5
 [0.1.4]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.4
 [0.1.3]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.3

@@ -167,15 +167,14 @@ private struct RateView: View {
                 Image(systemName: systemImage).font(.system(size: 9, weight: .bold)).foregroundStyle(tint)
                 Text(verbatim: Fmt.rate(rate))
                     .font(mono(12, .medium)).foregroundStyle(.primary)
-                    .lineLimit(1).minimumScaleFactor(0.7)
+                    .lineLimit(1).minimumScaleFactor(0.5).allowsTightening(true)
             }
             if showSession {
                 Text(verbatim: Fmt.bytes(session))
                     .font(mono(9)).foregroundStyle(.secondary)
-                    .lineLimit(1).minimumScaleFactor(0.7)
+                    .lineLimit(1).minimumScaleFactor(0.6).allowsTightening(true)
             }
         }
-        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -235,22 +234,18 @@ private struct SmallWidget: View {
             Spacer(minLength: 6)
             Divider().opacity(0.4)
             Spacer(minLength: 6)
-            HStack {
-                RateView(
-                    systemImage: "arrow.down",
-                    rate: snapshot.throughputIn,
-                    session: snapshot.bytesIn,
-                    tint: Palette.inbound
-                )
-                Spacer(minLength: 8)
-                RateView(
-                    systemImage: "arrow.up",
-                    rate: snapshot.throughputOut,
-                    session: snapshot.bytesOut,
-                    tint: Palette.outbound
-                )
+            HStack(spacing: 8) {
+                column("arrow.down", snapshot.throughputIn, snapshot.bytesIn, Palette.inbound)
+                column("arrow.up", snapshot.throughputOut, snapshot.bytesOut, Palette.outbound)
             }
         }
+    }
+
+    /// A throughput readout that takes an equal half of the widget's width, so
+    /// the two never crowd each other into wrapping.
+    private func column(_ image: String, _ rate: Double, _ session: UInt64, _ tint: Color) -> some View {
+        RateView(systemImage: image, rate: rate, session: session, tint: tint)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

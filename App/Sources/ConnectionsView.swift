@@ -235,6 +235,9 @@ private struct ThroughputSummary: View {
             metric("IN", Format.rate(model.throughputIn), Theme.inbound)
             metric("OUT", Format.rate(model.throughputOut), Theme.outbound)
         }
+        // Inset from the toolbar capsule's rounded edges so the first label
+        // doesn't hug the left border.
+        .padding(.horizontal, 10)
     }
 
     private func metric(_ label: LocalizedStringKey, _ value: String, _ color: Color) -> some View {

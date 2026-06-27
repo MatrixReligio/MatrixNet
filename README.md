@@ -41,6 +41,14 @@ proxy, filter, or VPN you already use without fighting it.
   up/down rate, cumulative bytes, and connection lifecycle.
 - Kernel-attributed process ownership — the same mechanism `nettop` and Activity
   Monitor use — so attribution is accurate without polling races.
+- **Client/server role** inferred per flow from the ports (did this host dial
+  out, or accept a connection?).
+- **Proxy & VPN/tunnel awareness** — connections whose remote is your configured
+  or local proxy are marked, and processes that relay other apps' traffic
+  (NetworkExtension tunnels) are badged, so it's clear when traffic is routed.
+- **Threat-IP flagging** — remote addresses on a public threat-intelligence
+  blocklist are flagged with a ⚠️ badge (advisory only — MatrixNet labels, it
+  never blocks).
 - DNS enrichment maps observed IPs back to hostnames.
 - Connection history you can look back through ("which app connected where
   yesterday").
@@ -58,8 +66,8 @@ proxy, filter, or VPN you already use without fighting it.
 
 ### 🖥️ Desktop Widget
 - A WidgetKit widget (small / medium / large) shows live active-connection count,
-  up/down throughput, session totals, and the top talking apps — right on your
-  desktop or in Notification Center.
+  up/down throughput, session totals, the top talking apps, and a threat-hit
+  count — right on your desktop or in Notification Center.
 
 ### 🌍 Speaks Your Language
 - Fully localized into **8 languages** — English, Simplified & Traditional
@@ -72,6 +80,9 @@ proxy, filter, or VPN you already use without fighting it.
   daily in the background.
 - The **GeoIP database refreshes automatically** in the background from the
   monthly DB-IP dataset, so country attribution stays accurate over time.
+- The **threat-IP list refreshes automatically** the same way, from the public
+  IPsum aggregate — the app only ever contacts its own release asset, never the
+  upstream feeds.
 
 ### 🛡️ Privacy & Zero-Conflict
 - **Zero conflict by design.** MatrixNet is fully passive: it uses no
@@ -247,6 +258,10 @@ MatrixNet stands on the shoulders of the tools that made network transparency a
 norm. Thanks to the **Wireshark** and **tcpdump/libpcap** projects for decades of
 protocol dissection and capture work, and to **Little Snitch** and **LuLu** for
 showing what per-app network awareness on macOS can be.
+
+Bundled data: country geolocation by [DB-IP](https://db-ip.com) (CC-BY-4.0) and
+the threat-IP list derived from [IPsum](https://github.com/stamparm/ipsum)
+(public domain). See [`NOTICE`](./NOTICE) for full attributions.
 
 ---
 
