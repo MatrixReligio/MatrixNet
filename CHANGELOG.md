@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.16] - 2026-06-27
+
+### Added
+- **Drill into a country on the Map.** Click a country (in the list or on the
+  globe) to see its individual connections — app, remote host:port, protocol and
+  client/server role, with threat rows flagged. A back button returns to the list.
+
+### Changed
+- The Map's labels are now mode-aware: in **History** mode destinations and counts
+  read as "records" rather than "active", since historical connections are not live.
+
 ## [0.1.15] - 2026-06-27
 
 ### Changed
@@ -286,7 +297,8 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.15...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.16...HEAD
+[0.1.16]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.16
 [0.1.15]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.15
 [0.1.14]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.14
 [0.1.13]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.13

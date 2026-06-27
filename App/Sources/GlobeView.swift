@@ -29,21 +29,23 @@ enum MapProjection {
 
 /// The Map tab: an offline, real-world dotted globe with glowing arcs from this
 /// machine to every country it is currently talking to. Node size grows with the
-/// connection count; threat destinations pulse red. Fully offline — drawn from a
-/// bundled Natural Earth dataset, never map tiles.
+/// connection count; threat destinations pulse red. Selecting a country lists its
+/// individual connections. Fully offline — drawn from a bundled Natural Earth
+/// dataset, never map tiles.
 struct GlobeView: View {
     @Environment(AppModel.self) private var model
     @State private var source: GlobeSource = .live
     @State private var threatsOnly = false
     @State private var hover: GlobeHover?
+    @State private var selectedCountry: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             toolbar
             HStack(alignment: .top, spacing: 14) {
                 mapCard
-                GlobeDestinationsList(destinations: destinations)
-                    .frame(width: 264)
+                sidePanel
+                    .frame(width: 272)
             }
             .frame(maxHeight: .infinity)
         }
@@ -51,6 +53,7 @@ struct GlobeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle("Map")
         .background(.background)
+        .onChange(of: source) { _, _ in selectedCountry = nil }
     }
 
     // MARK: Data
@@ -100,6 +103,47 @@ struct GlobeView: View {
         destinations.reduce(0) { $0 + $1.connections }
     }
 
+    /// The individual connections (live) or history records reaching a country.
+    private func connections(for country: String) -> [CountryConnectionRow] {
+        switch source {
+        case .live:
+            model.connections
+                .filter { $0.state == .active && GeoIP.country(for: $0.fiveTuple.destination.address) == country }
+                .map { connection in
+                    let address = connection.fiveTuple.destination.address
+                    let host = connection.remoteHostname ?? address.description
+                    return CountryConnectionRow(
+                        id: connection.id.uuidString,
+                        app: connection.app,
+                        appName: connection.app.displayName,
+                        endpoint: "\(host):\(connection.fiveTuple.destination.port)",
+                        proto: connection.fiveTuple.proto.displayName,
+                        role: connection.fiveTuple.role,
+                        isThreat: Threat.isThreat(address)
+                    )
+                }
+                .sorted { $0.appName.localizedCompare($1.appName) == .orderedAscending }
+        case .history:
+            model.recentHistory(limit: 500)
+                .filter { record in
+                    guard let ip = IPAddress(record.remoteHost), ip.scope == .global else { return false }
+                    return GeoIP.country(for: ip) == country
+                }
+                .map { record in
+                    CountryConnectionRow(
+                        id: record.appName + "\u{1F}" + record.remoteHost + "\u{1F}" + record.proto,
+                        app: nil,
+                        appName: record.appName,
+                        endpoint: record.remoteHost,
+                        proto: record.proto,
+                        role: nil,
+                        isThreat: IPAddress(record.remoteHost).map(Threat.isThreat) ?? false
+                    )
+                }
+                .sorted { $0.appName.localizedCompare($1.appName) == .orderedAscending }
+        }
+    }
+
     // MARK: Toolbar
 
     private var toolbar: some View {
@@ -120,12 +164,14 @@ struct GlobeView: View {
 
             Spacer()
 
-            Text(verbatim: "↓ \(Format.rate(model.throughputIn))   ↑ \(Format.rate(model.throughputOut))")
-                .font(Theme.mono(11, weight: .medium))
-                .foregroundStyle(.secondary)
+            if source == .live {
+                Text(verbatim: "↓ \(Format.rate(model.throughputIn))   ↑ \(Format.rate(model.throughputOut))")
+                    .font(Theme.mono(11, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
 
             chip("\(destinations.count)", "countries", Theme.accent)
-            chip("\(locatedConnections)", "connections", Theme.inbound)
+            chip("\(locatedConnections)", source == .live ? "connections" : "records", Theme.inbound)
             chip("\(destinations.filter(\.isThreat).count)", "threats", Theme.danger)
         }
     }
@@ -140,6 +186,25 @@ struct GlobeView: View {
         .background(.background.secondary, in: Capsule())
     }
 
+    // MARK: Side panel (country list ⇆ country detail)
+
+    @ViewBuilder private var sidePanel: some View {
+        if let selectedCountry {
+            CountryDetailPanel(
+                country: selectedCountry,
+                isHistory: source == .history,
+                rows: connections(for: selectedCountry),
+                onBack: { self.selectedCountry = nil }
+            )
+        } else {
+            GlobeDestinationsList(
+                destinations: destinations,
+                isHistory: source == .history,
+                onSelect: { selectedCountry = $0.country }
+            )
+        }
+    }
+
     // MARK: Map
 
     private var mapCard: some View {
@@ -150,7 +215,7 @@ struct GlobeView: View {
                 GlobeArcsLayer(destinations: destinations, home: WorldMapStore.homeCoordinate)
                 GlobeLegend()
                 if let hover {
-                    GlobeTooltip(destination: hover.destination)
+                    GlobeTooltip(destination: hover.destination, isHistory: source == .history)
                         .position(x: hover.point.x, y: max(34, hover.point.y - 30))
                         .allowsHitTesting(false)
                 }
@@ -164,6 +229,13 @@ struct GlobeView: View {
                     hover = nil
                 }
             }
+            .gesture(
+                SpatialTapGesture().onEnded { value in
+                    if let hit = nearest(to: value.location, in: size) {
+                        selectedCountry = hit.destination.country
+                    }
+                }
+            )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
@@ -219,6 +291,16 @@ struct GlobeDestination: Identifiable {
 private struct GlobeHover {
     let point: CGPoint
     let destination: GlobeDestination
+}
+
+struct CountryConnectionRow: Identifiable {
+    let id: String
+    let app: AppIdentity?
+    let appName: String
+    let endpoint: String
+    let proto: String
+    let role: ConnectionRole?
+    let isThreat: Bool
 }
 
 // MARK: - Static dotted base
@@ -328,120 +410,5 @@ private struct GlobeArcsLayer: View {
         let opacity = 0.6 * (1 - cycle)
         let rect = CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2)
         context.stroke(Path(ellipseIn: rect), with: .color(color.opacity(opacity)), lineWidth: 1.5)
-    }
-}
-
-private struct GlobeLegend: View {
-    var body: some View {
-        VStack {
-            Spacer()
-            HStack(spacing: 14) {
-                legendDot(Color(red: 0.32, green: 0.82, blue: 0.58), "Active destination")
-                legendDot(Color(red: 0.94, green: 0.46, blue: 0.42), "Threat")
-                legendDot(.white, "This Mac")
-                Spacer()
-            }
-            .font(.caption2)
-            .foregroundStyle(Color.white.opacity(0.6))
-            .padding(12)
-        }
-    }
-
-    private func legendDot(_ color: Color, _ label: LocalizedStringKey) -> some View {
-        HStack(spacing: 5) {
-            Circle().fill(color).frame(width: 7, height: 7)
-            Text(label)
-        }
-    }
-}
-
-private struct GlobeTooltip: View {
-    let destination: GlobeDestination
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 5) {
-                Text(verbatim: GeoIPDatabase.flag(for: destination.country) ?? "🏳️")
-                Text(verbatim: destination.name).font(.caption.weight(.semibold))
-            }
-            Text("\(destination.connections) active")
-                .font(.caption2).foregroundStyle(.secondary)
-            if destination.isThreat {
-                Label("Threat", systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption2).foregroundStyle(Theme.danger)
-            }
-        }
-        .padding(7)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Color.primary.opacity(0.1)))
-    }
-}
-
-// MARK: - Destinations list
-
-private struct GlobeDestinationsList: View {
-    let destinations: [GlobeDestination]
-
-    private var maxConnections: Int {
-        max(1, destinations.map(\.connections).max() ?? 1)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Active destinations")
-                .font(.caption).foregroundStyle(.secondary).textCase(.uppercase)
-            if destinations.isEmpty {
-                Text("No located connections.")
-                    .font(.caption).foregroundStyle(.secondary).padding(.top, 6)
-            } else {
-                ScrollView {
-                    VStack(spacing: 8) {
-                        ForEach(destinations) { destination in
-                            row(destination)
-                        }
-                    }
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .frame(maxHeight: .infinity, alignment: .top)
-    }
-
-    private func row(_ destination: GlobeDestination) -> some View {
-        HStack(spacing: 9) {
-            Text(verbatim: GeoIPDatabase.flag(for: destination.country) ?? "🏳️")
-                .font(.title3)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 4) {
-                    Text(verbatim: destination.name).font(.callout).lineLimit(1)
-                    if destination.isThreat {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.caption2).foregroundStyle(Theme.danger)
-                    }
-                    Spacer()
-                    Text("\(destination.connections)")
-                        .font(Theme.mono(11)).foregroundStyle(.secondary)
-                }
-                bar(for: destination)
-            }
-        }
-        .padding(9)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            destination.isThreat ? Theme.danger.opacity(0.1) : Color.primary.opacity(0.04),
-            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-        )
-    }
-
-    private func bar(for destination: GlobeDestination) -> some View {
-        let tint = destination.isThreat ? Theme.danger : Theme.accent
-        let fraction = max(0.04, Double(destination.connections) / Double(maxConnections))
-        return GeometryReader { geometry in
-            Capsule().fill(tint.opacity(0.16))
-                .overlay(alignment: .leading) {
-                    Capsule().fill(tint).frame(width: geometry.size.width * fraction)
-                }
-        }
-        .frame(height: 4)
     }
 }
