@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-06-27
+
+### Added
+- **History detail and time-range filter.** Select a history row to see its
+  full detail (app, remote, protocol, inbound/outbound bytes, sightings, first/
+  last seen) in an inspector, and filter the list to the last hour, 24 hours,
+  7 days, or all time.
+
 ## [0.1.3] - 2026-06-27
 
 ### Added
@@ -115,7 +123,8 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.4
 [0.1.3]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.3
 [0.1.2]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.2
 [0.1.1]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.1
