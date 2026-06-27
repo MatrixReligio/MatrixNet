@@ -59,9 +59,15 @@ struct HistoryView: View {
 
     private var table: some View {
         Table(filtered, selection: $selection, sortOrder: $sortOrder, columnCustomization: $columns) {
-            TableColumn("Application", value: \.appName) { Text($0.appName).lineLimit(1).help($0.appName) }
-                .width(min: 120, ideal: 180)
-                .customizationID("application")
+            TableColumn("Application", value: \.appName) {
+                Text($0.appName)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .help($0.appName)
+            }
+            .width(min: 120, ideal: 200)
+            .customizationID("application")
             TableColumn("Remote", value: \.remoteHost) {
                 Text($0.remoteHost).font(Theme.mono(11)).lineLimit(1).truncationMode(.middle).help($0.remoteHost)
             }

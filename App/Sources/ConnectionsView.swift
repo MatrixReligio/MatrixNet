@@ -169,7 +169,7 @@ private struct AppCell: View {
             }
             .frame(width: 18, height: 18)
 
-            Text(app.displayName).lineLimit(1)
+            Text(app.displayName).lineLimit(1).truncationMode(.tail)
             if ProxyInfo.isTunnel(app.displayName) {
                 Image(systemName: "shield.lefthalf.filled")
                     .font(.caption2)
@@ -181,6 +181,7 @@ private struct AppCell: View {
                 .font(Theme.mono(10)).monospacedDigit()
                 .foregroundStyle(.tertiary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .help(app.displayName)
     }
 }

@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Status:** Phase 1. Until version `1.0.0`, public interfaces and behavior may
 > change without notice.
 
+## [0.1.18] - 2026-06-27
+
+### Fixed
+- **Process / application names are no longer cut off** in the Packets, Connections
+  and History tables. Cells now fill their column width and truncate with an
+  ellipsis only when genuinely too long (full name still on hover); the Packets
+  "Process" column is also wider by default.
+
 ## [0.1.17] - 2026-06-27
 
 ### Fixed
@@ -302,6 +310,7 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
+[0.1.18]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.18
 [0.1.17]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.17
 [0.1.16]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.16
 [0.1.15]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.15

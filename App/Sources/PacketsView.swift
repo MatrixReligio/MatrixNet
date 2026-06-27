@@ -112,20 +112,31 @@ struct PacketsView: View {
             }
             .width(min: 96, ideal: 112, max: 150)
             .customizationID("time")
-            TableColumn("Process", value: \.processName) { Text($0.processName).lineLimit(1).help($0.processName) }
-                .width(min: 80, ideal: 120)
-                .customizationID("process")
+            TableColumn("Process", value: \.processName) {
+                Text($0.processName)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .help($0.processName)
+            }
+            .width(min: 140, ideal: 220)
+            .customizationID("process")
             TableColumn("Proto", value: \.highestProtocol) {
                 Text($0.highestProtocol).font(Theme.mono(11)).foregroundStyle(Theme.accent)
             }
             .width(min: 48, ideal: 56, max: 90)
             .customizationID("proto")
             TableColumn("Summary", value: \.summary) {
-                Text($0.summary).font(Theme.mono(11)).lineLimit(1).help($0.summary)
+                Text($0.summary)
+                    .font(Theme.mono(11))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .help($0.summary)
             }
             .customizationID("summary")
         }
-        .persistTableColumns($columns, key: "table.packets")
+        .persistTableColumns($columns, key: "table.packets.v2")
     }
 
     private var enableState: some View {
