@@ -54,8 +54,10 @@ private struct GeneralSettings: View {
 
             Section {
                 Toggle("Run in background (menu bar only)", isOn: $runInBackground)
-                    .onChange(of: runInBackground) { _, newValue in
-                        NSApp.setActivationPolicy(newValue ? .accessory : .regular)
+                    .onChange(of: runInBackground) { _, _ in
+                        // Window-aware: the Dock icon only hides once no window is
+                        // open, so the app never becomes unreachable.
+                        (NSApp.delegate as? AppDelegate)?.syncActivationPolicy()
                     }
             } footer: {
                 Text("Keep monitoring from the menu bar with no Dock icon, so the widget stays fresh.")

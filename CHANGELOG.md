@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-06-27
+
+### Fixed
+- **Background (menu-bar-only) mode no longer makes the app unreachable.** The
+  Dock icon and app menu now hide only once the *last window closes* — while a
+  window is open the app stays a normal app, so the menu, Settings (⌘,) and Dock
+  icon remain available. Reopening from the menu bar restores them. The menu-bar
+  dropdown also gains a **Settings…** entry so preferences are always reachable.
+
 ## [0.1.11] - 2026-06-27
 
 ### Added
@@ -247,7 +256,8 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.11...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.12...HEAD
+[0.1.12]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.12
 [0.1.11]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.11
 [0.1.10]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.10
 [0.1.9]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.9

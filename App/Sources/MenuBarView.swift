@@ -58,8 +58,13 @@ struct MenuBarView: View {
 
             HStack {
                 Button("Open MatrixNet") {
+                    // Restore the Dock icon + app menu before showing the window.
+                    NSApp.setActivationPolicy(.regular)
                     openWindow(id: "main")
                     NSApp.activate()
+                }
+                SettingsLink {
+                    Text("Settings…")
                 }
                 Spacer()
                 Button("Quit") { NSApplication.shared.terminate(nil) }
