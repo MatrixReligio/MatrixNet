@@ -10,6 +10,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-06-27
+
+### Added
+- **Runs in the background.** MatrixNet keeps monitoring after the main window is
+  closed, so the desktop widget stays up to date. A new General setting — "Run in
+  background (menu bar only)" — hides the Dock icon and keeps the app in the menu
+  bar.
+- **Settings window** (⌘,) with General, Updates, and Data sections.
+- **Launch at login.** Register MatrixNet as a login item from Settings
+  (via `SMAppService`).
+- **Live throughput in the menu bar.** The menu-bar title now shows the current
+  ↓/↑ rate in a compact, non-jittering form.
+- **Threat-connection notifications.** Optionally post a system notification when
+  an active connection reaches a flagged address — advisory only (it never
+  blocks), de-duplicated per app+address and rate-limited so it cannot flood.
+- The Data settings show when the GeoIP and threat datasets were last checked and
+  offer an on-demand refresh.
+
+### Fixed
+- **The desktop widget no longer freezes when the main window is closed.** The
+  monitoring engine now runs for the whole app lifetime instead of being tied to
+  the window, so the shared metrics the widget reads keep updating.
+
 ## [0.1.7] - 2026-06-27
 
 ### Fixed
@@ -177,7 +200,8 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.8
 [0.1.7]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.7
 [0.1.6]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.6
 [0.1.5]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.5

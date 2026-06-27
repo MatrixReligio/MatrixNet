@@ -25,6 +25,14 @@ final class UpdateController: ObservableObject {
     func checkForUpdates() {
         controller.updater.checkForUpdates()
     }
+
+    /// Whether Sparkle checks for updates automatically in the background.
+    /// Sparkle persists this itself (the `SUEnableAutomaticChecks` default), so
+    /// it is the single source of truth for the Settings toggle.
+    var automaticallyChecksForUpdates: Bool {
+        get { controller.updater.automaticallyChecksForUpdates }
+        set { controller.updater.automaticallyChecksForUpdates = newValue }
+    }
 }
 
 /// A "Check for Updates…" menu command wired to the shared updater.

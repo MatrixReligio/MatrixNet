@@ -69,6 +69,17 @@ proxy, filter, or VPN you already use without fighting it.
   up/down throughput, session totals, the top talking apps, and a threat-hit
   count — right on your desktop or in Notification Center.
 
+### 🧭 Menu Bar & Background
+- Lives in the **menu bar** with a live ↓/↑ throughput readout, and keeps
+  monitoring after you close the main window — so the desktop widget never goes
+  stale.
+- Optional **menu-bar-only mode** hides the Dock icon entirely.
+- **Launch at login** and a **Settings window** (⌘,) for background mode,
+  threat-connection notifications, automatic update checks, and on-demand dataset
+  refresh.
+- **Threat-connection notifications** alert you when an active connection reaches
+  a flagged address — advisory only; MatrixNet never blocks.
+
 ### 🌍 Speaks Your Language
 - Fully localized into **8 languages** — English, Simplified & Traditional
   Chinese, Japanese, Korean, French, German, and Spanish — following your macOS

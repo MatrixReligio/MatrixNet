@@ -1,3 +1,4 @@
+import MatrixNetModel
 import SwiftUI
 
 private enum Links {
@@ -7,23 +8,17 @@ private enum Links {
 
 @main
 struct MatrixNetApp: App {
-    @State private var model = AppModel()
-    @State private var capture = PacketCaptureModel()
+    // The delegate owns the monitoring engine so it runs for the whole process
+    // lifetime, independent of the window — keeping the widget fresh.
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var updater = UpdateController()
 
     var body: some Scene {
         Window("MatrixNet", id: "main") {
             RootView()
-                .environment(model)
-                .environment(capture)
+                .environment(appDelegate.model)
+                .environment(appDelegate.capture)
                 .frame(minWidth: 880, minHeight: 520)
-                .onAppear {
-                    capture.attribution = model.aggregator
-                    model.start()
-                    ProxyInfo.refresh()
-                    Task.detached(priority: .background) { await GeoIP.updateIfNeeded() }
-                    Task.detached(priority: .background) { await Threat.updateIfNeeded() }
-                }
         }
         .windowToolbarStyle(.unified)
         .commands {
@@ -40,10 +35,27 @@ struct MatrixNetApp: App {
             }
         }
 
-        MenuBarExtra("MatrixNet", systemImage: "dot.radiowaves.left.and.right") {
+        MenuBarExtra {
             MenuBarView()
-                .environment(model)
+                .environment(appDelegate.model)
+        } label: {
+            MenuBarTitle(model: appDelegate.model)
         }
         .menuBarExtraStyle(.window)
+
+        Settings {
+            SettingsView(updater: updater)
+                .environment(appDelegate.model)
+        }
+    }
+}
+
+/// The menu-bar status item label: live down/up throughput. Reading the model's
+/// rates here is what makes the menu-bar title update as traffic changes.
+private struct MenuBarTitle: View {
+    let model: AppModel
+
+    var body: some View {
+        Text(MenuBarRateFormatter.compact(in: model.throughputIn, out: model.throughputOut))
     }
 }

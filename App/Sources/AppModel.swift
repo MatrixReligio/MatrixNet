@@ -38,6 +38,10 @@ public final class AppModel {
     /// list. Surfaced in the app and widget; advisory only (never blocks).
     public private(set) var threatCount: Int = 0
 
+    /// Posts threat-connection notifications; set by the app delegate at launch.
+    var threatNotifier: ThreatNotifier?
+    private let preferences = Preferences(defaults: SharedMetricsStore.sharedDefaults ?? .standard)
+
     private var monitor: NetworkStatisticsMonitor?
     /// Shared with the packet pipeline so captured packets are attributed to the
     /// same connections (the aggregator is built for both sources).
@@ -148,8 +152,20 @@ public final class AppModel {
                 }
                 return lhs.lastActivityAt > rhs.lastActivityAt
             }
-        threatCount = connections.lazy
-            .count(where: { $0.state == .active && Threat.isThreat($0.fiveTuple.destination.address) })
+        let threats = connections.filter {
+            $0.state == .active && Threat.isThreat($0.fiveTuple.destination.address)
+        }
+        threatCount = threats.count
+        threatNotifier?.evaluate(
+            threats.map {
+                ThreatNotifier.Hit(
+                    app: $0.app.displayName,
+                    ip: $0.fiveTuple.destination.address.description,
+                    host: $0.remoteHostname
+                )
+            },
+            enabled: preferences.threatNotificationsEnabled
+        )
 
         updateThroughput(session: session)
         publishWidgetMetrics()

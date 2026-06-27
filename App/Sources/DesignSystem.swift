@@ -71,7 +71,7 @@ enum Format {
         return "\(bytes(UInt64(bytesPerSecond)))/s"
     }
 
-    nonisolated(unsafe) private static let clock: DateFormatter = {
+    private static let clock: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "HH:mm:ss"

@@ -53,6 +53,11 @@ enum GeoIP {
         country(for: address).flatMap(GeoIPDatabase.flag)
     }
 
+    /// When the dataset was last checked for an update (shown in Settings).
+    static var lastChecked: Date? {
+        UserDefaults.standard.object(forKey: lastCheckedKey) as? Date
+    }
+
     // MARK: - Loading
 
     private static var downloadedURL: URL? {
@@ -80,10 +85,10 @@ enum GeoIP {
     /// Downloads a newer dataset when the check is due, validates it, installs it
     /// atomically into Application Support and swaps it in. Safe to call on every
     /// launch — it self-throttles and fails silently (flags are non-critical).
-    static func updateIfNeeded(now: Date = Date()) async {
+    static func updateIfNeeded(now: Date = Date(), force: Bool = false) async {
         let defaults = UserDefaults.standard
         let lastChecked = defaults.object(forKey: lastCheckedKey) as? Date
-        guard GeoIPUpdatePolicy.shouldCheck(now: now, lastChecked: lastChecked) else { return }
+        guard force || GeoIPUpdatePolicy.shouldCheck(now: now, lastChecked: lastChecked) else { return }
         defaults.set(now, forKey: lastCheckedKey)
 
         guard let destination = downloadedURL else { return }

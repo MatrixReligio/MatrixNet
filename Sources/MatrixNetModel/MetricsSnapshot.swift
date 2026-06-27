@@ -90,6 +90,12 @@ public enum SharedMetricsStore {
     public static let appGroupIdentifier = "4DUQGD879H.com.matrixreligio.matrixnet"
     public static let fileName = "metrics.json"
 
+    /// Shared `UserDefaults` for the App Group, so preferences persist in the
+    /// same container the app and its widget read. `nil` if unavailable.
+    public static var sharedDefaults: UserDefaults? {
+        UserDefaults(suiteName: appGroupIdentifier)
+    }
+
     /// Default shared-container URL, or `nil` if the App Group is unavailable.
     public static func defaultURL() -> URL? {
         FileManager.default

@@ -57,7 +57,10 @@ struct MenuBarView: View {
             Divider()
 
             HStack {
-                Button("Open MatrixNet") { openWindow(id: "main") }
+                Button("Open MatrixNet") {
+                    openWindow(id: "main")
+                    NSApp.activate()
+                }
                 Spacer()
                 Button("Quit") { NSApplication.shared.terminate(nil) }
             }
