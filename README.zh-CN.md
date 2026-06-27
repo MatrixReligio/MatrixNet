@@ -1,6 +1,6 @@
 # MatrixNet
 
-[English](./README.md) · **简体中文**
+[English](./README.md) · **简体中文** · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Français](./README.fr.md) · [Deutsch](./README.de.md) · [Español](./README.es.md)
 
 **看清每个 App 正在和哪个 IP 通信 —— 再把任意一条流追到数据包级别。**
 
