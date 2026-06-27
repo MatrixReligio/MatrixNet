@@ -79,8 +79,8 @@ targets:
     info:
       path: App/MatrixNet-Info.plist
       properties:
-        CFBundleShortVersionString: "0.1.4"
-        CFBundleVersion: "5"
+        CFBundleShortVersionString: "0.1.5"
+        CFBundleVersion: "6"
         LSMinimumSystemVersion: "26.0"
         CFBundleLocalizations: [en, zh-Hans, zh-Hant, ja, ko, fr, de, es]
         # Sparkle auto-update. Appcast is published as a stable GitHub "latest
@@ -128,8 +128,8 @@ targets:
     info:
       path: Widget/MatrixNetWidget-Info.plist
       properties:
-        CFBundleShortVersionString: "0.1.4"
-        CFBundleVersion: "5"
+        CFBundleShortVersionString: "0.1.5"
+        CFBundleVersion: "6"
         CFBundleLocalizations: [en, zh-Hans, zh-Hant, ja, ko, fr, de, es]
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
