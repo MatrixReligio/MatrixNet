@@ -15,6 +15,7 @@ public struct Preferences {
         case threatNotificationsEnabled = "pref.threatNotificationsEnabled"
         case historyRetentionDays = "pref.historyRetentionDays"
         case homeRegion = "pref.homeRegion"
+        case showDomains = "pref.showDomains"
     }
 
     private let defaults: UserDefaults
@@ -54,6 +55,13 @@ public struct Preferences {
     public var historyRetentionDays: Int {
         get { defaults.object(forKey: Key.historyRetentionDays.rawValue) as? Int ?? 30 }
         nonmutating set { defaults.set(newValue, forKey: Key.historyRetentionDays.rawValue) }
+    }
+
+    /// Whether to show resolved domain names instead of raw IPs where a name is
+    /// known (Connections, Packets, Map). Defaults to on.
+    public var showDomains: Bool {
+        get { bool(.showDomains, default: true) }
+        nonmutating set { setBool(newValue, .showDomains) }
     }
 
     /// The ISO-2 region used as the Map's "home" anchor, or `nil` to follow the

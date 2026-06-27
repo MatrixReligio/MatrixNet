@@ -10,6 +10,8 @@ struct ConnectionsView: View {
     @State private var sortOrder = [KeyPathComparator(\Connection.lastActivityAt, order: .reverse)]
     @State private var columns = TableColumnCustomization<Connection>()
     @State private var showInspector = true
+    @AppStorage(Preferences.Key.showDomains.rawValue, store: SharedMetricsStore.sharedDefaults)
+    private var showDomains = true
 
     private var filtered: [Connection] {
         let base = search.isEmpty ? model.connections : model.connections.filter { matches($0, search) }
@@ -134,6 +136,15 @@ struct ConnectionsView: View {
             .tint(Theme.accent)
         }
         ToolbarItem(placement: .primaryAction) {
+            Button { showDomains.toggle() } label: {
+                Label(
+                    showDomains ? LocalizedStringKey("Domains") : LocalizedStringKey("IPs"),
+                    systemImage: showDomains ? "globe" : "number"
+                )
+            }
+            .help("Show domain names or IP addresses")
+        }
+        ToolbarItem(placement: .primaryAction) {
             Button { showInspector.toggle() } label: {
                 Label("Inspector", systemImage: "sidebar.right")
             }
@@ -142,7 +153,11 @@ struct ConnectionsView: View {
 
     private func remoteLabel(_ connection: Connection) -> String {
         let endpoint = connection.fiveTuple.destination
-        let host = connection.remoteHostname ?? endpoint.address.description
+        let host = AddressDisplay.host(
+            ip: endpoint.address.description,
+            name: connection.remoteHostname,
+            showDomains: showDomains
+        )
         return "\(host):\(endpoint.port)"
     }
 

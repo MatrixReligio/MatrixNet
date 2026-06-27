@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Status:** Phase 1. Until version `1.0.0`, public interfaces and behavior may
 > change without notice.
 
+## [0.1.20] - 2026-06-27
+
+### Added
+- **Show domains or IPs.** A toolbar toggle (in Connections and Packets) switches
+  between resolved domain names and raw IP addresses; the Packets summaries swap
+  each known IP for its hostname, keeping the port. Defaults to domains, and the
+  choice is shared across both views.
+
 ## [0.1.19] - 2026-06-27
 
 ### Fixed
@@ -319,6 +327,7 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
+[0.1.20]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.20
 [0.1.19]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.19
 [0.1.18]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.18
 [0.1.17]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.17

@@ -52,6 +52,9 @@ public final class AppModel {
     public private(set) var destinationCountries: [CountryActivity] = []
     /// Countries that currently host at least one threat-flagged active remote.
     public private(set) var threatCountries: Set<String> = []
+    /// Known IP→hostname map (reverse DNS + DNS-enriched), keyed by the IP's
+    /// string form, for views that only have the textual address (e.g. Packets).
+    public private(set) var resolvedHostnames: [String: String] = [:]
     /// The busiest apps, enriched with live connection count, country flag, and
     /// threat/tunnel markers for the Overview "Top Talkers" list.
     private(set) var topTalkers: [TopTalker] = []
@@ -191,6 +194,16 @@ public final class AppModel {
         protocolMix = OverviewStats.protocolMix(connections)
         destinationCountries = OverviewStats.destinationCountries(connections) { GeoIP.country(for: $0) }
         threatCountries = Set(threats.compactMap { GeoIP.country(for: $0.fiveTuple.destination.address) })
+        var nameMap: [String: String] = [:]
+        for (ip, name) in hostnames {
+            nameMap[ip.description] = name
+        }
+        for connection in connections {
+            if let host = connection.remoteHostname {
+                nameMap[connection.fiveTuple.destination.address.description] = host
+            }
+        }
+        resolvedHostnames = nameMap
         topTalkers = makeTopTalkers(connections: connections)
 
         updateThroughput(session: session)

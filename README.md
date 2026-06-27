@@ -60,7 +60,8 @@ proxy, filter, or VPN you already use without fighting it.
 - **Threat-IP flagging** — remote addresses on a public threat-intelligence
   blocklist are flagged with a ⚠️ badge (advisory only — MatrixNet labels, it
   never blocks).
-- DNS enrichment maps observed IPs back to hostnames.
+- DNS enrichment maps observed IPs back to hostnames, with a one-click toggle to
+  show **domain names or raw IPs** across the Connections and Packets views.
 - A **Map tab** plots a real-world, offline dotted globe (Natural Earth, no map
   tiles) with glowing arcs from this Mac to every country it is talking to —
   node size by connection count, threat destinations in red.

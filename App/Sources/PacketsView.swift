@@ -9,10 +9,18 @@ import UniformTypeIdentifiers
 /// helper is enabled, an explanatory call-to-action is shown instead.
 struct PacketsView: View {
     @Environment(PacketCaptureModel.self) private var capture
+    @Environment(AppModel.self) private var model
     @State private var selection: UInt64?
     @State private var search = ""
     @State private var sortOrder = [KeyPathComparator(\PacketRow.timestamp, order: .forward)]
     @State private var columns = TableColumnCustomization<PacketRow>()
+    @AppStorage(Preferences.Key.showDomains.rawValue, store: SharedMetricsStore.sharedDefaults)
+    private var showDomains = true
+
+    /// A packet summary with IPs swapped for domain names when the toggle is on.
+    private func displaySummary(_ packet: PacketRow) -> String {
+        showDomains ? AddressDisplay.rewriteSummary(packet.summary, names: model.resolvedHostnames) : packet.summary
+    }
 
     private var selectedPacket: PacketRow? {
         capture.packets.first { $0.id == selection }
@@ -29,7 +37,7 @@ struct PacketsView: View {
         let needle = query.lowercased()
         if packet.processName.lowercased().contains(needle) { return true }
         if packet.highestProtocol.lowercased().contains(needle) { return true }
-        if packet.summary.lowercased().contains(needle) { return true }
+        if displaySummary(packet).lowercased().contains(needle) { return true }
         return false
     }
 
@@ -126,13 +134,13 @@ struct PacketsView: View {
             }
             .width(min: 48, ideal: 56, max: 90)
             .customizationID("proto")
-            TableColumn("Summary", value: \.summary) {
-                Text($0.summary)
+            TableColumn("Summary", value: \.summary) { packet in
+                Text(verbatim: displaySummary(packet))
                     .font(Theme.mono(11))
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .help($0.summary)
+                    .help(displaySummary(packet))
             }
             .customizationID("summary")
         }
@@ -173,6 +181,15 @@ struct PacketsView: View {
                 )
             }
             .tint(Theme.accent)
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button { showDomains.toggle() } label: {
+                Label(
+                    showDomains ? LocalizedStringKey("Domains") : LocalizedStringKey("IPs"),
+                    systemImage: showDomains ? "globe" : "number"
+                )
+            }
+            .help("Show domain names or IP addresses")
         }
         ToolbarItem(placement: .primaryAction) {
             Button { capture.clear() } label: { Label("Clear", systemImage: "trash") }
