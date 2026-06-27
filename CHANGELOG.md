@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Status:** Phase 1. Until version `1.0.0`, public interfaces and behavior may
 > change without notice.
 
+## [0.1.21] - 2026-06-28
+
+### Fixed
+- **Throughput chart time axis is clearer.** "Now" is pinned to the right edge
+  with a stable 60-second window, and the tick labels drop the minus sign in
+  favour of plain ages (`60s … 15s … now`), so they no longer collide visually
+  with the y-axis baseline.
+- **Throughput tooltip uses a 24-hour clock.** Hovering past midnight previously
+  showed `12:10:49 AM` (rendered as "上午12:10:49" in Chinese); it now reads a
+  plain, locale-independent `00:10:49`.
+
 ## [0.1.20] - 2026-06-27
 
 ### Added

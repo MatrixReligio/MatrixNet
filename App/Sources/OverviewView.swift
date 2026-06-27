@@ -117,8 +117,12 @@ private struct ThroughputChart: View {
         }
     }
 
+    /// Width of the live window in seconds (≈ 60 samples at 1 Hz).
+    private let windowSeconds: TimeInterval = 60
+
     private var chart: some View {
         let latest = samples.last?.time ?? Date()
+        let ticks = ThroughputAxis.tickDates(latest: latest, window: windowSeconds, count: 5)
         let downLabel = String(localized: "Download")
         let upLabel = String(localized: "Upload")
         return Chart {
@@ -172,16 +176,19 @@ private struct ThroughputChart: View {
         .chartForegroundStyleScale([downLabel: Theme.inbound, upLabel: Theme.outbound])
         .chartLegend(position: .top, alignment: .trailing, spacing: 4)
         .chartXSelection(value: $selectedTime)
+        // Pin "now" to the right edge with a stable 60s window so the axis reads
+        // 60s … 15s … now left to right.
+        .chartXScale(domain: latest.addingTimeInterval(-windowSeconds) ... latest)
         .chartXAxis {
-            AxisMarks(values: .automatic(desiredCount: 5)) { value in
+            AxisMarks(values: ticks) { value in
                 AxisGridLine()
                 AxisValueLabel {
                     if let date = value.as(Date.self) {
-                        let seconds = Int(latest.timeIntervalSince(date).rounded())
-                        if seconds <= 0 {
+                        let seconds = ThroughputAxis.secondsAgo(of: date, relativeTo: latest)
+                        if seconds == 0 {
                             Text("now")
                         } else {
-                            Text(verbatim: "-\(seconds)s")
+                            Text(verbatim: "\(seconds)s")
                         }
                     }
                 }
@@ -201,7 +208,7 @@ private struct ThroughputChart: View {
 
     private func tooltip(_ sample: ThroughputSample) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(sample.time, format: .dateTime.hour().minute().second())
+            Text(verbatim: ThroughputAxis.clockLabel(for: sample.time))
                 .font(.caption2).foregroundStyle(.secondary)
             Text(verbatim: "↓ \(Format.rate(sample.inRate))")
                 .foregroundStyle(Theme.inbound)
