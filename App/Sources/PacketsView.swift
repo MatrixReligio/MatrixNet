@@ -94,9 +94,11 @@ struct PacketsView: View {
 
     private var packetList: some View {
         Table(sortedPackets, selection: $selection, sortOrder: $sortOrder, columnCustomization: $columns) {
-            TableColumn("Time", value: \.timestamp) { Text($0.timestamp, format: .dateTime.hour().minute().second()) }
-                .width(min: 60, ideal: 70, max: 110)
-                .customizationID("time")
+            TableColumn("Time", value: \.timestamp) {
+                Text(verbatim: Format.preciseTime($0.timestamp)).font(Theme.mono(11))
+            }
+            .width(min: 96, ideal: 112, max: 150)
+            .customizationID("time")
             TableColumn("Process", value: \.processName) { Text($0.processName).lineLimit(1) }
                 .width(min: 80, ideal: 120)
                 .customizationID("process")

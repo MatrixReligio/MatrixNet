@@ -188,6 +188,27 @@ struct ConnectionAggregatorTests {
         #expect(traffic.first?.bytesIn == 1500)
     }
 
+    @Test("packet attribution sets real per-connection and per-app bytes")
+    func packetAttribution() async throws {
+        let aggregator = ConnectionAggregator()
+        let connection = try connection(50030, pid: 9)
+        await aggregator.apply(.added(connection)) // registers the flow key
+        await aggregator.attributePackets([
+            ConnectionAggregator.PacketAttribution(
+                flowKey: connection.fiveTuple.flowKey, pid: 9, inbound: true, bytes: 1500
+            ),
+            ConnectionAggregator.PacketAttribution(
+                flowKey: connection.fiveTuple.flowKey, pid: 9, inbound: false, bytes: 200
+            )
+        ])
+        let snapshot = try #require(await aggregator.snapshot().first)
+        #expect(snapshot.bytesIn == 1500)
+        #expect(snapshot.bytesOut == 200)
+        let traffic = try #require(await aggregator.appTraffic().first)
+        #expect(traffic.bytesIn == 1500)
+        #expect(traffic.bytesOut == 200)
+    }
+
     @Test("packet correlation resolves registered connections by flow key")
     func packetCorrelation() async throws {
         let aggregator = ConnectionAggregator()

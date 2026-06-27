@@ -1,4 +1,5 @@
 import Foundation
+import MatrixNetCapture
 import MatrixNetDissection
 import MatrixNetModel
 import MatrixNetXPC
@@ -38,6 +39,11 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
     private(set) var isCapturing = false
     private(set) var lastError: String?
     private(set) var packets: [PacketRow] = []
+
+    /// The connection aggregator captured packets are attributed to (set at
+    /// launch). Lets the connections table and top talkers show real per-flow
+    /// bytes while capturing — even traffic a proxy hides from NetworkStatistics.
+    var attribution: ConnectionAggregator?
 
     private let daemon = SMAppService.daemon(plistName: CaptureXPC.helperPlistName)
     private var connection: NSXPCConnection?
@@ -184,6 +190,24 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
         if packets.count > maxPackets {
             packets.removeFirst(packets.count - maxPackets)
         }
+        attribute(rows)
+    }
+
+    /// Forwards captured packets to the aggregator (off the main actor) so real
+    /// per-connection/per-app byte totals accumulate while capturing.
+    private func attribute(_ rows: [DissectedRow]) {
+        guard let attribution else { return }
+        let attributions = rows.compactMap { row -> ConnectionAggregator.PacketAttribution? in
+            guard let tuple = row.dissected.fiveTuple else { return nil }
+            return ConnectionAggregator.PacketAttribution(
+                flowKey: tuple.flowKey,
+                pid: row.packet.pid,
+                inbound: row.packet.direction == 2,
+                bytes: row.packet.originalLength
+            )
+        }
+        guard !attributions.isEmpty else { return }
+        Task.detached { await attribution.attributePackets(attributions) }
     }
 
     private func direction(from raw: UInt8) -> TrafficDirection {

@@ -10,6 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-06-27
+
+### Added
+- **Real per-connection and per-app byte counts from packet capture.** While the
+  packet helper is capturing, each packet is attributed to its connection at the
+  data-link layer, so the Connections, History, and Top Talkers views show true
+  byte totals even for traffic a transparent proxy/VPN hides from
+  `NetworkStatistics` (where per-connection counters read 0).
+
+### Fixed
+- **Packet timestamps are now per-packet** (microsecond `bh_tstamp`) instead of
+  one shared time per read batch, and the Packets time column shows
+  `HH:mm:ss.microseconds` — so packets within the same second are distinguishable.
+- **Help menu no longer reports "No help found."** It now links to the project on
+  GitHub and to the issue tracker.
+
 ## [0.1.2] - 2026-06-27
 
 ### Added
@@ -99,7 +115,8 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
-[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/MatrixReligio/MatrixNet/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.3
 [0.1.2]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.2
 [0.1.1]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.1
 [0.1.0]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.0

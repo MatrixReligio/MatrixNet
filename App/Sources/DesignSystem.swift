@@ -63,4 +63,20 @@ enum Format {
         guard bytesPerSecond >= 1 else { return "—" }
         return "\(bytes(UInt64(bytesPerSecond)))/s"
     }
+
+    nonisolated(unsafe) private static let clock: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter
+    }()
+
+    /// Wall-clock time down to the microsecond (`HH:mm:ss.uuuuuu`), so packets
+    /// captured within the same second are still distinguishable.
+    static func preciseTime(_ date: Date) -> String {
+        let interval = date.timeIntervalSince1970
+        let whole = interval.rounded(.down)
+        let micros = min(999_999, Int(((interval - whole) * 1_000_000).rounded()))
+        return "\(clock.string(from: date)).\(String(format: "%06d", micros))"
+    }
 }

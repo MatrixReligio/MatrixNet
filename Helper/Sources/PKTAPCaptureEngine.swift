@@ -146,12 +146,11 @@ final class PKTAPCaptureEngine: @unchecked Sendable {
         let count = buffer.withUnsafeMutableBytes { read(descriptor, $0.baseAddress, capacity) }
         guard count > 0 else { return }
 
-        let rawPackets = BPFRecordParser.packets(in: buffer, count: count)
-        let now = Date().timeIntervalSince1970
-        let packets = rawPackets.compactMap { raw -> WirePacket? in
-            guard let pktap = PKTAPParser.parse(raw) else { return nil }
+        let records = BPFRecordParser.records(in: buffer, count: count)
+        let packets = records.compactMap { record -> WirePacket? in
+            guard let pktap = PKTAPParser.parse(record.bytes) else { return nil }
             return WirePacket(
-                timestamp: now,
+                timestamp: record.timestamp,
                 pid: pktap.pid,
                 processName: pktap.processName,
                 direction: directionByte(pktap.direction),

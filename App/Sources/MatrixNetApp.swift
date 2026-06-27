@@ -1,5 +1,10 @@
 import SwiftUI
 
+private enum Links {
+    static let repository = URL(string: "https://github.com/MatrixReligio/MatrixNet")!
+    static let issues = URL(string: "https://github.com/MatrixReligio/MatrixNet/issues")!
+}
+
 @main
 struct MatrixNetApp: App {
     @State private var model = AppModel()
@@ -13,6 +18,7 @@ struct MatrixNetApp: App {
                 .environment(capture)
                 .frame(minWidth: 880, minHeight: 520)
                 .onAppear {
+                    capture.attribution = model.aggregator
                     model.start()
                     Task.detached(priority: .background) { await GeoIP.updateIfNeeded() }
                 }
@@ -23,6 +29,12 @@ struct MatrixNetApp: App {
             // Place "Check for Updates…" in the application menu, next to About.
             CommandGroup(after: .appInfo) {
                 CheckForUpdatesCommand(updater: updater)
+            }
+            // The default Help menu points at a non-existent help book ("No help
+            // found"); replace it with links to the project's open-source pages.
+            CommandGroup(replacing: .help) {
+                Link("MatrixNet on GitHub", destination: Links.repository)
+                Link("Report an Issue", destination: Links.issues)
             }
         }
 

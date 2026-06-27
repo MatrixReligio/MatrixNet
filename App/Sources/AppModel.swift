@@ -35,7 +35,9 @@ public final class AppModel {
     public private(set) var topApps: [AppTraffic] = []
 
     private var monitor: NetworkStatisticsMonitor?
-    private let aggregator = ConnectionAggregator()
+    /// Shared with the packet pipeline so captured packets are attributed to the
+    /// same connections (the aggregator is built for both sources).
+    let aggregator = ConnectionAggregator()
     private let resolver = HostnameResolver()
     private let historyStore = try? HistoryStore.persistent()
     private var pumpTask: Task<Void, Never>?

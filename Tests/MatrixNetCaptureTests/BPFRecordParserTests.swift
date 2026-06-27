@@ -27,6 +27,22 @@ struct BPFRecordParserTests {
         #expect(packets == [[1, 2, 3, 4, 5]])
     }
 
+    @Test("extracts the per-record microsecond timestamp from bh_tstamp")
+    func timestamp() {
+        var buffer = record([1, 2, 3])
+        // bh_tstamp.tv_sec = 10 (offset 0), tv_usec = 500_000 (offset 4)
+        let seconds: UInt32 = 10
+        let micros: UInt32 = 500_000
+        for index in 0 ..< 4 {
+            buffer[index] = UInt8(seconds >> (UInt32(index) * 8) & 0xFF)
+            buffer[4 + index] = UInt8(micros >> (UInt32(index) * 8) & 0xFF)
+        }
+        let records = BPFRecordParser.records(in: buffer, count: buffer.count)
+        #expect(records.count == 1)
+        #expect(records.first?.timestamp == 10.5)
+        #expect(records.first?.bytes == [1, 2, 3])
+    }
+
     @Test("extracts multiple word-aligned records")
     func multiple() {
         let buffer = record([0xAA, 0xBB, 0xCC]) + record([0xDD, 0xDD]) + record([0x01])

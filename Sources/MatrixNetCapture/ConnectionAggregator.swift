@@ -29,8 +29,50 @@ public actor ConnectionAggregator {
     /// instantaneous per-connection bytes would show ~0 for everything.
     private var trafficByApp: [String: AppTraffic] = [:]
 
+    /// Packet-derived byte totals, populated only while packet capture is active.
+    /// Captured at the data-link layer (PKTAP), these see real per-flow bytes even
+    /// when a transparent proxy/VPN hides them from `NetworkStatistics` — so the
+    /// connections table and top talkers show true figures while capturing.
+    private var packetBytesByConn: [UUID: (inBytes: UInt64, outBytes: UInt64)] = [:]
+    private var packetTrafficByApp: [String: AppTraffic] = [:]
+
+    /// A captured packet attributed to a flow, handed in by the packet pipeline.
+    public struct PacketAttribution: Sendable {
+        public let flowKey: FlowKey
+        public let pid: Int32
+        public let inbound: Bool
+        public let bytes: Int
+        public init(flowKey: FlowKey, pid: Int32, inbound: Bool, bytes: Int) {
+            self.flowKey = flowKey
+            self.pid = pid
+            self.inbound = inbound
+            self.bytes = bytes
+        }
+    }
+
     public init(correlator: FlowCorrelator = FlowCorrelator()) {
         self.correlator = correlator
+    }
+
+    /// Attributes captured packets to their connections (by flow key, with a PID
+    /// fallback) and accumulates real byte totals per connection and per app.
+    public func attributePackets(_ packets: [PacketAttribution]) async {
+        for packet in packets {
+            guard let id = await correlator.connectionID(forPacketFlow: packet.flowKey, pid: packet.pid) else {
+                continue
+            }
+            let bytes = UInt64(max(0, packet.bytes))
+            var conn = packetBytesByConn[id] ?? (inBytes: 0, outBytes: 0)
+            if packet.inbound { conn.inBytes &+= bytes } else { conn.outBytes &+= bytes }
+            packetBytesByConn[id] = conn
+
+            guard let connection = connections[id] else { continue }
+            let key = connection.app.displayName
+            var traffic = packetTrafficByApp[key] ?? AppTraffic(app: connection.app)
+            traffic.app = connection.app
+            if packet.inbound { traffic.bytesIn &+= bytes } else { traffic.bytesOut &+= bytes }
+            packetTrafficByApp[key] = traffic
+        }
     }
 
     /// Accumulates the positive growth of a connection's counters into the global
@@ -63,8 +105,10 @@ public actor ConnectionAggregator {
     }
 
     /// Session-cumulative per-app traffic (monotonic; survives connection removal).
+    /// Prefers packet-derived figures while capturing (accurate under a proxy),
+    /// falling back to the `NetworkStatistics`-derived totals otherwise.
     public func appTraffic() -> [AppTraffic] {
-        Array(trafficByApp.values)
+        packetTrafficByApp.isEmpty ? Array(trafficByApp.values) : Array(packetTrafficByApp.values)
     }
 
     /// Clears all live and session state so a stopped-then-restarted monitor
@@ -75,6 +119,8 @@ public actor ConnectionAggregator {
         lastSeenIn.removeAll()
         lastSeenOut.removeAll()
         trafficByApp.removeAll()
+        packetBytesByConn.removeAll()
+        packetTrafficByApp.removeAll()
         sessionBytesIn = 0
         sessionBytesOut = 0
     }
@@ -122,6 +168,9 @@ public actor ConnectionAggregator {
             connections[id] = nil
             lastSeenIn[id] = nil
             lastSeenOut[id] = nil
+            // The per-app packet total already captured this flow's bytes; drop
+            // the per-connection tally so the map doesn't grow without bound.
+            packetBytesByConn[id] = nil
             await correlator.remove(connectionID: id)
         }
     }
@@ -133,9 +182,17 @@ public actor ConnectionAggregator {
         }
     }
 
-    /// A snapshot of all currently tracked connections.
+    /// A snapshot of all currently tracked connections. While packet capture is
+    /// active, a connection's byte counters are replaced with the packet-derived
+    /// totals so the table shows real figures even under a proxy.
     public func snapshot() -> [Connection] {
-        Array(connections.values)
+        connections.values.map { connection in
+            guard let packet = packetBytesByConn[connection.id] else { return connection }
+            var merged = connection
+            merged.bytesIn = packet.inBytes
+            merged.bytesOut = packet.outBytes
+            return merged
+        }
     }
 
     /// Resolves a dissected packet to its owning connection id.
