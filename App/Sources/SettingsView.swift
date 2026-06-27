@@ -1,3 +1,4 @@
+import MatrixNetGeoIP
 import MatrixNetModel
 import ServiceManagement
 import SwiftUI
@@ -30,6 +31,8 @@ private struct GeneralSettings: View {
     private var runInBackground = false
     @AppStorage(Preferences.Key.threatNotificationsEnabled.rawValue, store: SharedMetricsStore.sharedDefaults)
     private var threatNotifications = false
+    @AppStorage(Preferences.Key.homeRegion.rawValue, store: SharedMetricsStore.sharedDefaults)
+    private var homeRegion = ""
     @State private var loginError: String?
 
     var body: some View {
@@ -75,8 +78,29 @@ private struct GeneralSettings: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            Section {
+                Picker("Home region (Map)", selection: $homeRegion) {
+                    Text("Automatic (system region)").tag("")
+                    ForEach(WorldMapStore.selectableRegions, id: \.self) { code in
+                        Text(verbatim: regionLabel(code)).tag(code)
+                    }
+                }
+            } footer: {
+                Text("Where the Map’s “this Mac” anchor sits. Defaults to your system region.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
+    }
+
+    private func regionLabel(_ code: String) -> String {
+        let name = Locale.current.localizedString(forRegionCode: code) ?? code
+        if let flag = GeoIPDatabase.flag(for: code) {
+            return "\(flag) \(name)"
+        }
+        return name
     }
 
     private func applyLaunchAtLogin(_ enabled: Bool) {

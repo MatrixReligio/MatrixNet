@@ -45,8 +45,10 @@ struct GlobeView: View {
                 GlobeDestinationsList(destinations: destinations)
                     .frame(width: 264)
             }
+            .frame(maxHeight: .infinity)
         }
         .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle("Map")
         .background(.background)
     }
@@ -163,14 +165,13 @@ struct GlobeView: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 520)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             RadialGradient(
                 colors: [Color(red: 0.09, green: 0.14, blue: 0.24), Color(red: 0.04, green: 0.07, blue: 0.12)],
                 center: .center,
                 startRadius: 10,
-                endRadius: 760
+                endRadius: 900
             )
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -403,7 +404,7 @@ private struct GlobeDestinationsList: View {
             }
             Spacer(minLength: 0)
         }
-        .frame(maxHeight: 520, alignment: .top)
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     private func row(_ destination: GlobeDestination) -> some View {

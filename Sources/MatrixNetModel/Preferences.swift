@@ -14,6 +14,7 @@ public struct Preferences {
         case runInBackground = "pref.runInBackground"
         case threatNotificationsEnabled = "pref.threatNotificationsEnabled"
         case historyRetentionDays = "pref.historyRetentionDays"
+        case homeRegion = "pref.homeRegion"
     }
 
     private let defaults: UserDefaults
@@ -53,5 +54,17 @@ public struct Preferences {
     public var historyRetentionDays: Int {
         get { defaults.object(forKey: Key.historyRetentionDays.rawValue) as? Int ?? 30 }
         nonmutating set { defaults.set(newValue, forKey: Key.historyRetentionDays.rawValue) }
+    }
+
+    /// The ISO-2 region used as the Map's "home" anchor, or `nil` to follow the
+    /// system region. (The system region can differ from physical location.)
+    public var homeRegion: String? {
+        get {
+            let value = defaults.string(forKey: Key.homeRegion.rawValue) ?? ""
+            return value.isEmpty ? nil : value
+        }
+        nonmutating set {
+            defaults.set(newValue ?? "", forKey: Key.homeRegion.rawValue)
+        }
     }
 }

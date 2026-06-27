@@ -15,6 +15,17 @@ struct PreferencesTests {
         #expect(prefs.runInBackground == false)
         #expect(prefs.threatNotificationsEnabled == false)
         #expect(prefs.historyRetentionDays == 30)
+        #expect(prefs.homeRegion == nil)
+    }
+
+    @Test("home region round-trips and clears back to nil")
+    func homeRegion() throws {
+        let store = try freshDefaults()
+        let prefs = Preferences(defaults: store)
+        prefs.homeRegion = "CN"
+        #expect(Preferences(defaults: store).homeRegion == "CN")
+        prefs.homeRegion = nil
+        #expect(Preferences(defaults: store).homeRegion == nil)
     }
 
     @Test("values round-trip through the store")
