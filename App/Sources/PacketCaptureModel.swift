@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import MatrixNetCapture
 import MatrixNetDissection
@@ -49,6 +50,9 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
     private var connection: NSXPCConnection?
     private var nextID: UInt64 = 0
     private let maxPackets = 5000
+    /// Caches full process names resolved from a PID, since the per-packet PKTAP
+    /// `comm` field is capped at 16 characters by the kernel.
+    private var processNameCache: [Int32: String] = [:]
 
     /// Refreshes the helper registration state from the system.
     func refreshState() {
@@ -177,7 +181,7 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
             packets.append(PacketRow(
                 id: nextID,
                 timestamp: Date(timeIntervalSince1970: row.packet.timestamp),
-                processName: row.packet.processName,
+                processName: fullProcessName(pid: row.packet.pid, fallback: row.packet.processName),
                 pid: row.packet.pid,
                 direction: direction(from: row.packet.direction),
                 summary: row.dissected.summary,
@@ -191,6 +195,23 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
             packets.removeFirst(packets.count - maxPackets)
         }
         attribute(rows)
+    }
+
+    /// Resolves a process's full name from its PID via `proc_pidpath` (cached),
+    /// because PKTAP's per-packet `comm` field is truncated to 16 characters. Uses
+    /// the same display-name derivation as connections for consistency; falls back
+    /// to the truncated `comm` when the path can't be read (e.g. another user).
+    private func fullProcessName(pid: Int32, fallback: String) -> String {
+        guard pid > 0 else { return fallback }
+        if let cached = processNameCache[pid] { return cached }
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        let length = proc_pidpath(pid, &buffer, UInt32(buffer.count))
+        guard length > 0,
+              let path = String(bytes: buffer.prefix(Int(length)), encoding: .utf8),
+              !path.isEmpty else { return fallback }
+        let name = AppIdentity(pid: pid, executablePath: path).displayName
+        processNameCache[pid] = name
+        return name
     }
 
     /// Forwards captured packets to the aggregator (off the main actor) so real

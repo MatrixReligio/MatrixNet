@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Status:** Phase 1. Until version `1.0.0`, public interfaces and behavior may
 > change without notice.
 
+## [0.1.19] - 2026-06-27
+
+### Fixed
+- **Packet process names are no longer truncated to 16 characters.** PKTAP only
+  carries a 16-char `comm` per packet (so "Spark Mail Helper" showed as "Spark
+  Mail Helpe"); MatrixNet now resolves the full name from the packet's PID
+  (matching the Connections view), falling back to the short name when the path
+  isn't readable.
+
 ## [0.1.18] - 2026-06-27
 
 ### Fixed
@@ -310,6 +319,7 @@ First Developer ID-signed, notarized build.
   or HTTPS/TLS decryption. Those are tracked on the
   [roadmap](./README.md#roadmap) for later phases.
 
+[0.1.19]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.19
 [0.1.18]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.18
 [0.1.17]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.17
 [0.1.16]: https://github.com/MatrixReligio/MatrixNet/releases/tag/v0.1.16
