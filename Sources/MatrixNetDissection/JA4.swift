@@ -51,4 +51,23 @@ enum JA4 {
         let raw = rawB(ciphers: ciphers)
         return raw.isEmpty ? "000000000000" : hash12(raw)
     }
+
+    /// Sorted GREASE/SNI/ALPN-free extensions, then "_" + sig-algs in wire order
+    /// (the JA4_c pre-image). The trailing "_" is omitted when there are no sig-algs.
+    static func rawC(extensions: [UInt16], signatureAlgorithms: [UInt16]) -> String {
+        let exts = extensions
+            .filter { !isGREASE($0) && $0 != 0x0000 && $0 != 0x0010 }
+            .map(hex4)
+            .sorted()
+            .joined(separator: ",")
+        let sigs = signatureAlgorithms.filter { !isGREASE($0) }.map(hex4).joined(separator: ",")
+        return sigs.isEmpty ? exts : "\(exts)_\(sigs)"
+    }
+
+    /// JA4_c: first 12 hex of SHA-256 of the extension pre-image, or the zero sentinel.
+    static func partC(extensions: [UInt16], signatureAlgorithms: [UInt16]) -> String {
+        let extsOnly = extensions.filter { !isGREASE($0) && $0 != 0x0000 && $0 != 0x0010 }
+        if extsOnly.isEmpty { return "000000000000" }
+        return hash12(rawC(extensions: extensions, signatureAlgorithms: signatureAlgorithms))
+    }
 }

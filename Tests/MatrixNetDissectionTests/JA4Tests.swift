@@ -37,3 +37,33 @@ struct JA4BTests {
         #expect(JA4.partB(ciphers: [0x1A1A]) == "000000000000")
     }
 }
+
+@Suite("JA4_c extensions")
+struct JA4CTests {
+    let extensions: [UInt16] = [
+        0x001b, 0x0000, 0x0033, 0x0010, 0x4469, 0x0017, 0x002d, 0x000d,
+        0x0005, 0x0023, 0x0012, 0x002b, 0xff01, 0x000b, 0x000a, 0x0015
+    ]
+    let sigAlgs: [UInt16] = [0x0403, 0x0804, 0x0401, 0x0503, 0x0805, 0x0501, 0x0806, 0x0601]
+
+    @Test("raw list removes SNI+ALPN+GREASE, sorts extensions, keeps sig-alg order")
+    func raw() {
+        #expect(JA4.rawC(extensions: [0x0A0A] + extensions, signatureAlgorithms: sigAlgs) ==
+            "0005,000a,000b,000d,0012,0015,0017,001b,0023,002b,002d,0033,4469,ff01_0403,0804,0401,0503,0805,0501,0806,0601")
+    }
+
+    @Test("hash matches the FoxIO reference vector")
+    func hash() {
+        #expect(JA4.partC(extensions: extensions, signatureAlgorithms: sigAlgs) == "e5627efa2ab1")
+    }
+
+    @Test("no signature algorithms means no trailing underscore")
+    func noSigAlgs() {
+        #expect(JA4.rawC(extensions: [0x002b, 0x000a], signatureAlgorithms: []) == "000a,002b")
+    }
+
+    @Test("no extensions after exclusions hashes to the zero sentinel")
+    func empty() {
+        #expect(JA4.partC(extensions: [0x0000, 0x0010, 0x1A1A], signatureAlgorithms: []) == "000000000000")
+    }
+}
