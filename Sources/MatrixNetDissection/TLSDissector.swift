@@ -71,6 +71,15 @@ enum TLSDissector {
         )
     }
 
+    /// Parses a ClientHello *handshake message* (starting at the handshake type
+    /// byte 0x01) into JA4 fields + SNI. Shared by the TLS-record path and the
+    /// QUIC CRYPTO-frame path, which both produce a bare ClientHello message.
+    static func clientHello(fromHandshake bytes: [UInt8]) -> (hello: JA4ClientHello, serverName: String?)? {
+        guard bytes.first == 0x01 else { return nil } // ClientHello
+        var reader = ByteReader(bytes, offset: 1)
+        return try? parseClientHello(&reader)
+    }
+
     /// Walks a ClientHello collecting every field JA4 needs (and the SNI host).
     private static func parseClientHello(
         _ reader: inout ByteReader
