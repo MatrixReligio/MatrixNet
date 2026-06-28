@@ -90,4 +90,30 @@ struct FlowQualityTrackerTests {
         #expect(tracker.quality.retransmits == 0)
         #expect(tracker.quality.outOfOrder == 0)
     }
+
+    @Test("a SYN carrying data (TCP Fast Open) consumes one sequence number")
+    func synWithPayload() {
+        var tracker = FlowQualityTracker()
+        // TFO SYN with 100 bytes of early data; data occupies ISN+1 ... ISN+100.
+        let tfoSyn = TCPSegment(flags: .syn, sequence: 1000, acknowledgement: 0, payloadLength: 100)
+        // The next in-order segment therefore starts at ISN+1+100 = 1101.
+        let nextData = TCPSegment(flags: [.ack, .psh], sequence: 1101, acknowledgement: 0, payloadLength: 200)
+        tracker.ingest(timestampMicros: 0, inbound: false, segment: tfoSyn)
+        tracker.ingest(timestampMicros: 1, inbound: false, segment: nextData)
+        #expect(tracker.quality.outOfOrder == 0)
+        #expect(tracker.quality.retransmits == 0)
+    }
+
+    @Test("a FIN carrying data consumes one sequence number")
+    func finWithPayload() {
+        var tracker = FlowQualityTracker()
+        // FIN segment carrying its last 100 data bytes; it consumes one extra
+        // sequence number for the FIN itself, so the high-water mark is seq+len+1.
+        let finData = TCPSegment(flags: [.ack, .fin], sequence: 1000, acknowledgement: 0, payloadLength: 100)
+        let afterFin = TCPSegment(flags: .ack, sequence: 1101, acknowledgement: 0, payloadLength: 20)
+        tracker.ingest(timestampMicros: 0, inbound: true, segment: finData)
+        tracker.ingest(timestampMicros: 1, inbound: true, segment: afterFin)
+        #expect(tracker.quality.outOfOrder == 0)
+        #expect(tracker.quality.retransmits == 0)
+    }
 }

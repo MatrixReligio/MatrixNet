@@ -49,7 +49,13 @@ public struct FlowQualityTracker: Sendable {
         guard segment.payloadLength > 0 else { return }
         if !inbound, firstOutboundDataTs == nil { firstOutboundDataTs = timestampMicros }
 
-        let end = segment.sequence &+ UInt32(segment.payloadLength)
+        // SYN and FIN each consume one sequence number (RFC 9293 §3.4), so a
+        // segment that carries payload alongside a SYN (TCP Fast Open) or FIN
+        // advances the next expected sequence by one extra. Without this the
+        // following in-order segment looks like it skipped a byte and would be
+        // miscounted as out-of-order.
+        let controlBytes = UInt32((segment.flags.contains(.syn) ? 1 : 0) + (segment.flags.contains(.fin) ? 1 : 0))
+        let end = segment.sequence &+ UInt32(segment.payloadLength) &+ controlBytes
         if let prior = maxSeqEnd[inbound] {
             let delta = Int32(bitPattern: segment.sequence &- prior)
             if delta < 0 {
