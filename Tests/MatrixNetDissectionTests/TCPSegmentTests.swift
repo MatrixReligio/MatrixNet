@@ -36,6 +36,31 @@ struct TCPSegmentTests {
         #expect(segment.payloadLength == 4)
     }
 
+    @Test("a TSO frame with IPv4 totalLength 0 sizes payload from the buffer")
+    func tcpSegmentationOffload() throws {
+        // macOS delivers outbound TSO/LSO frames to PKTAP before the NIC segments
+        // them, with the IPv4 total-length field still 0. The payload length must
+        // then come from the captured buffer, not the (zero) length field — else
+        // every data segment looks empty and quality tracking sees nothing.
+        var packet: [UInt8] = [
+            0x45, 0x00, 0x00, 0x00, // ver/IHL, DSCP, total length = 0 (TSO)
+            0x00, 0x00, 0x40, 0x00,
+            0x40, 0x06, 0x00, 0x00,
+            0x0A, 0x00, 0x00, 0x01,
+            0x0A, 0x00, 0x00, 0x02
+        ]
+        packet += [
+            0x01, 0xBB, 0xC0, 0x00,
+            0x00, 0x00, 0x10, 0x00,
+            0x00, 0x00, 0x20, 0x00,
+            0x50, 0x18, 0xFF, 0xFF, // data offset 5, flags ACK+PSH (0x018)
+            0x00, 0x00, 0x00, 0x00
+        ]
+        packet += [0xDE, 0xAD, 0xBE, 0xEF] // 4 payload bytes
+        let segment = try #require(PacketDissector().dissect(packet, linkType: .rawIP).tcpSegment)
+        #expect(segment.payloadLength == 4)
+    }
+
     @Test("a UDP packet has no TCP segment")
     func udpHasNoSegment() {
         // Minimal IPv4+UDP: totalLength 28, proto 17.

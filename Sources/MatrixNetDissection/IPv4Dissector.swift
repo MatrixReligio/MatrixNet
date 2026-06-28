@@ -60,11 +60,16 @@ enum IPv4Dissector {
             fields: fields,
             byteRange: start ..< start + headerLength
         )
+        // macOS hands outbound TSO/LSO frames to PKTAP before the NIC segments
+        // them, with `totalLength` still 0. In that case the captured buffer holds
+        // the whole frame, so size the payload from it rather than the zero field.
+        let payloadEnd = totalLength == 0 ? bytes.count : min(start + Int(totalLength), bytes.count)
+
         return NetworkLayerResult(
             node: node,
             ipProtocol: ipProtocol,
             payloadOffset: start + headerLength,
-            payloadEnd: min(start + Int(totalLength), bytes.count),
+            payloadEnd: payloadEnd,
             source: source,
             destination: destination
         )
