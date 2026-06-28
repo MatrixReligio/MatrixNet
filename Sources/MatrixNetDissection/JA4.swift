@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 
 /// Fields parsed from a TLS ClientHello that JA4 is computed from.
-struct JA4ClientHello: Sendable, Equatable {
+struct JA4ClientHello: Equatable {
     /// Negotiated/offered version used for JA4_a (from supported_versions, else legacy).
     var tlsVersion: UInt16
     /// Offered cipher suites, in wire order, GREASE NOT yet removed.
@@ -23,7 +23,7 @@ struct JA4ClientHello: Sendable, Equatable {
 /// patent-pending); only the freely-implementable JA4 client fingerprint is here.
 enum JA4 {
     /// Whether the fingerprint is for TLS over TCP or over QUIC.
-    enum Transport: Sendable { case tcp, quic }
+    enum Transport { case tcp, quic }
 
     /// GREASE: both bytes equal and each low nibble is `0xa` (RFC 8701).
     static func isGREASE(_ value: UInt16) -> Bool {
@@ -80,9 +80,9 @@ enum JA4 {
         case 0x0301: "10"
         case 0x0300: "s3"
         case 0x0002: "s2"
-        case 0xfeff: "d1"
-        case 0xfefd: "d2"
-        case 0xfefc: "d3"
+        case 0xFEFF: "d1"
+        case 0xFEFD: "d2"
+        case 0xFEFC: "d3"
         default: "00"
         }
     }
@@ -107,8 +107,8 @@ enum JA4 {
     static func rawA(from hello: JA4ClientHello, transport: Transport) -> String {
         let proto = transport == .quic ? "q" : "t"
         let sni = hello.hasSNI ? "d" : "i"
-        let cipherCount = count2(hello.ciphers.filter { !isGREASE($0) }.count)
-        let extCount = count2(hello.extensions.filter { !isGREASE($0) }.count)
+        let cipherCount = count2(hello.ciphers.count(where: { !isGREASE($0) }))
+        let extCount = count2(hello.extensions.count(where: { !isGREASE($0) }))
         return "\(proto)\(versionString(hello.tlsVersion))\(sni)\(cipherCount)\(extCount)\(alpnCode(hello.alpnFirst))"
     }
 

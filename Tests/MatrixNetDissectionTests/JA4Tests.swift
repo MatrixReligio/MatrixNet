@@ -17,8 +17,8 @@ struct JA4GreaseTests {
 @Suite("JA4_b ciphers")
 struct JA4BTests {
     let ciphers: [UInt16] = [
-        0x1301, 0x1302, 0x1303, 0xc02b, 0xc02f, 0xc02c, 0xc030,
-        0xcca9, 0xcca8, 0xc013, 0xc014, 0x009c, 0x009d, 0x002f, 0x0035
+        0x1301, 0x1302, 0x1303, 0xC02B, 0xC02F, 0xC02C, 0xC030,
+        0xCCA9, 0xCCA8, 0xC013, 0xC014, 0x009C, 0x009D, 0x002F, 0x0035
     ]
 
     @Test("raw cipher list is GREASE-free and sorted ascending")
@@ -41,15 +41,16 @@ struct JA4BTests {
 @Suite("JA4_c extensions")
 struct JA4CTests {
     let extensions: [UInt16] = [
-        0x001b, 0x0000, 0x0033, 0x0010, 0x4469, 0x0017, 0x002d, 0x000d,
-        0x0005, 0x0023, 0x0012, 0x002b, 0xff01, 0x000b, 0x000a, 0x0015
+        0x001B, 0x0000, 0x0033, 0x0010, 0x4469, 0x0017, 0x002D, 0x000D,
+        0x0005, 0x0023, 0x0012, 0x002B, 0xFF01, 0x000B, 0x000A, 0x0015
     ]
     let sigAlgs: [UInt16] = [0x0403, 0x0804, 0x0401, 0x0503, 0x0805, 0x0501, 0x0806, 0x0601]
 
     @Test("raw list removes SNI+ALPN+GREASE, sorts extensions, keeps sig-alg order")
     func raw() {
-        #expect(JA4.rawC(extensions: [0x0A0A] + extensions, signatureAlgorithms: sigAlgs) ==
-            "0005,000a,000b,000d,0012,0015,0017,001b,0023,002b,002d,0033,4469,ff01_0403,0804,0401,0503,0805,0501,0806,0601")
+        let expected = "0005,000a,000b,000d,0012,0015,0017,001b,0023,002b,002d,0033,4469,ff01"
+            + "_0403,0804,0401,0503,0805,0501,0806,0601"
+        #expect(JA4.rawC(extensions: [0x0A0A] + extensions, signatureAlgorithms: sigAlgs) == expected)
     }
 
     @Test("hash matches the FoxIO reference vector")
@@ -59,7 +60,7 @@ struct JA4CTests {
 
     @Test("no signature algorithms means no trailing underscore")
     func noSigAlgs() {
-        #expect(JA4.rawC(extensions: [0x002b, 0x000a], signatureAlgorithms: []) == "000a,002b")
+        #expect(JA4.rawC(extensions: [0x002B, 0x000A], signatureAlgorithms: []) == "000a,002b")
     }
 
     @Test("no extensions after exclusions hashes to the zero sentinel")
@@ -74,12 +75,12 @@ struct JA4AfullTests {
         JA4ClientHello(
             tlsVersion: 0x0304,
             ciphers: [
-                0x1301, 0x1302, 0x1303, 0xc02b, 0xc02f, 0xc02c, 0xc030,
-                0xcca9, 0xcca8, 0xc013, 0xc014, 0x009c, 0x009d, 0x002f, 0x0035
+                0x1301, 0x1302, 0x1303, 0xC02B, 0xC02F, 0xC02C, 0xC030,
+                0xCCA9, 0xCCA8, 0xC013, 0xC014, 0x009C, 0x009D, 0x002F, 0x0035
             ],
             extensions: [
-                0x001b, 0x0000, 0x0033, 0x0010, 0x4469, 0x0017, 0x002d, 0x000d,
-                0x0005, 0x0023, 0x0012, 0x002b, 0xff01, 0x000b, 0x000a, 0x0015
+                0x001B, 0x0000, 0x0033, 0x0010, 0x4469, 0x0017, 0x002D, 0x000D,
+                0x0005, 0x0023, 0x0012, 0x002B, 0xFF01, 0x000B, 0x000A, 0x0015
             ],
             signatureAlgorithms: [0x0403, 0x0804, 0x0401, 0x0503, 0x0805, 0x0501, 0x0806, 0x0601],
             alpnFirst: Array("h2".utf8),
