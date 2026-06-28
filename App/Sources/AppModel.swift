@@ -542,3 +542,27 @@ extension AppModel {
         qualityByKey["\(connection.app.displayName)\u{1F}\(connection.fiveTuple.destination.address.description)"]
     }
 }
+
+// MARK: - DNS privacy posture
+
+public extension AppModel {
+    /// The DNS transport this connection represents (plaintext / DoT / DoQ / DoH /
+    /// local discovery / not-DNS). Derived purely from the 5-tuple and observed
+    /// hostname — works during ordinary monitoring, no packet capture required.
+    func dnsTransport(for connection: Connection) -> DNSTransport {
+        DNSEncryptionClassifier.classify(
+            proto: connection.fiveTuple.proto,
+            port: connection.fiveTuple.destination.port,
+            hostname: connection.remoteHostname
+        )
+    }
+
+    /// The aggregate DNS posture for an app across its current connections.
+    func dnsPosture(for app: String) -> AppDNSPosture {
+        let transports = connections
+            .filter { $0.app.displayName == app }
+            .map { dnsTransport(for: $0) }
+            .filter(\.isDNS)
+        return AppDNSPosture(app: app, transports: Set(transports))
+    }
+}

@@ -34,6 +34,10 @@ struct ConnectionInspector: View {
                     } else if ProxyInfo.isTunnel(connection.app.displayName) {
                         LabeledContent("Routing") { Text("VPN/proxy tunnel") }
                     }
+                    let dns = model.dnsTransport(for: connection)
+                    if dns.isDNS {
+                        LabeledContent("DNS") { dnsLabel(dns) }
+                    }
                     if let country = GeoIP.country(for: connection.fiveTuple.destination.address) {
                         let flag = GeoIP.flag(for: connection.fiveTuple.destination.address) ?? ""
                         LabeledContent("Country", value: "\(flag) \(country)")
@@ -124,6 +128,29 @@ struct ConnectionInspector: View {
                     .foregroundStyle(.secondary)
                     .font(.callout)
             }
+        }
+    }
+
+    /// Renders a connection's DNS transport, flagging cleartext DNS (visible to
+    /// the network) in the advisory colour and encrypted transports in the accent.
+    @ViewBuilder
+    private func dnsLabel(_ transport: DNSTransport) -> some View {
+        switch transport {
+        case .plaintext:
+            Label("Plaintext DNS", systemImage: "lock.open")
+                .foregroundStyle(Theme.advisory)
+                .font(.callout.weight(.medium))
+        case .dot:
+            Text("DNS over TLS").foregroundStyle(Theme.accent)
+        case .doq:
+            Text("DNS over QUIC").foregroundStyle(Theme.accent)
+        case let .doh(resolver):
+            Text(resolver.map { "DNS over HTTPS (\($0))" } ?? String(localized: "DNS over HTTPS"))
+                .foregroundStyle(Theme.accent)
+        case .localDiscovery:
+            Text("Local discovery (mDNS)").foregroundStyle(.secondary)
+        case .none:
+            EmptyView()
         }
     }
 
