@@ -38,6 +38,7 @@ public struct PacketDissector: Sendable {
         var tlsClientFingerprint: String?
         if let application = parseApplicationLayer(
             bytes,
+            proto: proto,
             ports: (transport.sourcePort, transport.destinationPort),
             destination: network.destination,
             at: transport.payloadOffset
@@ -70,6 +71,7 @@ public struct PacketDissector: Sendable {
 
     private func parseApplicationLayer(
         _ bytes: [UInt8],
+        proto: TransportProtocol,
         ports: (source: UInt16, destination: UInt16),
         destination: IPAddress,
         at offset: Int
@@ -88,7 +90,18 @@ public struct PacketDissector: Sendable {
             }
             return ApplicationLayer(node: dns.node, hostnames: hostnames, fingerprint: nil)
         }
-        if ports.source == 443 || ports.destination == 443 || TLSDissector.looksLikeTLS(bytes, at: offset) {
+        // QUIC runs over UDP (HTTP/3 on :443). Try it before the TLS branch so a
+        // UDP/443 datagram is not mis-dissected as a TLS record.
+        if proto == .udp, ports.source == 443 || ports.destination == 443 {
+            guard let quic = QUICDissector.dissect(bytes, at: offset) else { return nil }
+            let hostnames = (quic.serverName.flatMap(HostnameNormalizer.normalize))
+                .map { [HostnameObservation(ip: destination, name: $0)] } ?? []
+            return ApplicationLayer(node: quic.node, hostnames: hostnames, fingerprint: quic.clientFingerprint)
+        }
+        if proto == .tcp, ports.source == 443 || ports.destination == 443 || TLSDissector.looksLikeTLS(
+            bytes,
+            at: offset
+        ) {
             guard let tls = try? TLSDissector.dissect(bytes, at: offset) else { return nil }
             let hostnames = (tls.serverName.flatMap(HostnameNormalizer.normalize))
                 .map { [HostnameObservation(ip: destination, name: $0)] } ?? []
