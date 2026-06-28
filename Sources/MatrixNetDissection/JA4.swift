@@ -60,6 +60,10 @@ enum JA4 {
             .map(hex4)
             .sorted()
             .joined(separator: ",")
+        // No qualifying extensions → no pre-image. Returning "" (rather than
+        // "_<sigs>") keeps the contract self-consistent; partC maps this to the
+        // zero sentinel regardless of sig-algs.
+        guard !exts.isEmpty else { return exts }
         let sigs = signatureAlgorithms.filter { !isGREASE($0) }.map(hex4).joined(separator: ",")
         return sigs.isEmpty ? exts : "\(exts)_\(sigs)"
     }

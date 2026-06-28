@@ -67,6 +67,12 @@ struct JA4CTests {
     func empty() {
         #expect(JA4.partC(extensions: [0x0000, 0x0010, 0x1A1A], signatureAlgorithms: []) == "000000000000")
     }
+
+    @Test("no qualifying extensions yields an empty pre-image, never a leading underscore")
+    func emptyExtsWithSigAlgs() {
+        #expect(JA4.rawC(extensions: [0x0000, 0x0010], signatureAlgorithms: [0x0403]).isEmpty)
+        #expect(JA4.partC(extensions: [0x0000, 0x0010], signatureAlgorithms: [0x0403]) == "000000000000")
+    }
 }
 
 @Suite("JA4_a and full string")
