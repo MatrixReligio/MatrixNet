@@ -69,6 +69,10 @@ public final class AppModel {
     let aggregator = ConnectionAggregator()
     private let resolver = HostnameResolver()
     private let historyStore = try? HistoryStore.persistent()
+    private let usageStore = try? UsageStore.persistent()
+    private var lastUsageSeen: [String: UsageTotals] = [:]
+    private var lastUsageFlush = Date.distantPast
+    private var lastCompactedHour: Date?
     private var pumpTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
     private var lastMetricsWrite = Date.distantPast
@@ -78,7 +82,9 @@ public final class AppModel {
     private var lastRateBytesIn: UInt64 = 0
     private var lastRateBytesOut: UInt64 = 0
 
-    public init() {}
+    public init() {
+        performUsageLaunchMaintenance()
+    }
 
     /// The total number of currently active (not closed) connections.
     public var activeCount: Int {
@@ -113,6 +119,10 @@ public final class AppModel {
         lastRateSampleAt = .distantPast
         lastRateBytesIn = 0
         lastRateBytesOut = 0
+        // The aggregator's usage totals are reset alongside the new stream, so
+        // the delta baseline must restart from empty too.
+        lastUsageSeen.removeAll()
+        lastCompactedHour = UsageBucketing.hourStart(of: Date(), calendar: .current)
 
         let stream = monitor.start()
         let aggregator = aggregator
@@ -129,6 +139,7 @@ public final class AppModel {
                 await resolver.resolveIfNeeded(snapshot.map(\.fiveTuple.destination.address))
                 let hostnames = await resolver.snapshot()
                 self?.publish(snapshot, hostnames: hostnames, session: session, apps: apps)
+                await self?.flushUsage(now: Date())
                 try? await Task.sleep(for: .seconds(1))
             }
         }
@@ -271,6 +282,71 @@ public final class AppModel {
             )
         }
         try? historyStore.record(summaries)
+    }
+
+    /// Hourly usage rows for the Usage tab over the given reporting period.
+    public func usageRows(for period: UsagePeriod) -> [UsageRow] {
+        (try? usageStore?.fetch(range: period.range(now: Date(), calendar: .current))) ?? []
+    }
+
+    /// Diffs the aggregator's monotonic per-flow usage totals and persists the
+    /// positive growth into hourly buckets. Throttled to ≈ 30s, with the prior
+    /// hour compacted to its top destinations once it rolls over.
+    private func flushUsage(now: Date) async {
+        guard let usageStore, now.timeIntervalSince(lastUsageFlush) >= 30 else { return }
+        lastUsageFlush = now
+
+        let snapshot = await aggregator.usageSnapshot()
+        var current: [String: UsageTotals] = [:]
+        var meta: [String: ConnectionAggregator.UsageFlowTotal] = [:]
+        for flow in snapshot {
+            let key = "\(flow.app)\u{1F}\(flow.address.description)"
+            current[key] = UsageTotals(bytesIn: flow.bytesIn, bytesOut: flow.bytesOut)
+            meta[key] = flow
+        }
+        let deltas = UsageAccumulator.deltas(previous: lastUsageSeen, current: current)
+        lastUsageSeen = current
+        guard !deltas.isEmpty else { return }
+
+        let hour = UsageBucketing.hourStart(of: now, calendar: .current)
+        var merged: [String: UsageRow] = [:]
+        for (key, delta) in deltas {
+            guard let flow = meta[key] else { continue }
+            let host = resolvedHostnames[flow.address.description] ?? flow.address.description
+            let country = GeoIP.country(for: flow.address) ?? ""
+            let rowKey = "\(flow.app)\u{1F}\(host)\u{1F}\(country)"
+            if var row = merged[rowKey] {
+                row.bytesIn += delta.bytesIn
+                row.bytesOut += delta.bytesOut
+                merged[rowKey] = row
+            } else {
+                merged[rowKey] = UsageRow(
+                    periodStart: hour, app: flow.app, host: host, country: country,
+                    bytesIn: delta.bytesIn, bytesOut: delta.bytesOut
+                )
+            }
+        }
+        try? usageStore.accumulate(Array(merged.values))
+
+        if let last = lastCompactedHour, last < hour {
+            try? usageStore.compactHour(last, n: 20)
+            lastCompactedHour = hour
+        } else if lastCompactedHour == nil {
+            lastCompactedHour = hour
+        }
+    }
+
+    /// On launch: drop usage older than the retention window and compact any
+    /// already-closed hours left untruncated by a previous crash.
+    private func performUsageLaunchMaintenance() {
+        guard let usageStore else { return }
+        let cutoff = Calendar.current.date(byAdding: .day, value: -preferences.usageRetentionDays, to: Date())
+            ?? .distantPast
+        try? usageStore.prune(olderThan: cutoff)
+        let currentHour = UsageBucketing.hourStart(of: Date(), calendar: .current)
+        for hour in (try? usageStore.distinctHours(before: currentHour)) ?? [] {
+            try? usageStore.compactHour(hour, n: 20)
+        }
     }
 
     /// Publishes a compact metrics snapshot to the shared App Group container and

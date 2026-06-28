@@ -16,6 +16,27 @@ struct PreferencesTests {
         #expect(prefs.threatNotificationsEnabled == false)
         #expect(prefs.historyRetentionDays == 30)
         #expect(prefs.homeRegion == nil)
+        #expect(prefs.usageRetentionDays == 90)
+        #expect(prefs.billingCycleResetDay == 1)
+    }
+
+    @Test("billing cycle reset day clamps to 1...28")
+    func billingCycleResetDayClamps() throws {
+        let store = try freshDefaults()
+        let prefs = Preferences(defaults: store)
+        prefs.billingCycleResetDay = 40
+        #expect(Preferences(defaults: store).billingCycleResetDay == 28)
+        prefs.billingCycleResetDay = 0
+        #expect(Preferences(defaults: store).billingCycleResetDay == 1)
+        prefs.billingCycleResetDay = 15
+        #expect(Preferences(defaults: store).billingCycleResetDay == 15)
+    }
+
+    @Test("usage retention round-trips")
+    func usageRetention() throws {
+        let store = try freshDefaults()
+        Preferences(defaults: store).usageRetentionDays = 120
+        #expect(Preferences(defaults: store).usageRetentionDays == 120)
     }
 
     @Test("home region round-trips and clears back to nil")

@@ -16,6 +16,8 @@ public struct Preferences {
         case historyRetentionDays = "pref.historyRetentionDays"
         case homeRegion = "pref.homeRegion"
         case showDomains = "pref.showDomains"
+        case usageRetentionDays = "pref.usageRetentionDays"
+        case billingCycleResetDay = "pref.billingCycleResetDay"
     }
 
     private let defaults: UserDefaults
@@ -62,6 +64,22 @@ public struct Preferences {
     public var showDomains: Bool {
         get { bool(.showDomains, default: true) }
         nonmutating set { setBool(newValue, .showDomains) }
+    }
+
+    /// How many days of per-app usage history to retain.
+    public var usageRetentionDays: Int {
+        get { defaults.object(forKey: Key.usageRetentionDays.rawValue) as? Int ?? 90 }
+        nonmutating set { defaults.set(newValue, forKey: Key.usageRetentionDays.rawValue) }
+    }
+
+    /// Day of the month the billing cycle resets on, clamped to 1...28 so it is
+    /// valid in every month.
+    public var billingCycleResetDay: Int {
+        get {
+            let raw = defaults.object(forKey: Key.billingCycleResetDay.rawValue) as? Int ?? 1
+            return min(28, max(1, raw))
+        }
+        nonmutating set { defaults.set(min(28, max(1, newValue)), forKey: Key.billingCycleResetDay.rawValue) }
     }
 
     /// The ISO-2 region used as the Map's "home" anchor, or `nil` to follow the
