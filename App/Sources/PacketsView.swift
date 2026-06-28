@@ -210,10 +210,14 @@ struct PacketsView: View {
         let writer = PcapNGWriter(linkType: PcapLinkType.ethernet)
         var data = Data(writer.header())
         for packet in capture.packets {
+            let comment = packet.pid > 0
+                ? "\(packet.processName) (pid \(packet.pid))"
+                : (packet.processName.isEmpty ? nil : packet.processName)
             let record = CapturedRecord(
                 timestampMicros: UInt64(packet.timestamp.timeIntervalSince1970 * 1_000_000),
                 originalLength: packet.bytes.count,
-                data: packet.bytes
+                data: packet.bytes,
+                comment: comment
             )
             data.append(contentsOf: writer.packet(record))
         }
