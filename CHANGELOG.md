@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Status:** Phase 1. Until version `1.0.0`, public interfaces and behavior may
 > change without notice.
 
+## [0.1.25] - 2026-06-28
+
+### Fixed
+- **Usage and history persist again (and the Usage tab fills).** All SwiftData
+  models now share one container in the Team-ID App Group: previously each store
+  opened its own container at the same path, so SwiftData kept only the
+  last-opened model's table — which left the Usage tab permanently empty and could
+  drop connection history. The store also lives in the app's private App Group
+  container again, so macOS no longer prompts "wants to access data from other
+  apps" on launch.
+
 ## [0.1.24] - 2026-06-28
 
 ### Added

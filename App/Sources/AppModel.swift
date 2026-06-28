@@ -70,12 +70,15 @@ public final class AppModel {
     /// same connections (the aggregator is built for both sources).
     let aggregator = ConnectionAggregator()
     private let resolver = HostnameResolver()
-    private let historyStore = try? HistoryStore.persistent()
-    private let usageStore = try? UsageStore.persistent()
+    // All three stores MUST share one container; separate containers at the
+    // default URL make SwiftData migrate the store to the last-opened schema and
+    // drop the other models' tables (lost history, broke usage).
+    private let historyStore: HistoryStore?
+    private let usageStore: UsageStore?
     private var lastUsageSeen: [String: UsageTotals] = [:]
     private var lastUsageFlush = Date.distantPast
     private var lastCompactedHour: Date?
-    private let destinationBaselineStore = try? DestinationBaselineStore.persistent()
+    private let destinationBaselineStore: DestinationBaselineStore?
     private var knownDestinations: [String: AppBaseline] = [:]
     private var pumpTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
@@ -87,6 +90,10 @@ public final class AppModel {
     private var lastRateBytesOut: UInt64 = 0
 
     public init() {
+        let container = try? SharedModelContainer.make()
+        historyStore = container.map(HistoryStore.init(container:))
+        usageStore = container.map(UsageStore.init(container:))
+        destinationBaselineStore = container.map(DestinationBaselineStore.init(container:))
         performUsageLaunchMaintenance()
         knownDestinations = (try? destinationBaselineStore?.load()) ?? [:]
     }
