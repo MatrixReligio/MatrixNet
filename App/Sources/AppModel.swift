@@ -87,6 +87,10 @@ public final class AppModel {
     /// capture is active (a ClientHello is required to compute JA4).
     private var fingerprintsByApp: [String: [StoredFingerprint]] = [:]
     private var lastFingerprintFlush = Date.distantPast
+    /// Live per-(app, destination) network quality, refreshed from the aggregator
+    /// each poll while capturing. Keyed by "app\u{1F}address". Not persisted —
+    /// quality is a live diagnostic, not history. Read by the connection inspector.
+    private var qualityByKey: [String: FlowQuality] = [:]
     private var pumpTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
     private var lastMetricsWrite = Date.distantPast
@@ -172,6 +176,7 @@ public final class AppModel {
                 self?.publish(snapshot, hostnames: hostnames, session: session, apps: apps)
                 await self?.flushUsage(now: Date())
                 await self?.flushFingerprints(now: Date())
+                await self?.refreshQuality()
                 try? await Task.sleep(for: .seconds(1))
             }
         }
@@ -515,5 +520,25 @@ extension AppModel {
             )
         }
         fingerprintsByApp = (try? fingerprintStore.load()) ?? fingerprintsByApp
+    }
+}
+
+// MARK: - Network quality
+
+extension AppModel {
+    /// Refreshes the live quality map from the aggregator (cheap; no persistence).
+    func refreshQuality() async {
+        let snapshot = await aggregator.qualitySnapshot()
+        var map: [String: FlowQuality] = [:]
+        for item in snapshot {
+            map["\(item.app)\u{1F}\(item.address.description)"] = item.quality
+        }
+        qualityByKey = map
+    }
+
+    /// The measured network quality for a connection's (app, destination), if any
+    /// has been observed since capture started.
+    public func quality(for connection: Connection) -> FlowQuality? {
+        qualityByKey["\(connection.app.displayName)\u{1F}\(connection.fiveTuple.destination.address.description)"]
     }
 }

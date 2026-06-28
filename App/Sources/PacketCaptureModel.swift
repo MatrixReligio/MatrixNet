@@ -183,6 +183,15 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
         let pid: Int32
     }
 
+    /// A captured TCP segment awaiting per-flow quality attribution.
+    private struct CapturedSegment {
+        let segment: TCPSegment
+        let timestampMicros: UInt64
+        let inbound: Bool
+        let flowKey: FlowKey
+        let pid: Int32
+    }
+
     private func append(_ rows: [DissectedRow]) {
         for row in rows {
             packets.append(PacketRow(
@@ -241,7 +250,17 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
             guard let ja4 = row.dissected.tlsClientFingerprint, let tuple = row.dissected.fiveTuple else { return nil }
             return CapturedFingerprint(ja4: ja4, flowKey: tuple.flowKey, pid: row.packet.pid)
         }
-        guard !attributions.isEmpty || !hostnames.isEmpty || !fingerprints.isEmpty else { return }
+        let segments = rows.compactMap { row -> CapturedSegment? in
+            guard let tcp = row.dissected.tcpSegment, let tuple = row.dissected.fiveTuple else { return nil }
+            return CapturedSegment(
+                segment: tcp,
+                timestampMicros: UInt64((row.packet.timestamp * 1_000_000).rounded()),
+                inbound: row.packet.direction == 2,
+                flowKey: tuple.flowKey,
+                pid: row.packet.pid
+            )
+        }
+        guard !attributions.isEmpty || !hostnames.isEmpty || !fingerprints.isEmpty || !segments.isEmpty else { return }
         Task.detached {
             await attribution.attributePackets(attributions)
             for observation in hostnames {
@@ -249,6 +268,15 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
             }
             for fingerprint in fingerprints {
                 await attribution.recordFingerprint(fingerprint.ja4, flowKey: fingerprint.flowKey, pid: fingerprint.pid)
+            }
+            for item in segments {
+                await attribution.recordTCP(
+                    item.segment,
+                    timestampMicros: item.timestampMicros,
+                    inbound: item.inbound,
+                    flowKey: item.flowKey,
+                    pid: item.pid
+                )
             }
         }
     }

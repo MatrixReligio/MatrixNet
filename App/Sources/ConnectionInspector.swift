@@ -55,6 +55,7 @@ struct ConnectionInspector: View {
                     }
                 }
                 fingerprintSection(for: connection)
+                qualitySection(for: connection)
             }
             .formStyle(.grouped)
         } else {
@@ -91,6 +92,37 @@ struct ConnectionInspector: View {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    /// Passively measured network quality for this connection's flow — handshake
+    /// RTT, retransmits, and setup time. Requires packet capture (per-packet
+    /// timing); shows guidance otherwise. TCP only.
+    private func qualitySection(for connection: Connection) -> some View {
+        Section("Network Quality") {
+            if connection.fiveTuple.proto != .tcp {
+                Text("Network quality is measured for TCP connections.")
+                    .foregroundStyle(.secondary).font(.callout)
+            } else if let quality = model.quality(for: connection) {
+                if let rtt = quality.handshakeRTTms {
+                    LabeledContent("Handshake RTT") { mono(String(format: "%.1f ms", rtt)) }
+                }
+                if let setup = quality.setupMs {
+                    LabeledContent("Connection Setup") { mono(String(format: "%.1f ms", setup)) }
+                }
+                LabeledContent("Retransmits") { mono("\(quality.retransmits)") }
+                LabeledContent("Out of Order") { mono("\(quality.outOfOrder)") }
+                if quality.handshakeRTTms == nil {
+                    Text("Handshake not captured (connection opened before capture).")
+                        .foregroundStyle(.secondary).font(.caption)
+                }
+            } else {
+                Text(capture.isCapturing
+                    ? LocalizedStringKey("No quality data observed yet for this connection.")
+                    : LocalizedStringKey("Enable packet capture in the Packets tab to measure network quality."))
+                    .foregroundStyle(.secondary)
+                    .font(.callout)
             }
         }
     }
