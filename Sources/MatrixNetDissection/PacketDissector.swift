@@ -66,8 +66,13 @@ public struct PacketDissector: Sendable {
         guard offset < bytes.count else { return nil }
         if ports.source == 53 || ports.destination == 53 {
             guard let dns = try? DNSDissector.dissect(bytes, at: offset) else { return nil }
+            // Bind resolved IPs to the *queried* name, not an answer's canonical
+            // name — CDN domains resolve through a CNAME (www.foo.com → foo.cdn.net),
+            // and the user-facing host is what was asked for.
+            let queriedName = dns.message.questions.first.flatMap { HostnameNormalizer.normalize($0.name) }
             let hostnames = dns.message.answers.compactMap { answer -> HostnameObservation? in
-                guard let ip = answer.ip, let name = HostnameNormalizer.normalize(answer.name) else { return nil }
+                guard let ip = answer.ip else { return nil }
+                guard let name = queriedName ?? HostnameNormalizer.normalize(answer.name) else { return nil }
                 return HostnameObservation(ip: ip, name: name)
             }
             return (dns.node, hostnames)

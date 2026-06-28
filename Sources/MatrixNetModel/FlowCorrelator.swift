@@ -60,7 +60,11 @@ public actor FlowCorrelator {
         return nil
     }
 
-    /// Records an IP→hostname mapping observed in DNS traffic.
+    /// Records an IP→hostname mapping observed in DNS/TLS-SNI traffic.
+    ///
+    /// Keyed by IP with last-writer-wins: a shared CDN IP serving several SNIs
+    /// keeps only the most recent name. Per-flow accuracy would require keying by
+    /// connection; the per-IP map is a deliberate, bounded simplification.
     public func recordHostname(_ hostname: String, for ip: IPAddress) {
         hostnamesByIP[ip] = hostname
     }

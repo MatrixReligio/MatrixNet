@@ -55,4 +55,25 @@ struct PacketDissectorHostnameTests {
         let packet = dissector.dissect(hex(tcpSyn), linkType: .ethernet)
         #expect(packet.hostnames.isEmpty)
     }
+
+    /// Ethernet + IPv4 + UDP + DNS response for www.example.com that returns a
+    /// CNAME (cdn.example.net) before the A record. The observation must bind the
+    /// IP to the *queried* name, not the CNAME's canonical name.
+    private let dnsCNAMEResponse = """
+    aabbccddeeff 112233445566 0800
+    45 00 0079 0001 0000 40 11 0000 08080808 c0a80105
+    0035 c000 0065 0000
+    1234 8180 0001 0002 0000 0000
+    03 777777 07 6578616d706c65 03 636f6d 00 0001 0001
+    C00C 0005 0001 0000012C 0011 03 63646e 07 6578616d706c65 03 6e6574 00
+    03 63646e 07 6578616d706c65 03 6e6574 00 0001 0001 0000012C 0004 5db8d822
+    """
+
+    @Test("a CNAME chain binds the IP to the queried name, not the canonical name")
+    func dnsCNAMEUsesQueriedName() throws {
+        let packet = dissector.dissect(hex(dnsCNAMEResponse), linkType: .ethernet)
+        let ip = try #require(IPAddress("93.184.216.34"))
+        #expect(packet.hostnames.contains(HostnameObservation(ip: ip, name: "www.example.com")))
+        #expect(!packet.hostnames.contains { $0.name == "cdn.example.net" })
+    }
 }
