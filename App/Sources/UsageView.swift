@@ -9,6 +9,22 @@ struct UsageView: View {
     @State private var choice: PeriodChoice = .last7Days
     @State private var dimension: Dimension = .app
     @State private var selectedApp: String?
+    @State private var mode: ViewMode = .breakdown
+
+    /// Whether the tab shows the ranked totals or the per-app activity timeline.
+    enum ViewMode: String, CaseIterable, Identifiable {
+        case breakdown, timeline
+        var id: String {
+            rawValue
+        }
+
+        var title: LocalizedStringKey {
+            switch self {
+            case .breakdown: "Usage"
+            case .timeline: "Timeline"
+            }
+        }
+    }
 
     /// The selectable reporting windows (mapped to `UsagePeriod`, resolving the
     /// billing cycle from the user's reset-day preference).
@@ -60,6 +76,8 @@ struct UsageView: View {
     /// Fetched once per period change and refreshed on a slow timer, rather than
     /// re-querying SwiftData on every body pass (the model publishes ~1 Hz).
     @State private var rows: [UsageRow] = []
+    /// The activity timeline for the current period, refreshed alongside `rows`.
+    @State private var timeline = ActivityTimeline(hours: [], rows: [])
 
     var body: some View {
         ScrollView {
@@ -70,7 +88,15 @@ struct UsageView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
 
-                if rows.isEmpty {
+                Picker("View", selection: $mode) {
+                    ForEach(ViewMode.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+
+                if mode == .timeline {
+                    ActivityTimelineView(timeline: timeline)
+                } else if rows.isEmpty {
                     UsageEmptyState()
                 } else {
                     UsageHero(
@@ -104,6 +130,7 @@ struct UsageView: View {
         .task(id: choice) {
             while !Task.isCancelled {
                 rows = model.usageRows(for: period)
+                timeline = model.activityTimeline(period: period)
                 try? await Task.sleep(for: .seconds(15))
             }
         }

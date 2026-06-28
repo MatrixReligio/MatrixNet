@@ -566,3 +566,28 @@ public extension AppModel {
         return AppDNSPosture(app: app, transports: Set(transports))
     }
 }
+
+// MARK: - Activity timeline
+
+public extension AppModel {
+    /// A per-app activity timeline over `period`, built from the persisted hourly
+    /// usage buckets — hourly cells for Today, daily cells for multi-day windows.
+    /// Works without packet capture (reuses the Usage store).
+    func activityTimeline(period: UsagePeriod, now: Date = Date()) -> ActivityTimeline {
+        let calendar = Calendar.current
+        let (start, end) = period.range(now: now, calendar: calendar)
+        let rows = usageRows(for: period)
+        let hourly = period.trendGranularity == .hour
+        let step: TimeInterval = hourly ? 3600 : 86400
+        let anchor = hourly
+            ? UsageBucketing.hourStart(of: start, calendar: calendar)
+            : calendar.startOfDay(for: start)
+        var hours: [Date] = []
+        var cursor = anchor
+        while cursor < end {
+            hours.append(cursor)
+            cursor = cursor.addingTimeInterval(step)
+        }
+        return ActivityTimelineBuilder.build(rows: rows, hours: hours)
+    }
+}
