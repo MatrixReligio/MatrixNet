@@ -48,6 +48,11 @@ public actor ConnectionAggregator {
     /// when capturing; this is the always-on fallback.
     private var nstatUsageByFlow: [String: UsageFlowTotal] = [:]
 
+    /// Set of JA4 TLS client fingerprints observed per app (display name).
+    /// Populated only while packet capture is active (a ClientHello is required);
+    /// de-duplicated by app + fingerprint.
+    private var fingerprintsByApp: [String: Set<String>] = [:]
+
     /// A monotonic byte total for one app talking to one destination address.
     public struct UsageFlowTotal: Sendable {
         public let app: String
@@ -170,6 +175,7 @@ public actor ConnectionAggregator {
         packetTrafficByApp.removeAll()
         usageByFlow.removeAll()
         nstatUsageByFlow.removeAll()
+        fingerprintsByApp.removeAll()
         sessionBytesIn = 0
         sessionBytesOut = 0
     }
@@ -258,5 +264,20 @@ public actor ConnectionAggregator {
     /// connection snapshot (preferred over reverse DNS).
     public func hostnameSnapshot() async -> [IPAddress: String] {
         await correlator.allHostnames()
+    }
+
+    /// Records a TLS client fingerprint (JA4) against the app that owns `flowKey`.
+    /// Dropped when the flow cannot be resolved to a tracked connection.
+    public func recordFingerprint(_ ja4: String, flowKey: FlowKey, pid: Int32) async {
+        guard let id = await correlator.connectionID(forPacketFlow: flowKey, pid: pid),
+              let connection = connections[id] else { return }
+        fingerprintsByApp[connection.app.displayName, default: []].insert(ja4)
+    }
+
+    /// All observed (app, JA4) pairs.
+    public func fingerprintSnapshot() -> [AppFingerprintObservation] {
+        fingerprintsByApp.flatMap { app, fingerprints in
+            fingerprints.map { AppFingerprintObservation(app: app, ja4: $0) }
+        }
     }
 }
