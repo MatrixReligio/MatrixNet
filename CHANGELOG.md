@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.7.0] - 2026-06-29
+
+### Added
+- **IPv6 geolocation.** The bundled GeoIP database now carries IPv6 country
+  ranges alongside IPv4 (format v2: an IPv6 section appended to the existing IPv4
+  table, ~15 MB). IPv6 destinations now resolve to a country, so the world map,
+  the "Countries" overview metric, connection-row flags, and threat-country
+  attribution no longer under-count IPv6 traffic. The binary format stays
+  backward compatible — older app builds read the IPv4 table and ignore the
+  appended section.
+
+### Fixed
+- **The in-app GeoIP updater no longer downgrades to an IPv4-only database.** The
+  updater prefers the downloaded rolling dataset over the bundled one; it now
+  rejects a stale IPv4-only file so a fresh install keeps its IPv6-capable bundle
+  until the rolling asset is rebuilt with IPv6.
+
 ## [1.6.0] - 2026-06-29
 
 ### Added

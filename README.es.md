@@ -75,7 +75,7 @@ MatrixNet es estrictamente **pasivo — observar, nunca bloquear**. Sin cortafue
 
 ### 🔄 Siempre al día
 - **Actualización automática integrada** mediante [Sparkle](https://sparkle-project.org), con actualizaciones firmadas con EdDSA servidas desde las Releases de GitHub. A demanda o a diario en segundo plano.
-- La **base de datos GeoIP se actualiza automáticamente** en segundo plano desde el conjunto de datos mensual de DB-IP, para que la atribución por país siga siendo precisa con el tiempo.
+- La **base de datos GeoIP se actualiza automáticamente** en segundo plano desde el conjunto de datos mensual de DB-IP, para que la atribución por país siga siendo precisa con el tiempo. Cubre destinos tanto **IPv4 como IPv6**, de modo que el mapa y las métricas por país no subestiman el tráfico IPv6.
 - La **lista de IP de amenaza se actualiza automáticamente** del mismo modo, desde el agregado público IPsum — la app solo contacta con su propio recurso de versión, nunca con las fuentes upstream.
 
 ### 🛡️ Privacidad y cero conflictos

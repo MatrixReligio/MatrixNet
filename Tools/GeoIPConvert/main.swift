@@ -30,8 +30,12 @@ func ipv6Halves(_ text: String) -> (high: UInt64, low: UInt64)? {
     guard inet_pton(AF_INET6, text, &bytes) == 1 else { return nil }
     var high: UInt64 = 0
     var low: UInt64 = 0
-    for byte in bytes[0 ..< 8] { high = (high << 8) | UInt64(byte) }
-    for byte in bytes[8 ..< 16] { low = (low << 8) | UInt64(byte) }
+    for byte in bytes[0 ..< 8] {
+        high = (high << 8) | UInt64(byte)
+    }
+    for byte in bytes[8 ..< 16] {
+        low = (low << 8) | UInt64(byte)
+    }
     return (high, low)
 }
 
@@ -65,8 +69,11 @@ for line in content.split(separator: "\n") {
         ranges.append(Range(start: start, end: end, country: country))
     } else if let start = ipv6Halves(String(fields[0])), let end = ipv6Halves(String(fields[1])) {
         v6Ranges.append(V6Range(
-            startHigh: start.high, startLow: start.low,
-            endHigh: end.high, endLow: end.low, country: country
+            startHigh: start.high,
+            startLow: start.low,
+            endHigh: end.high,
+            endLow: end.low,
+            country: country
         ))
     }
 }

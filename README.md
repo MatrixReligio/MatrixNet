@@ -136,7 +136,9 @@ fighting it.
   signed updates served from GitHub Releases. Check on demand or let it check
   daily in the background.
 - The **GeoIP database refreshes automatically** in the background from the
-  monthly DB-IP dataset, so country attribution stays accurate over time.
+  monthly DB-IP dataset, so country attribution stays accurate over time. It
+  covers both **IPv4 and IPv6** destinations, so the map and country metrics
+  don't under-count IPv6 traffic.
 - The **threat-IP list refreshes automatically** the same way, from the public
   IPsum aggregate — the app only ever contacts its own release asset, never the
   upstream feeds.
