@@ -70,4 +70,53 @@ enum JA4 {
         if extsOnly.isEmpty { return "000000000000" }
         return hash12(rawC(extensions: extensions, signatureAlgorithms: signatureAlgorithms))
     }
+
+    /// Two-character JA4 version code (FoxIO mapping); "00" if unrecognized.
+    private static func versionString(_ value: UInt16) -> String {
+        switch value {
+        case 0x0304: "13"
+        case 0x0303: "12"
+        case 0x0302: "11"
+        case 0x0301: "10"
+        case 0x0300: "s3"
+        case 0x0002: "s2"
+        case 0xfeff: "d1"
+        case 0xfefd: "d2"
+        case 0xfefc: "d3"
+        default: "00"
+        }
+    }
+
+    private static func count2(_ count: Int) -> String {
+        String(format: "%02d", min(count, 99))
+    }
+
+    /// First and last char of the first ALPN value; "00" when absent, "99" when
+    /// the first byte is non-ASCII. This follows FoxIO's reference `ja4.py`
+    /// (`f"{alpn[0]}{alpn[-1]}"`, then `'99'` if `ord(alpn[0]) > 127`), which is
+    /// what shipping tools actually produce; it diverges from the prose in JA4.md
+    /// for non-ASCII bytes, but real ALPN values are always printable ASCII
+    /// protocol IDs (h2, http/1.1, h3), so the common path is unambiguous.
+    private static func alpnCode(_ value: [UInt8]?) -> String {
+        guard let value, let first = value.first, let last = value.last else { return "00" }
+        if first > 0x7F { return "99" }
+        return "\(String(UnicodeScalar(first)))\(String(UnicodeScalar(last)))"
+    }
+
+    /// JA4_a: protocol + version + SNI flag + cipher count + extension count + ALPN.
+    static func rawA(from hello: JA4ClientHello, transport: Transport) -> String {
+        let proto = transport == .quic ? "q" : "t"
+        let sni = hello.hasSNI ? "d" : "i"
+        let cipherCount = count2(hello.ciphers.filter { !isGREASE($0) }.count)
+        let extCount = count2(hello.extensions.filter { !isGREASE($0) }.count)
+        return "\(proto)\(versionString(hello.tlsVersion))\(sni)\(cipherCount)\(extCount)\(alpnCode(hello.alpnFirst))"
+    }
+
+    /// The full JA4 string `a_b_c`.
+    static func string(from hello: JA4ClientHello, transport: Transport) -> String {
+        let partA = rawA(from: hello, transport: transport)
+        let hashB = partB(ciphers: hello.ciphers)
+        let hashC = partC(extensions: hello.extensions, signatureAlgorithms: hello.signatureAlgorithms)
+        return "\(partA)_\(hashB)_\(hashC)"
+    }
 }

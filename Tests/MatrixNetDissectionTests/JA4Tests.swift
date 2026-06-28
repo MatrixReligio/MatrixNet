@@ -67,3 +67,60 @@ struct JA4CTests {
         #expect(JA4.partC(extensions: [0x0000, 0x0010, 0x1A1A], signatureAlgorithms: []) == "000000000000")
     }
 }
+
+@Suite("JA4_a and full string")
+struct JA4AfullTests {
+    private func reference() -> JA4ClientHello {
+        JA4ClientHello(
+            tlsVersion: 0x0304,
+            ciphers: [
+                0x1301, 0x1302, 0x1303, 0xc02b, 0xc02f, 0xc02c, 0xc030,
+                0xcca9, 0xcca8, 0xc013, 0xc014, 0x009c, 0x009d, 0x002f, 0x0035
+            ],
+            extensions: [
+                0x001b, 0x0000, 0x0033, 0x0010, 0x4469, 0x0017, 0x002d, 0x000d,
+                0x0005, 0x0023, 0x0012, 0x002b, 0xff01, 0x000b, 0x000a, 0x0015
+            ],
+            signatureAlgorithms: [0x0403, 0x0804, 0x0401, 0x0503, 0x0805, 0x0501, 0x0806, 0x0601],
+            alpnFirst: Array("h2".utf8),
+            hasSNI: true
+        )
+    }
+
+    @Test("JA4_a matches the reference vector")
+    func partA() {
+        #expect(JA4.rawA(from: reference(), transport: .tcp) == "t13d1516h2")
+    }
+
+    @Test("full JA4 string matches the FoxIO reference vector")
+    func full() {
+        #expect(JA4.string(from: reference(), transport: .tcp) == "t13d1516h2_8daaf6152771_e5627efa2ab1")
+    }
+
+    @Test("no SNI yields i, no ALPN yields 00, GREASE excluded from counts, count caps at 99")
+    func variants() {
+        var hello = reference()
+        hello.hasSNI = false
+        hello.alpnFirst = nil
+        hello.ciphers = [0x0A0A] + Array(repeating: 0x1301, count: 120)
+        let value = JA4.rawA(from: hello, transport: .tcp)
+        #expect(value.hasPrefix("t13i")) // version 13, no SNI
+        #expect(value.contains("99")) // cipher count capped
+        #expect(value.hasSuffix("00")) // no ALPN
+    }
+
+    @Test("ALPN http/1.1 maps to h1; quic transport prefixes q")
+    func alpnAndQuic() {
+        var hello = reference()
+        hello.alpnFirst = Array("http/1.1".utf8)
+        #expect(JA4.rawA(from: hello, transport: .quic).hasPrefix("q13d"))
+        #expect(JA4.rawA(from: hello, transport: .quic).hasSuffix("h1"))
+    }
+
+    @Test("a non-ASCII first ALPN byte yields 99 (FoxIO reference behavior)")
+    func alpnNonASCII() {
+        var hello = reference()
+        hello.alpnFirst = [0xAB, 0xCD]
+        #expect(JA4.rawA(from: hello, transport: .tcp).hasSuffix("99"))
+    }
+}
