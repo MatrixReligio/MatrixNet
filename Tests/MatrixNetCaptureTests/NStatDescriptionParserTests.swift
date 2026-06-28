@@ -44,7 +44,12 @@ struct NStatDescriptionParserTests {
     func mapsTCPState(_ tcpState: String, _ expected: ConnectionState) {
         var description = tcpDescription()
         description["TCPState"] = tcpState
-        #expect(NStatDescriptionParser.connection(from: description, id: UUID(), startedAt: start)?.state == expected)
+        #expect(NStatDescriptionParser.connection(
+            from: description,
+            id: UUID(),
+            startedAt: start,
+            resolvePath: { _ in nil }
+        )?.state == expected)
     }
 
     @Test("UDP flows are active regardless of TCP state field")
@@ -52,13 +57,23 @@ struct NStatDescriptionParserTests {
         var description = tcpDescription()
         description["provider"] = "UDP"
         description["TCPState"] = nil
-        #expect(NStatDescriptionParser.connection(from: description, id: UUID(), startedAt: start)?.state == .active)
+        #expect(NStatDescriptionParser.connection(
+            from: description,
+            id: UUID(),
+            startedAt: start,
+            resolvePath: { _ in nil }
+        )?.state == .active)
     }
 
     @Test("builds a connection from a TCP description dictionary")
     func parsesTCPDescription() throws {
         let connection = try #require(
-            NStatDescriptionParser.connection(from: tcpDescription(), id: UUID(), startedAt: start)
+            NStatDescriptionParser.connection(
+                from: tcpDescription(),
+                id: UUID(),
+                startedAt: start,
+                resolvePath: { _ in nil }
+            )
         )
         #expect(connection.fiveTuple.proto == .tcp)
         #expect(connection.fiveTuple.source.address == IPAddress("192.168.1.5"))
@@ -71,13 +86,33 @@ struct NStatDescriptionParserTests {
         #expect(connection.bytesOut == 1200)
     }
 
+    @Test("prefers the full name from the PID's path over the truncated NStat name")
+    func resolvesFullNameFromPath() throws {
+        // NStat truncates processName at 32 chars; the path's last component is
+        // the untruncated name.
+        var description = tcpDescription()
+        description["processName"] = "com.adguard.mac.adguard.network-" // 32-char truncation
+        let fullPath = "/Library/SystemExtensions/X/com.adguard.mac.adguard.network-extension"
+        let connection = try #require(
+            NStatDescriptionParser.connection(
+                from: description, id: UUID(), startedAt: start, resolvePath: { _ in fullPath }
+            )
+        )
+        #expect(connection.app.displayName == "com.adguard.mac.adguard.network-extension")
+    }
+
     @Test("drops an idle listening socket (remote port 0, no traffic)")
     func dropsIdleListener() {
         var description = tcpDescription()
         description["remoteAddress"] = sockaddrV4([0, 0, 0, 0], port: 0)
         description["rxBytes"] = 0
         description["txBytes"] = 0
-        #expect(NStatDescriptionParser.connection(from: description, id: UUID(), startedAt: start) == nil)
+        #expect(NStatDescriptionParser.connection(
+            from: description,
+            id: UUID(),
+            startedAt: start,
+            resolvePath: { _ in nil }
+        ) == nil)
     }
 
     @Test("keeps a remote-port-0 flow that has observed traffic")
@@ -89,7 +124,12 @@ struct NStatDescriptionParserTests {
         description["rxBytes"] = 86
         description["txBytes"] = 0
         let connection = try #require(
-            NStatDescriptionParser.connection(from: description, id: UUID(), startedAt: start)
+            NStatDescriptionParser.connection(
+                from: description,
+                id: UUID(),
+                startedAt: start,
+                resolvePath: { _ in nil }
+            )
         )
         #expect(connection.bytesIn == 86)
         #expect(connection.fiveTuple.destination.port == 0)
@@ -99,14 +139,24 @@ struct NStatDescriptionParserTests {
     func missingProvider() {
         var description = tcpDescription()
         description["provider"] = nil
-        #expect(NStatDescriptionParser.connection(from: description, id: UUID(), startedAt: start) == nil)
+        #expect(NStatDescriptionParser.connection(
+            from: description,
+            id: UUID(),
+            startedAt: start,
+            resolvePath: { _ in nil }
+        ) == nil)
     }
 
     @Test("returns nil when an address is missing or malformed")
     func missingAddress() {
         var description = tcpDescription()
         description["remoteAddress"] = Data([0x00]) // malformed sockaddr
-        #expect(NStatDescriptionParser.connection(from: description, id: UUID(), startedAt: start) == nil)
+        #expect(NStatDescriptionParser.connection(
+            from: description,
+            id: UUID(),
+            startedAt: start,
+            resolvePath: { _ in nil }
+        ) == nil)
     }
 
     @Test("parses a counts dictionary into a ConnectionCounts snapshot")
@@ -139,7 +189,12 @@ struct NStatDescriptionParserTests {
         description["txBytes"] = nil
         description["processName"] = nil
         let connection = try #require(
-            NStatDescriptionParser.connection(from: description, id: UUID(), startedAt: start)
+            NStatDescriptionParser.connection(
+                from: description,
+                id: UUID(),
+                startedAt: start,
+                resolvePath: { _ in nil }
+            )
         )
         #expect(connection.bytesIn == 0)
         #expect(connection.bytesOut == 0)

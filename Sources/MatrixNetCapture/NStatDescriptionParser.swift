@@ -10,7 +10,17 @@ import MatrixNetModel
 enum NStatDescriptionParser {
     /// Builds a `Connection` from a description dictionary, or `nil` if the
     /// essential fields (protocol + both endpoints) are missing or malformed.
-    static func connection(from description: [String: Any], id: UUID, startedAt: Date) -> Connection? {
+    ///
+    /// `resolvePath` maps a PID to its full executable path; the default reads it
+    /// from the kernel. The NStat `processName` is capped at 32 characters, so the
+    /// path's last component is preferred as the display name (it is untruncated),
+    /// falling back to `processName` when the path can't be read.
+    static func connection(
+        from description: [String: Any],
+        id: UUID,
+        startedAt: Date,
+        resolvePath: (Int32) -> String? = { ProcessPathResolver.path(pid: $0) }
+    ) -> Connection? {
         guard let provider = description["provider"] as? String,
               let proto = transportProtocol(from: provider),
               let localData = description["localAddress"] as? Data,
@@ -22,7 +32,10 @@ enum NStatDescriptionParser {
         }
 
         let pid = Int32(truncatingIfNeeded: intValue(description["processID"]) ?? -1)
-        let name = description["processName"] as? String
+        // Prefer the full name from the executable path (NStat's processName is
+        // truncated at 32 chars); fall back to processName when unreadable.
+        let path = resolvePath(pid)
+        let name = path == nil ? description["processName"] as? String : nil
         let bytesIn = uint64Value(description["rxBytes"])
         let bytesOut = uint64Value(description["txBytes"])
         let packetsIn = uint64Value(description["rxPackets"])
@@ -38,7 +51,7 @@ enum NStatDescriptionParser {
         return Connection(
             id: id,
             fiveTuple: FiveTuple(proto: proto, source: source, destination: destination),
-            app: AppIdentity(pid: pid, displayName: name),
+            app: AppIdentity(pid: pid, displayName: name, executablePath: path),
             bytesOut: bytesOut,
             bytesIn: bytesIn,
             packetsOut: packetsOut,

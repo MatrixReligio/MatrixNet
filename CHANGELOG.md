@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Status:** Phase 1. Until version `1.0.0`, public interfaces and behavior may
 > change without notice.
 
+## [0.1.27] - 2026-06-28
+
+### Fixed
+- **Process names are no longer cut to 32 characters in Connections, History, and
+  Usage.** NetworkStatistics reports a process name truncated at 32 characters
+  (e.g. `com.adguard.mac.adguard.network-`), so long names — typically a system
+  extension's bundle id — appeared clipped. The full name is now resolved from the
+  process's executable path (the same way the packet view already does), falling
+  back to the short name only when the path can't be read.
+
 ## [0.1.26] - 2026-06-28
 
 ### Fixed
