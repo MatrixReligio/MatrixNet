@@ -36,6 +36,20 @@ public actor ConnectionAggregator {
     private var packetBytesByConn: [UUID: (inBytes: UInt64, outBytes: UInt64)] = [:]
     private var packetTrafficByApp: [String: AppTraffic] = [:]
 
+    /// Monotonic per-(app, destination address) packet byte totals for the Usage
+    /// tab. Unlike `packetBytesByConn`, these are NOT dropped on `.removed`, so a
+    /// short-lived flow that opens and closes between Usage polls is still
+    /// accounted for. Keyed by `"app\u{1F}address"`.
+    private var usageByFlow: [String: UsageFlowTotal] = [:]
+
+    /// A monotonic byte total for one app talking to one destination address.
+    public struct UsageFlowTotal: Sendable {
+        public let app: String
+        public let address: IPAddress
+        public var bytesIn: UInt64
+        public var bytesOut: UInt64
+    }
+
     /// A captured packet attributed to a flow, handed in by the packet pipeline.
     public struct PacketAttribution: Sendable {
         public let flowKey: FlowKey
@@ -72,7 +86,22 @@ public actor ConnectionAggregator {
             traffic.app = connection.app
             if packet.inbound { traffic.bytesIn &+= bytes } else { traffic.bytesOut &+= bytes }
             packetTrafficByApp[key] = traffic
+
+            // Monotonic per-(app, address) usage that survives the connection's
+            // removal, so the Usage tab can account for short-lived flows.
+            let address = connection.fiveTuple.destination.address
+            let usageKey = "\(connection.app.displayName)\u{1F}\(address.description)"
+            var flow = usageByFlow[usageKey]
+                ?? UsageFlowTotal(app: connection.app.displayName, address: address, bytesIn: 0, bytesOut: 0)
+            if packet.inbound { flow.bytesIn &+= bytes } else { flow.bytesOut &+= bytes }
+            usageByFlow[usageKey] = flow
         }
+    }
+
+    /// Monotonic per-(app, address) usage totals for the Usage tab (these survive
+    /// connection close, unlike the per-connection map).
+    public func usageSnapshot() -> [UsageFlowTotal] {
+        Array(usageByFlow.values)
     }
 
     /// Accumulates the positive growth of a connection's counters into the global
@@ -121,6 +150,7 @@ public actor ConnectionAggregator {
         trafficByApp.removeAll()
         packetBytesByConn.removeAll()
         packetTrafficByApp.removeAll()
+        usageByFlow.removeAll()
         sessionBytesIn = 0
         sessionBytesOut = 0
     }
