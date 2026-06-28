@@ -84,7 +84,9 @@ public enum PcapNGReader {
             guard let code = u16(cursor), let valueLength = u16(cursor + 2) else { return nil }
             if code == 0 { return nil } // opt_endofopt
             let valueStart = cursor + 4
-            guard valueStart + valueLength <= bytes.count else { return nil }
+            // Bound to the options region, not the whole buffer, so a malformed
+            // length can never read into the trailing length or the next block.
+            guard valueStart + valueLength <= end else { return nil }
             if code == 1 { // opt_comment
                 return String(validating: bytes[valueStart ..< valueStart + valueLength], as: UTF8.self)
             }

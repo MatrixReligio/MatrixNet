@@ -33,6 +33,8 @@ public enum UsageExport {
             )
         }
         let encoder = JSONEncoder()
+        // snake_case so JSON keys match the CSV header (bytes_in, period_start, …).
+        encoder.keyEncodingStrategy = .convertToSnakeCase
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         guard let data = try? encoder.encode(dtos), let string = String(data: data, encoding: .utf8) else {
             return "[]"

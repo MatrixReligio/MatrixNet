@@ -47,11 +47,12 @@ struct UsageExportTests {
         let data = try #require(UsageExport.json(rows).data(using: .utf8))
         let decoded = try JSONSerialization.jsonObject(with: data) as? [[String: Any]]
         #expect(decoded?.count == 1)
+        // JSON keys match the CSV header (snake_case) so both formats agree.
         #expect(decoded?.first?["app"] as? String == "Safari")
         #expect(decoded?.first?["host"] as? String == "ex,ample.com")
-        #expect(decoded?.first?["bytesIn"] as? Int == 100)
-        #expect(decoded?.first?["bytesOut"] as? Int == 20)
-        #expect(decoded?.first?["periodStart"] as? String == "1970-01-01T00:00:00Z")
+        #expect(decoded?.first?["bytes_in"] as? Int == 100)
+        #expect(decoded?.first?["bytes_out"] as? Int == 20)
+        #expect(decoded?.first?["period_start"] as? String == "1970-01-01T00:00:00Z")
     }
 
     @Test("empty rows produce an empty json array")
