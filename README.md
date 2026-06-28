@@ -98,6 +98,9 @@ fighting it.
 - **Per-app network quality** — passively measure each TCP connection's handshake
   RTT, retransmits, and connection-setup time from the captured packets, shown in
   the connection inspector (capture-only; no probes sent).
+- **Per-app encrypted DNS** — see which apps still use plaintext DNS vs DoT, DoQ,
+  or DoH (with the resolver named), classified from the 5-tuple and hostname — no
+  packet capture required.
 - A Wireshark-style three-pane view: packet list, protocol detail tree, and
   synchronized hex.
 - Follow Stream reassembly and a display-filter language to slice the capture.

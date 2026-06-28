@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.5.0] - 2026-06-29
+
+### Added
+- **Per-app encrypted DNS detection.** MatrixNet now classifies each connection's
+  DNS transport from its 5-tuple and observed hostname — **plaintext DNS** (port
+  53, visible to your network and ISP), **DNS over TLS** (853/TCP), **DNS over
+  QUIC** (853/UDP), **DNS over HTTPS** (443 to a recognized resolver, with the
+  provider named), and **local discovery** (mDNS/LLMNR) — and shows it in the
+  connection inspector, flagging cleartext DNS. Unlike the capture-only analyses,
+  this works during ordinary monitoring with no packet capture required.
+
 ## [1.4.1] - 2026-06-28
 
 ### Fixed

@@ -54,6 +54,7 @@ MatrixNet est strictement **passif — observer, jamais bloquer**. Pas de pare-f
 - **Empreinte client TLS JA4, par app** —— déduisez passivement la pile TLS de chaque app à partir du ClientHello (moteur de navigateur, Go, curl, bibliothèque suspecte) sans déchiffrement ; affichée sur la couche TLS et par app dans l'inspecteur de connexion, les piles reconnues étant étiquetées.
 - **Visibilité HTTP/3 / QUIC** — déchiffrez passivement le QUIC Initial (clés publiques dérivées du DCID, RFC 9001 — sans secret ni MITM) pour lire le SNI, l'ALPN et la version de chaque connexion HTTP/3, et calculer son JA4 QUIC, le tout par app.
 - **Qualité réseau par app** — mesure passive du RTT de handshake TCP, des retransmissions et du temps d'établissement de chaque connexion, affichée dans l'inspecteur de connexions (capture uniquement ; aucune sonde).
+- **DNS chiffré par app** — repérez les apps qui utilisent encore le DNS en clair plutôt que DoT, DoQ ou DoH (avec le résolveur nommé), classé à partir du 5-tuple et du nom d'hôte — sans capture de paquets.
 - Une vue à trois volets façon Wireshark : liste des paquets, arbre de détail des protocoles et hexa synchronisé.
 - Réassemblage Suivre le flux et un langage de filtres d'affichage pour découper la capture.
 - Filtrage des paquets jusqu'à une seule app ou une seule connexion.
