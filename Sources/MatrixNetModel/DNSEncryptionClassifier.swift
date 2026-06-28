@@ -3,17 +3,21 @@
 /// destination is a known resolver hostname (the only passive DoH signal), so a
 /// plain HTTPS connection to an unrelated host is never misreported as DoH.
 public enum DNSEncryptionClassifier {
-    /// Known public DoH resolver host suffixes → friendly provider name.
+    /// Known public DoH resolver host suffixes → friendly provider name. Each
+    /// entry is a resolver-specific hostname, NOT a provider's corporate/product
+    /// homepage — otherwise a browser visiting, say, `quad9.net` would be
+    /// misreported as encrypted DNS. Matched exactly or as a subdomain.
     private static let dohProviders: [(suffix: String, name: String)] = [
         ("cloudflare-dns.com", "Cloudflare"),
         ("dns.google", "Google"),
         ("dns.google.com", "Google"),
-        ("quad9.net", "Quad9"),
-        ("nextdns.io", "NextDNS"),
-        ("opendns.com", "OpenDNS"),
-        ("adguard-dns.com", "AdGuard"),
-        ("cleanbrowsing.org", "CleanBrowsing"),
-        ("controld.com", "Control D")
+        ("dns.quad9.net", "Quad9"),
+        ("dns.nextdns.io", "NextDNS"),
+        ("doh.opendns.com", "OpenDNS"),
+        ("dns.adguard-dns.com", "AdGuard"),
+        ("doh.cleanbrowsing.org", "CleanBrowsing"),
+        ("dns.controld.com", "Control D"),
+        ("freedns.controld.com", "Control D")
     ]
 
     /// Classifies the DNS transport implied by a connection's protocol, remote
