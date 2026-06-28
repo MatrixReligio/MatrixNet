@@ -13,13 +13,21 @@ struct UsageReportTests {
     private func row(_ app: String, _ host: String, _ country: String, _ hour: Int, _ bytes: UInt64) -> UsageRow {
         UsageRow(
             periodStart: Date(timeIntervalSince1970: TimeInterval(hour * 3600)),
-            app: app, host: host, country: country, bytesIn: bytes, bytesOut: 0
+            app: app,
+            host: host,
+            country: country,
+            bytesIn: bytes,
+            bytesOut: 0
         )
     }
 
     private var rows: [UsageRow] {
-        [row("A", "x", "US", 0, 100), row("A", "y", "DE", 0, 50),
-         row("B", "z", "US", 1, 30), row("A", "x", "US", 1, 10)]
+        [
+            row("A", "x", "US", 0, 100),
+            row("A", "y", "DE", 0, 50),
+            row("B", "z", "US", 1, 30),
+            row("A", "x", "US", 1, 10)
+        ]
     }
 
     @Test("totals sum every row")

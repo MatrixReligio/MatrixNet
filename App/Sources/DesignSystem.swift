@@ -41,6 +41,25 @@ enum Theme {
     }
 }
 
+/// A calm rounded surface that groups related readouts. Shared across the
+/// Overview and Usage dashboards.
+struct Panel<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            content
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06))
+        )
+    }
+}
+
 extension Color {
     /// Builds a color that resolves differently in light and dark appearance.
     init(light: Color, dark: Color) {

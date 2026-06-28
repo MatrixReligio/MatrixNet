@@ -154,6 +154,10 @@ private struct DataSettings: View {
     @State private var checking = false
     @State private var geoIPChecked = GeoIP.lastChecked
     @State private var threatChecked = Threat.lastChecked
+    @AppStorage(Preferences.Key.usageRetentionDays.rawValue, store: SharedMetricsStore.sharedDefaults)
+    private var usageRetentionDays = 90
+    @AppStorage(Preferences.Key.billingCycleResetDay.rawValue, store: SharedMetricsStore.sharedDefaults)
+    private var billingCycleResetDay = 1
 
     var body: some View {
         Form {
@@ -164,6 +168,19 @@ private struct DataSettings: View {
                     .disabled(checking)
             } footer: {
                 Text("Datasets refresh automatically; MatrixNet only contacts its own release assets.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Stepper(value: $usageRetentionDays, in: 7 ... 365) {
+                    Text("Keep usage history for \(usageRetentionDays) days")
+                }
+                Stepper(value: $billingCycleResetDay, in: 1 ... 28) {
+                    Text("Billing cycle resets on day \(billingCycleResetDay)")
+                }
+            } footer: {
+                Text("Controls the Usage tab’s retention and the billing-cycle reporting window.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

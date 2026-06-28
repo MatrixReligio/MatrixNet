@@ -55,8 +55,8 @@ public enum UsageReport {
             let key = granularity == .hour
                 ? UsageBucketing.hourStart(of: row.periodStart, calendar: calendar)
                 : calendar.startOfDay(for: row.periodStart)
-            buckets[key, default: UsageTotals()] = buckets[key, default: UsageTotals()]
-                + UsageTotals(bytesIn: row.bytesIn, bytesOut: row.bytesOut)
+            buckets[key, default: UsageTotals()].bytesIn += row.bytesIn
+            buckets[key, default: UsageTotals()].bytesOut += row.bytesOut
         }
         return buckets
             .map { TrendBucket(start: $0.key, totals: $0.value) }
@@ -70,8 +70,8 @@ public enum UsageReport {
     private static func group(_ rows: [UsageRow], key: (UsageRow) -> String) -> [String: UsageTotals] {
         var out: [String: UsageTotals] = [:]
         for row in rows {
-            out[key(row), default: UsageTotals()] = out[key(row), default: UsageTotals()]
-                + UsageTotals(bytesIn: row.bytesIn, bytesOut: row.bytesOut)
+            out[key(row), default: UsageTotals()].bytesIn += row.bytesIn
+            out[key(row), default: UsageTotals()].bytesOut += row.bytesOut
         }
         return out
     }

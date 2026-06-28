@@ -403,23 +403,6 @@ private struct DestinationCountriesPanel: View {
 
 // MARK: - Shared chrome
 
-private struct Panel<Content: View>: View {
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            content
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.06))
-        )
-    }
-}
-
 private struct StatTile: View {
     let label: LocalizedStringKey
     let value: String

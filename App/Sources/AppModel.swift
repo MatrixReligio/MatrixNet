@@ -321,15 +321,19 @@ public final class AppModel {
                 merged[rowKey] = row
             } else {
                 merged[rowKey] = UsageRow(
-                    periodStart: hour, app: flow.app, host: host, country: country,
-                    bytesIn: delta.bytesIn, bytesOut: delta.bytesOut
+                    periodStart: hour,
+                    app: flow.app,
+                    host: host,
+                    country: country,
+                    bytesIn: delta.bytesIn,
+                    bytesOut: delta.bytesOut
                 )
             }
         }
         try? usageStore.accumulate(Array(merged.values))
 
         if let last = lastCompactedHour, last < hour {
-            try? usageStore.compactHour(last, n: 20)
+            try? usageStore.compactHour(last, limit: 20)
             lastCompactedHour = hour
         } else if lastCompactedHour == nil {
             lastCompactedHour = hour
@@ -345,7 +349,7 @@ public final class AppModel {
         try? usageStore.prune(olderThan: cutoff)
         let currentHour = UsageBucketing.hourStart(of: Date(), calendar: .current)
         for hour in (try? usageStore.distinctHours(before: currentHour)) ?? [] {
-            try? usageStore.compactHour(hour, n: 20)
+            try? usageStore.compactHour(hour, limit: 20)
         }
     }
 

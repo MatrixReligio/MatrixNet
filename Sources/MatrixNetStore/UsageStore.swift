@@ -8,7 +8,9 @@ import SwiftData
 public final class UsageStore {
     private let container: ModelContainer
 
-    public init(container: ModelContainer) { self.container = container }
+    public init(container: ModelContainer) {
+        self.container = container
+    }
 
     /// An in-memory store for tests and previews.
     public static func inMemory() throws -> UsageStore {
@@ -19,7 +21,7 @@ public final class UsageStore {
 
     /// A persistent store under Application Support.
     public static func persistent() throws -> UsageStore {
-        UsageStore(container: try ModelContainer(for: UsageBucketRecord.self))
+        try UsageStore(container: ModelContainer(for: UsageBucketRecord.self))
     }
 
     /// Additively upserts each row's bytes into its (hour, app, host, country)
@@ -42,8 +44,12 @@ public final class UsageStore {
                 existing.bytesOut += clampInt(row.bytesOut)
             } else {
                 context.insert(UsageBucketRecord(
-                    periodStart: start, app: app, host: host, country: country,
-                    bytesIn: clampInt(row.bytesIn), bytesOut: clampInt(row.bytesOut)
+                    periodStart: start,
+                    app: app,
+                    host: host,
+                    country: country,
+                    bytesIn: clampInt(row.bytesIn),
+                    bytesOut: clampInt(row.bytesOut)
                 ))
             }
         }
@@ -52,20 +58,26 @@ public final class UsageStore {
 
     /// Rewrites one hour's rows down to the top-N destinations per app, folding
     /// the tail into a synthetic "other" row. Idempotent.
-    public func compactHour(_ hourStart: Date, n: Int) throws {
+    public func compactHour(_ hourStart: Date, limit: Int) throws {
         let context = container.mainContext
         let end = hourStart.addingTimeInterval(3600)
         let descriptor = FetchDescriptor<UsageBucketRecord>(
             predicate: #Predicate { $0.periodStart >= hourStart && $0.periodStart < end }
         )
         let records = try context.fetch(descriptor)
-        let truncated = UsageTruncation.topN(records.map(Self.toRow), n: n)
+        let truncated = UsageTruncation.topN(records.map(Self.toRow), limit: limit)
         guard truncated.count != records.count else { return }
-        for record in records { context.delete(record) }
+        for record in records {
+            context.delete(record)
+        }
         for row in truncated {
             context.insert(UsageBucketRecord(
-                periodStart: row.periodStart, app: row.app, host: row.host, country: row.country,
-                bytesIn: clampInt(row.bytesIn), bytesOut: clampInt(row.bytesOut)
+                periodStart: row.periodStart,
+                app: row.app,
+                host: row.host,
+                country: row.country,
+                bytesIn: clampInt(row.bytesIn),
+                bytesOut: clampInt(row.bytesOut)
             ))
         }
         try context.save()
@@ -87,7 +99,9 @@ public final class UsageStore {
         let descriptor = FetchDescriptor<UsageBucketRecord>(
             predicate: #Predicate { $0.periodStart < cutoff }
         )
-        for record in try context.fetch(descriptor) { context.delete(record) }
+        for record in try context.fetch(descriptor) {
+            context.delete(record)
+        }
         try context.save()
     }
 
@@ -96,15 +110,21 @@ public final class UsageStore {
         let descriptor = FetchDescriptor<UsageBucketRecord>(
             predicate: #Predicate { $0.periodStart < before }
         )
-        return Array(Set(try container.mainContext.fetch(descriptor).map(\.periodStart))).sorted()
+        return try Array(Set(container.mainContext.fetch(descriptor).map(\.periodStart))).sorted()
     }
 
     private static func toRow(_ record: UsageBucketRecord) -> UsageRow {
         UsageRow(
-            periodStart: record.periodStart, app: record.app, host: record.host, country: record.country,
-            bytesIn: UInt64(max(0, record.bytesIn)), bytesOut: UInt64(max(0, record.bytesOut))
+            periodStart: record.periodStart,
+            app: record.app,
+            host: record.host,
+            country: record.country,
+            bytesIn: UInt64(max(0, record.bytesIn)),
+            bytesOut: UInt64(max(0, record.bytesOut))
         )
     }
 }
 
-private func clampInt(_ value: UInt64) -> Int { Int(min(value, UInt64(Int.max))) }
+private func clampInt(_ value: UInt64) -> Int {
+    Int(min(value, UInt64(Int.max)))
+}

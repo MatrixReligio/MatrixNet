@@ -10,7 +10,7 @@ struct UsagePeriodTests {
         return calendar
     }
 
-    // 2026-06-15 10:30:00 UTC
+    /// 2026-06-15 10:30:00 UTC
     private var now: Date {
         cal.date(from: DateComponents(year: 2026, month: 6, day: 15, hour: 10, minute: 30)) ?? .distantPast
     }

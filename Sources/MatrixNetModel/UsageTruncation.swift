@@ -6,7 +6,7 @@ public enum UsageTruncation {
     public static let otherHost = "·other"
     public static let mixedCountry = "—"
 
-    public static func topN(_ rows: [UsageRow], n: Int) -> [UsageRow] {
+    public static func topN(_ rows: [UsageRow], limit: Int) -> [UsageRow] {
         var byApp: [String: [UsageRow]] = [:]
         var order: [String] = []
         for row in rows {
@@ -16,13 +16,13 @@ public enum UsageTruncation {
         var result: [UsageRow] = []
         for app in order {
             let group = byApp[app] ?? []
-            guard group.count > n else {
+            guard group.count > limit else {
                 result.append(contentsOf: group)
                 continue
             }
             let sorted = group.sorted { ($0.bytesIn + $0.bytesOut) > ($1.bytesIn + $1.bytesOut) }
-            result.append(contentsOf: sorted.prefix(n))
-            let tail = sorted.dropFirst(n)
+            result.append(contentsOf: sorted.prefix(limit))
+            let tail = sorted.dropFirst(limit)
             let inSum = tail.reduce(UInt64(0)) { $0 + $1.bytesIn }
             let outSum = tail.reduce(UInt64(0)) { $0 + $1.bytesOut }
             result.append(UsageRow(

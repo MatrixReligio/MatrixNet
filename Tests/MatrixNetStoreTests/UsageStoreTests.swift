@@ -26,7 +26,7 @@ struct UsageStoreTests {
         let store = try UsageStore.inMemory()
         try store.accumulate([
             row("A", "x", 10, at: hour),
-            row("A", "y", 7, at: hour.addingTimeInterval(7200)),
+            row("A", "y", 7, at: hour.addingTimeInterval(7200))
         ])
         let out = try store.fetch(range: (hour, hour.addingTimeInterval(3600)))
         #expect(out.count == 1)
@@ -37,9 +37,9 @@ struct UsageStoreTests {
         let store = try UsageStore.inMemory()
         try store.accumulate([
             row("A", "a", 100, at: hour), row("A", "b", 50, at: hour),
-            row("A", "c", 9, at: hour), row("A", "d", 1, at: hour),
+            row("A", "c", 9, at: hour), row("A", "d", 1, at: hour)
         ])
-        try store.compactHour(hour, n: 2)
+        try store.compactHour(hour, limit: 2)
         let out = try store.fetch(range: (hour, hour.addingTimeInterval(3600)))
         #expect(out.count == 3)
         #expect(out.contains { $0.host == UsageTruncation.otherHost && $0.bytesIn == 10 })
@@ -50,10 +50,10 @@ struct UsageStoreTests {
         let store = try UsageStore.inMemory()
         try store.accumulate([
             row("A", "a", 100, at: hour), row("A", "b", 50, at: hour),
-            row("A", "c", 9, at: hour), row("A", "d", 1, at: hour),
+            row("A", "c", 9, at: hour), row("A", "d", 1, at: hour)
         ])
-        try store.compactHour(hour, n: 2)
-        try store.compactHour(hour, n: 2)
+        try store.compactHour(hour, limit: 2)
+        try store.compactHour(hour, limit: 2)
         let out = try store.fetch(range: (hour, hour.addingTimeInterval(3600)))
         #expect(out.count == 3)
     }
@@ -64,7 +64,7 @@ struct UsageStoreTests {
         let old = Date(timeIntervalSince1970: 0)
         let recent = Date(timeIntervalSince1970: 100_000)
         try store.accumulate([row("A", "x", 1, at: old), row("A", "y", 1, at: recent)])
-        try store.prune(olderThan: Date(timeIntervalSince1970: 50_000))
+        try store.prune(olderThan: Date(timeIntervalSince1970: 50000))
         let out = try store.fetch(range: (Date(timeIntervalSince1970: -1), Date(timeIntervalSince1970: 200_000)))
         #expect(out.count == 1)
         #expect(out[0].host == "y")

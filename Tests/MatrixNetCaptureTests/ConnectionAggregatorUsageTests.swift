@@ -26,7 +26,7 @@ struct ConnectionAggregatorUsageTests {
             ),
             ConnectionAggregator.PacketAttribution(
                 flowKey: connection.fiveTuple.flowKey, pid: 9, inbound: false, bytes: 100
-            ),
+            )
         ])
         await aggregator.apply(.removed(connection.id))
         let snapshot = await aggregator.usageSnapshot()
@@ -44,7 +44,7 @@ struct ConnectionAggregatorUsageTests {
         await aggregator.attributePackets([
             ConnectionAggregator.PacketAttribution(
                 flowKey: connection.fiveTuple.flowKey, pid: 9, inbound: true, bytes: 9
-            ),
+            )
         ])
         await aggregator.reset()
         #expect(await aggregator.usageSnapshot().isEmpty)
