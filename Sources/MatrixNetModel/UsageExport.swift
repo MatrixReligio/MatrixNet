@@ -14,7 +14,7 @@ public enum UsageExport {
                 field(row.host),
                 "\(row.bytesIn)",
                 "\(row.bytesOut)",
-                isoDate(row.periodStart),
+                isoDate(row.periodStart)
             ].joined(separator: ","))
         }
         return lines.joined(separator: "\n")

@@ -12,7 +12,7 @@ struct UsageExportTests {
             country: "US",
             bytesIn: 100,
             bytesOut: 20
-        ),
+        )
     ]
 
     @Test("csv has a header and an escaped row")

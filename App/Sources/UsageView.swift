@@ -1,5 +1,6 @@
 import MatrixNetModel
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The Usage tab: "where did my bandwidth go" — total throughput plus the top
 /// apps, countries, and domains by bytes over a selectable reporting window.
@@ -89,12 +90,35 @@ struct UsageView: View {
             .padding(20)
         }
         .navigationTitle(Text("Usage"))
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button("Export as CSV") { export(.csv) }
+                    Button("Export as JSON") { export(.json) }
+                } label: {
+                    Label("Export", systemImage: "square.and.arrow.up")
+                }
+                .disabled(rows.isEmpty)
+            }
+        }
         .task(id: choice) {
             while !Task.isCancelled {
                 rows = model.usageRows(for: period)
                 try? await Task.sleep(for: .seconds(15))
             }
         }
+    }
+
+    private enum ExportFormat { case csv, json }
+
+    private func export(_ format: ExportFormat) {
+        let panel = NSSavePanel()
+        let ext = format == .csv ? "csv" : "json"
+        panel.nameFieldStringValue = "usage.\(ext)"
+        panel.allowedContentTypes = [UTType(filenameExtension: ext) ?? .data]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let text = format == .csv ? UsageExport.csv(rows) : UsageExport.json(rows)
+        try? text.write(to: url, atomically: true, encoding: .utf8)
     }
 
     @ViewBuilder
