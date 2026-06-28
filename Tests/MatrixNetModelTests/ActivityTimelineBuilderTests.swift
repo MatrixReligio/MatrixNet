@@ -78,4 +78,43 @@ struct ActivityTimelineBuilderTests {
         let timeline = ActivityTimelineBuilder.build(rows: rows, hours: days)
         #expect(timeline.rows[0].buckets == [7, 3])
     }
+
+    @Test("places rows by bucket boundaries, not a fixed step (handles uneven grids/DST)")
+    func nonUniformGrid() {
+        // Gaps 3600 then 7200 — like a daily grid crossing a DST transition.
+        let grid = [h0, h0.addingTimeInterval(3600), h0.addingTimeInterval(10800)]
+        // A row at h0+7200 falls in bucket 1 (3600 ≤ 7200 < 10800), not bucket 2.
+        let mid = UsageRow(
+            periodStart: h0.addingTimeInterval(7200),
+            app: "A",
+            host: "h",
+            country: "US",
+            bytesIn: 9,
+            bytesOut: 0
+        )
+        let timeline = ActivityTimelineBuilder.build(rows: [mid], hours: grid)
+        #expect(timeline.rows[0].buckets == [0, 9, 0])
+    }
+
+    @Test("excludes a row at or after the end of the last bucket")
+    func atEnd() {
+        let endRow = UsageRow(
+            periodStart: h0.addingTimeInterval(3 * 3600), // == last bucket start + step
+            app: "A",
+            host: "h",
+            country: "US",
+            bytesIn: 99,
+            bytesOut: 0
+        )
+        #expect(ActivityTimelineBuilder.build(rows: [endRow], hours: hours).rows.isEmpty)
+    }
+
+    @Test("breaks equal totals by app name ascending")
+    func tiebreak() {
+        let timeline = ActivityTimelineBuilder.build(
+            rows: [row("Zebra", 0, 50), row("Apple", 0, 50)],
+            hours: hours
+        )
+        #expect(timeline.rows.map(\.app) == ["Apple", "Zebra"])
+    }
 }

@@ -32,14 +32,17 @@ public struct ActivityTimeline: Sendable, Equatable {
 public enum ActivityTimelineBuilder {
     public static func build(rows: [UsageRow], hours: [Date]) -> ActivityTimeline {
         guard !hours.isEmpty else { return ActivityTimeline(hours: hours, rows: []) }
-        let step = hours.count > 1 ? hours[1].timeIntervalSince(hours[0]) : 3600
-        let end = hours[hours.count - 1].addingTimeInterval(step)
+        // The last bucket's span equals the final gap (or 1h for a lone bucket),
+        // bounding what counts as "within" the timeline.
+        let lastStep = hours.count > 1 ? hours[hours.count - 1].timeIntervalSince(hours[hours.count - 2]) : 3600
+        let end = hours[hours.count - 1].addingTimeInterval(lastStep)
 
         var series: [String: [UInt64]] = [:]
         for row in rows {
-            let elapsed = row.periodStart.timeIntervalSince(hours[0])
-            guard row.periodStart >= hours[0], row.periodStart < end, step > 0 else { continue }
-            let index = min(hours.count - 1, Int(elapsed / step))
+            guard row.periodStart >= hours[0], row.periodStart < end else { continue }
+            // Find the bucket by boundary, not a fixed step, so uneven grids
+            // (e.g. a daily window crossing a DST change) place every row exactly.
+            guard let index = bucketIndex(for: row.periodStart, in: hours) else { continue }
             var buckets = series[row.app] ?? [UInt64](repeating: 0, count: hours.count)
             buckets[index] &+= row.bytesIn &+ row.bytesOut
             series[row.app] = buckets
@@ -57,5 +60,23 @@ public enum ActivityTimelineBuilder {
         appRows.sort { $0.total != $1.total ? $0.total > $1.total : $0.app < $1.app }
 
         return ActivityTimeline(hours: hours, rows: appRows)
+    }
+
+    /// The index of the bucket containing `date` — the last bucket whose start is
+    /// `<= date`, found by binary search (callers guarantee `date >= hours[0]`).
+    private static func bucketIndex(for date: Date, in hours: [Date]) -> Int? {
+        var low = 0
+        var high = hours.count - 1
+        var result: Int?
+        while low <= high {
+            let mid = (low + high) / 2
+            if hours[mid] <= date {
+                result = mid
+                low = mid + 1
+            } else {
+                high = mid - 1
+            }
+        }
+        return result
     }
 }
