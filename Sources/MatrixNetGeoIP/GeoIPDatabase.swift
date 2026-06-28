@@ -42,6 +42,13 @@ public struct GeoIPDatabase: Sendable {
         ranges.isEmpty && v6Ranges.isEmpty
     }
 
+    /// Whether the database carries an IPv6 section (format v2). The in-app
+    /// updater requires this so a stale IPv4-only file can never replace a
+    /// current bundle and erase IPv6 coverage.
+    public var hasIPv6: Bool {
+        !v6Ranges.isEmpty
+    }
+
     /// Builds from pre-sorted ranges (used by the loader and tests).
     init(ranges: [Range], v6Ranges: [V6Range] = []) {
         self.ranges = ranges

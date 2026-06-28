@@ -30,10 +30,12 @@ echo "==> Signing (Developer ID, inside-out)"
 
 # A release must ship the GeoIP database (gitignored; built before this script in
 # CI/locally). Without it the world map and country flags are blank — fail the
-# release rather than silently shipping a broken map (regression guard).
+# release rather than silently shipping a broken map (regression guard). The 10 MB
+# floor also asserts the IPv6 section is present: the IPv4-only table is ~3.5 MB,
+# while IPv4+IPv6 (format v2) is ~15 MB, so a dropped IPv6 section fails here.
 GEOIP="$APP/Contents/Resources/geoip.dat"
-if [ ! -s "$GEOIP" ] || [ "$(stat -f%z "$GEOIP")" -lt 1000000 ]; then
-  echo "ERROR: $GEOIP missing or too small — run scripts/build-geoip.sh before releasing." >&2
+if [ ! -s "$GEOIP" ] || [ "$(stat -f%z "$GEOIP")" -lt 10000000 ]; then
+  echo "ERROR: $GEOIP missing or too small (IPv6 section likely absent) — run scripts/build-geoip.sh." >&2
   exit 1
 fi
 echo "==> GeoIP database bundled ($(stat -f%z "$GEOIP") bytes)"

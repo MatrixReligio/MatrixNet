@@ -19,12 +19,15 @@ public enum GeoIPUpdatePolicy {
         return now.timeIntervalSince(lastChecked) >= interval
     }
 
-    /// Validates that downloaded bytes are a well-formed, non-empty GeoIP
-    /// database before they are allowed to replace the current one. Guards
-    /// against truncated downloads or error pages served as `geoip.dat`.
+    /// Validates that downloaded bytes are a well-formed GeoIP database before
+    /// they are allowed to replace the current one. Guards against truncated
+    /// downloads or error pages served as `geoip.dat`, and requires the current
+    /// format-v2 IPv6 section: the rolling `geoip-latest` asset is always built
+    /// with IPv6, so a file lacking it is a stale v1 file that must not replace a
+    /// current bundle and erase IPv6 coverage.
     public static func isValidDatabase(_ data: Data) -> Bool {
         guard let database = GeoIPDatabase(data: data) else { return false }
-        return !database.isEmpty
+        return database.hasIPv6
     }
 
     /// Whether to attempt a download now. Downloads when forced, when no usable

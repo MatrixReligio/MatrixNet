@@ -42,11 +42,26 @@ struct GeoIPUpdatePolicyTests {
         #expect(!GeoIPUpdatePolicy.isValidDatabase(empty))
     }
 
-    @Test("accepts a well-formed database with one range")
-    func acceptsValid() {
-        var bytes: [UInt8] = [0, 0, 0, 1] // count = 1
+    @Test("rejects a legacy IPv4-only (v1) download so the updater never downgrades")
+    func rejectsLegacyV4Only() {
+        // A v1 file (no appended IPv6 section) parses fine, but accepting it would
+        // let the in-app updater replace a current v2 bundle and lose IPv6.
+        var bytes: [UInt8] = [0, 0, 0, 1] // v4 count = 1
         bytes += [1, 2, 3, 0] // start IP
         bytes += [1, 2, 3, 255] // end IP
+        bytes += Array("US".utf8) // country
+        #expect(!GeoIPUpdatePolicy.isValidDatabase(Data(bytes)))
+    }
+
+    @Test("accepts a current v2 database carrying an IPv6 section")
+    func acceptsV2WithIPv6() {
+        var bytes: [UInt8] = [0, 0, 0, 1] // v4 count = 1
+        bytes += [1, 2, 3, 0] // start IP
+        bytes += [1, 2, 3, 255] // end IP
+        bytes += Array("US".utf8) // country
+        bytes += [0, 0, 0, 1] // v6 count = 1
+        bytes += [UInt8](repeating: 0, count: 16) // start ::
+        bytes += [UInt8](repeating: 0xFF, count: 16) // end ffff:…:ffff
         bytes += Array("US".utf8) // country
         #expect(GeoIPUpdatePolicy.isValidDatabase(Data(bytes)))
     }
