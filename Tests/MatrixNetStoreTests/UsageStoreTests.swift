@@ -58,6 +58,24 @@ struct UsageStoreTests {
         #expect(out.count == 3)
     }
 
+    @Test("compactHour folds even when exactly limit+1 destinations exist")
+    func compactExactlyOverByOne() throws {
+        let store = try UsageStore.inMemory()
+        // 3 hosts at limit 2 → the input and truncated counts are both 3, so a
+        // count-equality guard would wrongly skip folding the 3rd host.
+        try store.accumulate([
+            row("A", "a", 100, at: hour), row("A", "b", 50, at: hour), row("A", "c", 9, at: hour)
+        ])
+        try store.compactHour(hour, limit: 2)
+        var out = try store.fetch(range: (hour, hour.addingTimeInterval(3600)))
+        #expect(out.count == 3)
+        #expect(out.contains { $0.host == UsageTruncation.otherHost && $0.bytesIn == 9 })
+        // And re-compacting leaves exactly one ·other row (idempotent).
+        try store.compactHour(hour, limit: 2)
+        out = try store.fetch(range: (hour, hour.addingTimeInterval(3600)))
+        #expect(out.count(where: { $0.host == UsageTruncation.otherHost }) == 1)
+    }
+
     @Test("prune deletes rows older than the cutoff")
     func prune() throws {
         let store = try UsageStore.inMemory()

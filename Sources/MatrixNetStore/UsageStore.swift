@@ -65,8 +65,14 @@ public final class UsageStore {
             predicate: #Predicate { $0.periodStart >= hourStart && $0.periodStart < end }
         )
         let records = try context.fetch(descriptor)
+        // Already compact when no app exceeds the limit of real (non-"·other")
+        // destinations — cheap skip that also makes launch catch-up idempotent.
+        let namedCounts = Dictionary(
+            grouping: records.filter { $0.host != UsageTruncation.otherHost },
+            by: \.app
+        ).mapValues(\.count)
+        guard namedCounts.values.contains(where: { $0 > limit }) else { return }
         let truncated = UsageTruncation.topN(records.map(Self.toRow), limit: limit)
-        guard truncated.count != records.count else { return }
         for record in records {
             context.delete(record)
         }

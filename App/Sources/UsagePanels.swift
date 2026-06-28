@@ -29,7 +29,6 @@ struct UsageEmptyState: View {
 struct UsageHero: View {
     let totals: UsageTotals
     let trend: [TrendBucket]
-    let granularity: TrendGranularity
 
     private let downLabel = String(localized: "Download")
     private let upLabel = String(localized: "Upload")
@@ -161,14 +160,28 @@ private func combined(_ totals: UsageTotals) -> UInt64 {
 struct UsageAppRanking: View {
     let items: [AppUsage]
     @Binding var selectedApp: String?
-    let icons: [String: NSImage]
+    @Environment(AppModel.self) private var model
+
+    /// Best-effort app-name → icon map from the live connection set (a historical
+    /// app may no longer be running, in which case the row shows a generic mark).
+    private var icons: [String: NSImage] {
+        var icons: [String: NSImage] = [:]
+        for connection in model.connections {
+            let name = connection.app.displayName
+            if icons[name] == nil, let icon = AppIconResolver.shared.cachedIcon(for: connection.app) {
+                icons[name] = icon
+            }
+        }
+        return icons
+    }
 
     var body: some View {
         Panel {
+            let icons = icons
             let maxValue = items.map { combined($0.totals) }.max() ?? 1
             ForEach(items, id: \.app) { item in
                 UsageBarRow(
-                    leading: { icon(for: item.app) },
+                    leading: { icon(for: item.app, icons: icons) },
                     title: item.app,
                     detail: detailText(item.totals),
                     value: Format.bytes(combined(item.totals)),
@@ -187,7 +200,7 @@ struct UsageAppRanking: View {
     }
 
     @ViewBuilder
-    private func icon(for app: String) -> some View {
+    private func icon(for app: String, icons: [String: NSImage]) -> some View {
         if let image = icons[app] {
             Image(nsImage: image).resizable().frame(width: 16, height: 16)
         } else {

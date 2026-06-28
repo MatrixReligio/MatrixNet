@@ -120,8 +120,11 @@ public final class AppModel {
         lastRateBytesIn = 0
         lastRateBytesOut = 0
         // The aggregator's usage totals are reset alongside the new stream, so
-        // the delta baseline must restart from empty too.
+        // the delta baseline must restart from empty too. Defer the first usage
+        // flush a full interval so it can't read a snapshot before the async
+        // `aggregator.reset()` lands and double-count stale totals.
         lastUsageSeen.removeAll()
+        lastUsageFlush = Date()
         lastCompactedHour = UsageBucketing.hourStart(of: Date(), calendar: .current)
 
         let stream = monitor.start()

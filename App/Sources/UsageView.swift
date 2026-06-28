@@ -48,13 +48,17 @@ struct UsageView: View {
         case .today: .today
         case .last7Days: .last7Days
         case .last30Days: .last30Days
-        case .cycle: .currentCycle(resetDay: Preferences(defaults: .standard).billingCycleResetDay)
+        case .cycle:
+            .currentCycle(
+                resetDay: Preferences(defaults: SharedMetricsStore.sharedDefaults ?? .standard)
+                    .billingCycleResetDay
+            )
         }
     }
 
-    private var rows: [UsageRow] {
-        model.usageRows(for: period)
-    }
+    /// Fetched once per period change and refreshed on a slow timer, rather than
+    /// re-querying SwiftData on every body pass (the model publishes ~1 Hz).
+    @State private var rows: [UsageRow] = []
 
     var body: some View {
         ScrollView {
@@ -65,14 +69,12 @@ struct UsageView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
 
-                let rows = rows
                 if rows.isEmpty {
                     UsageEmptyState()
                 } else {
                     UsageHero(
                         totals: UsageReport.totals(rows),
-                        trend: UsageReport.trend(rows, by: period.trendGranularity, calendar: .current),
-                        granularity: period.trendGranularity
+                        trend: UsageReport.trend(rows, by: period.trendGranularity, calendar: .current)
                     )
 
                     Picker("Breakdown", selection: $dimension) {
@@ -87,13 +89,19 @@ struct UsageView: View {
             .padding(20)
         }
         .navigationTitle(Text("Usage"))
+        .task(id: choice) {
+            while !Task.isCancelled {
+                rows = model.usageRows(for: period)
+                try? await Task.sleep(for: .seconds(15))
+            }
+        }
     }
 
     @ViewBuilder
     private func breakdown(for rows: [UsageRow]) -> some View {
         switch dimension {
         case .app:
-            UsageAppRanking(items: UsageReport.byApp(rows), selectedApp: $selectedApp, icons: iconsByApp())
+            UsageAppRanking(items: UsageReport.byApp(rows), selectedApp: $selectedApp)
         case .country:
             UsageCountryRanking(items: UsageReport.byCountry(scoped(rows)))
         case .domain:
@@ -105,18 +113,5 @@ struct UsageView: View {
     private func scoped(_ rows: [UsageRow]) -> [UsageRow] {
         guard let selectedApp else { return rows }
         return rows.filter { $0.app == selectedApp }
-    }
-
-    /// Best-effort app-name → icon map from the live connection set (a historical
-    /// app may no longer be running, in which case the list shows a generic mark).
-    private func iconsByApp() -> [String: NSImage] {
-        var icons: [String: NSImage] = [:]
-        for connection in model.connections {
-            let name = connection.app.displayName
-            if icons[name] == nil, let icon = AppIconResolver.shared.cachedIcon(for: connection.app) {
-                icons[name] = icon
-            }
-        }
-        return icons
     }
 }

@@ -16,15 +16,19 @@ public enum UsageTruncation {
         var result: [UsageRow] = []
         for app in order {
             let group = byApp[app] ?? []
-            guard group.count > limit else {
+            // Rank only real destinations; a pre-existing "·other" is always part
+            // of the tail, so re-running topN is idempotent.
+            let named = group.filter { $0.host != otherHost }
+            guard named.count > limit else {
                 result.append(contentsOf: group)
                 continue
             }
-            let sorted = group.sorted { ($0.bytesIn + $0.bytesOut) > ($1.bytesIn + $1.bytesOut) }
+            let existingOther = group.filter { $0.host == otherHost }
+            let sorted = named.sorted { ($0.bytesIn + $0.bytesOut) > ($1.bytesIn + $1.bytesOut) }
             result.append(contentsOf: sorted.prefix(limit))
-            let tail = sorted.dropFirst(limit)
-            let inSum = tail.reduce(UInt64(0)) { $0 + $1.bytesIn }
-            let outSum = tail.reduce(UInt64(0)) { $0 + $1.bytesOut }
+            let folded = Array(sorted.dropFirst(limit)) + existingOther
+            let inSum = folded.reduce(UInt64(0)) { $0 + $1.bytesIn }
+            let outSum = folded.reduce(UInt64(0)) { $0 + $1.bytesOut }
             result.append(UsageRow(
                 periodStart: group[0].periodStart,
                 app: app,

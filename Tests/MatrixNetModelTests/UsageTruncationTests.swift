@@ -33,4 +33,16 @@ struct UsageTruncationTests {
         #expect(out.count(where: { $0.app == "A" }) == 3) // a, b, ·other
         #expect(out.count(where: { $0.app == "B" }) == 1)
     }
+
+    @Test("re-running topN is idempotent even when ·other is not the smallest")
+    func idempotent() {
+        // Folding leaves ·other (7) larger than a surviving named row (5), so a
+        // naive re-run would re-rank ·other and emit a second ·other row.
+        let rows = [row("A", "a", 100), row("A", "b", 5), row("A", "c", 4), row("A", "d", 3)]
+        let once = UsageTruncation.topN(rows, limit: 2)
+        let twice = UsageTruncation.topN(once, limit: 2)
+        let key: (UsageRow) -> String = { "\($0.host):\($0.bytesIn)" }
+        #expect(Set(once.map(key)) == Set(twice.map(key)))
+        #expect(twice.count(where: { $0.host == UsageTruncation.otherHost }) == 1)
+    }
 }
