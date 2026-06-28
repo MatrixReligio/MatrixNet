@@ -215,7 +215,9 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
     }
 
     /// Forwards captured packets to the aggregator (off the main actor) so real
-    /// per-connection/per-app byte totals accumulate while capturing.
+    /// per-connection/per-app byte totals accumulate while capturing, and records
+    /// any SNI/DNS hostnames so connections show the host the app actually
+    /// requested (preferred over reverse DNS).
     private func attribute(_ rows: [DissectedRow]) {
         guard let attribution else { return }
         let attributions = rows.compactMap { row -> ConnectionAggregator.PacketAttribution? in
@@ -227,8 +229,14 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
                 bytes: row.packet.originalLength
             )
         }
-        guard !attributions.isEmpty else { return }
-        Task.detached { await attribution.attributePackets(attributions) }
+        let hostnames = rows.flatMap(\.dissected.hostnames)
+        guard !attributions.isEmpty || !hostnames.isEmpty else { return }
+        Task.detached {
+            await attribution.attributePackets(attributions)
+            for observation in hostnames {
+                await attribution.recordHostname(observation.name, for: observation.ip)
+            }
+        }
     }
 
     private func direction(from raw: UInt8) -> TrafficDirection {

@@ -140,7 +140,11 @@ public final class AppModel {
                 let session = await aggregator.sessionTotals()
                 let apps = await aggregator.appTraffic()
                 await resolver.resolveIfNeeded(snapshot.map(\.fiveTuple.destination.address))
-                let hostnames = await resolver.snapshot()
+                let reverseDNS = await resolver.snapshot()
+                // SNI/DNS observed names are exact (the host the app requested),
+                // so they win over reverse-DNS PTR records (often CDN wildcards).
+                let observed = await aggregator.hostnameSnapshot()
+                let hostnames = reverseDNS.merging(observed) { _, exact in exact }
                 self?.publish(snapshot, hostnames: hostnames, session: session, apps: apps)
                 await self?.flushUsage(now: Date())
                 try? await Task.sleep(for: .seconds(1))

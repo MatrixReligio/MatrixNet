@@ -6,8 +6,8 @@ import Testing
 struct PacketDissectorHostnameTests {
     private let dissector = PacketDissector()
 
-    // Ethernet + IPv4(8.8.8.8→192.168.1.5) + UDP(53→49152) + DNS response
-    // answering example.com = 93.184.216.34.
+    /// Ethernet + IPv4(8.8.8.8→192.168.1.5) + UDP(53→49152) + DNS response
+    /// answering example.com = 93.184.216.34.
     private let dnsResponse = """
     aabbccddeeff 112233445566 0800
     45 00 0049 0001 0000 40 11 0000 08080808 c0a80105
@@ -17,8 +17,8 @@ struct PacketDissectorHostnameTests {
     C00C 0001 0001 0000012C 0004 5db8d822
     """
 
-    // Ethernet + IPv4(192.168.1.5→93.184.216.34) + TCP(50000→443) + TLS
-    // ClientHello with SNI example.com.
+    /// Ethernet + IPv4(192.168.1.5→93.184.216.34) + TCP(50000→443) + TLS
+    /// ClientHello with SNI example.com.
     private let tlsClientHello = """
     aabbccddeeff 112233445566 0800
     45 00 0070 1c46 4000 40 06 0000 c0a80105 5db8d822

@@ -6,7 +6,9 @@ import Foundation
 public enum HostnameNormalizer {
     public static func normalize(_ raw: String) -> String? {
         var host = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        while host.hasSuffix(".") { host.removeLast() }
+        while host.hasSuffix(".") {
+            host.removeLast()
+        }
         return host.isEmpty ? nil : host
     }
 }
