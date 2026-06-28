@@ -53,6 +53,7 @@ MatrixNet es estrictamente **pasivo — observar, nunca bloquear**. Sin cortafue
 - Disección sólida de los protocolos más importantes: **Ethernet, IPv4, IPv6, TCP, UDP, ICMP, DNS, TLS (handshake / SNI / certificado) y HTTP/1.1**.
 - **Huella de cliente TLS JA4, por app** —— deduce de forma pasiva la pila TLS de cada app a partir del ClientHello (motor de navegador, Go, curl, biblioteca sospechosa) sin descifrado; se muestra en la capa TLS y por app en el inspector de conexiones, con las pilas reconocidas etiquetadas.
 - **Visibilidad de HTTP/3 / QUIC** — descifra de forma pasiva el QUIC Initial (claves públicas derivadas del DCID, RFC 9001 — sin secreto ni MITM) para leer el SNI, el ALPN y la versión de cada conexión HTTP/3, y calcular su JA4 de QUIC, todo por app.
+- **Calidad de red por app** — mide de forma pasiva el RTT de handshake TCP, las retransmisiones y el tiempo de establecimiento de cada conexión, mostrado en el inspector de conexiones (solo con captura; sin sondas).
 - Una vista de tres paneles al estilo Wireshark: lista de paquetes, árbol de detalle de protocolos y hexadecimal sincronizado.
 - Reensamblado «Seguir flujo» y un lenguaje de filtros de visualización para acotar la captura.
 - Filtrar paquetes hasta una sola app o una sola conexión.

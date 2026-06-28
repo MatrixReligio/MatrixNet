@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.4.0] - 2026-06-28
+
+### Added
+- **Per-app network quality diagnostics.** While packet capture is active,
+  MatrixNet now passively measures each TCP connection's quality from the
+  captured packets and shows it in the connection inspector's new **Network
+  Quality** section: handshake RTT (SYN→SYN-ACK — at the client, the full
+  client↔server path round trip), connection-setup time (SYN→first request byte),
+  and retransmit / out-of-order counts derived from sequence numbers. All passive
+  — no probes are sent. Capture-only: when capture is off the section explains how
+  to enable it.
+
+### Fixed
+- **Offloaded (TSO/LSO) TCP segments are now measured.** macOS hands outbound
+  large-send frames to the capture path with the IPv4 total-length field still 0;
+  the payload length is now taken from the captured buffer in that case, so
+  retransmit/out-of-order tracking works on the dominant outbound traffic class.
+
 ## [1.3.1] - 2026-06-28
 
 ### Fixed

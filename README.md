@@ -95,6 +95,9 @@ fighting it.
 - **HTTP/3 / QUIC visibility** — passively decrypt the QUIC Initial (public,
   DCID-derived keys per RFC 9001 — no secret, no MITM) to read each HTTP/3
   connection's SNI, ALPN, and version, and compute its QUIC JA4, all per app.
+- **Per-app network quality** — passively measure each TCP connection's handshake
+  RTT, retransmits, and connection-setup time from the captured packets, shown in
+  the connection inspector (capture-only; no probes sent).
 - A Wireshark-style three-pane view: packet list, protocol detail tree, and
   synchronized hex.
 - Follow Stream reassembly and a display-filter language to slice the capture.
