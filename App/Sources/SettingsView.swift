@@ -31,6 +31,8 @@ private struct GeneralSettings: View {
     private var runInBackground = false
     @AppStorage(Preferences.Key.threatNotificationsEnabled.rawValue, store: SharedMetricsStore.sharedDefaults)
     private var threatNotifications = false
+    @AppStorage(Preferences.Key.newDestinationAlertsEnabled.rawValue, store: SharedMetricsStore.sharedDefaults)
+    private var newDestinationAlerts = false
     @AppStorage(Preferences.Key.homeRegion.rawValue, store: SharedMetricsStore.sharedDefaults)
     private var homeRegion = ""
     @State private var loginError: String?
@@ -75,6 +77,17 @@ private struct GeneralSettings: View {
                     }
             } footer: {
                 Text("Show a notification when an active connection reaches a flagged address.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Notify about new destinations", isOn: $newDestinationAlerts)
+                    .onChange(of: newDestinationAlerts) { _, newValue in
+                        if newValue { model.newDestinationNotifier?.requestAuthorizationIfNeeded() }
+                    }
+            } footer: {
+                Text("Alert when a known app first reaches a country it has never reached before.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

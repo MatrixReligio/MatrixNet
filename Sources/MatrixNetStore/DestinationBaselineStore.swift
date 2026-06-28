@@ -19,7 +19,9 @@ public struct AppBaseline: Sendable {
 public final class DestinationBaselineStore {
     private let container: ModelContainer
 
-    public init(container: ModelContainer) { self.container = container }
+    public init(container: ModelContainer) {
+        self.container = container
+    }
 
     /// An in-memory store for tests and previews.
     public static func inMemory() throws -> DestinationBaselineStore {
