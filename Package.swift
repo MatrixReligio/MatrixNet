@@ -53,6 +53,7 @@ let package = Package(
         ),
         .target(
             name: "MatrixNetStore",
+            dependencies: ["MatrixNetModel"],
             path: "Sources/MatrixNetStore"
         ),
         .target(
@@ -96,7 +97,7 @@ let package = Package(
         ),
         .testTarget(
             name: "MatrixNetStoreTests",
-            dependencies: ["MatrixNetStore"],
+            dependencies: ["MatrixNetStore", "MatrixNetModel"],
             path: "Tests/MatrixNetStoreTests"
         ),
         .testTarget(
