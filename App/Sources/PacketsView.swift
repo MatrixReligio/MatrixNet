@@ -68,11 +68,15 @@ struct PacketsView: View {
                 }
             }
             .frame(minWidth: 360)
-            ScrollView {
+            Group {
                 if let packet = selectedPacket {
-                    PacketDetail(packet: packet)
+                    ScrollView { PacketDetail(packet: packet) }
                 } else {
+                    // Centered in the pane: a ContentUnavailableView only fills and
+                    // centers when given the full frame — wrapping it in a
+                    // ScrollView (unbounded height) would pin it to the top.
                     ContentUnavailableView("No Packet Selected", systemImage: "doc.text.magnifyingglass")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .frame(minWidth: 280)
@@ -99,7 +103,7 @@ struct PacketsView: View {
             }
             Button("Reinstall Helper") { capture.reinstallHelper() }
         }
-        .frame(maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func captureBanner(_ message: String) -> some View {
