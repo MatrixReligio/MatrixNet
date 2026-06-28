@@ -18,7 +18,12 @@ import SwiftData
 ///     the store does not need to be in the group container.
 public enum SharedModelContainer {
     private static var schema: Schema {
-        Schema([ConnectionHistoryRecord.self, UsageBucketRecord.self, KnownDestinationRecord.self])
+        Schema([
+            ConnectionHistoryRecord.self,
+            UsageBucketRecord.self,
+            KnownDestinationRecord.self,
+            AppFingerprintRecord.self
+        ])
     }
 
     /// `Application Support/MatrixNet/matrixnet.store`, creating the folder.
