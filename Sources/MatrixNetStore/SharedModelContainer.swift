@@ -1,5 +1,4 @@
 import Foundation
-import MatrixNetModel
 import SwiftData
 
 /// Builds the single SwiftData container shared by every store.
@@ -9,29 +8,33 @@ import SwiftData
 ///     `ModelContainer(for: SingleModel.self)` instances makes SwiftData migrate
 ///     the shared store to whichever schema opened last, dropping the other
 ///     models' tables (this lost connection history and broke usage).
-///  2. **Store inside the Team-ID App Group container.** A non-App-Store app that
-///     writes to the default user-level Application Support shares a `default.store`
-///     with other apps — which makes macOS prompt "wants to access data from other
-///     apps" and would let a reset touch another app's file. The Team-ID-prefixed
-///     group container is private to this app and prompts silently.
+///  2. **An app-private store URL.** The store lives at an explicit
+///     `Application Support/MatrixNet/matrixnet.store` — the same private
+///     subfolder GeoIP/Threat already use. This avoids two macOS pitfalls: the
+///     default top-level `default.store` (shared with other non-sandboxed apps,
+///     which corrupts schemas and risks touching their data) and the App Group
+///     container (CoreData there makes macOS prompt "wants to access data from
+///     other apps" on launch). The widget reads metrics.json, not SwiftData, so
+///     the store does not need to be in the group container.
 public enum SharedModelContainer {
     private static var schema: Schema {
         Schema([ConnectionHistoryRecord.self, UsageBucketRecord.self, KnownDestinationRecord.self])
     }
 
-    private static var configuration: ModelConfiguration {
-        ModelConfiguration(
-            schema: schema,
-            groupContainer: .identifier(SharedMetricsStore.appGroupIdentifier)
-        )
+    /// `Application Support/MatrixNet/matrixnet.store`, creating the folder.
+    private static func storeURL() throws -> URL {
+        let directory = try FileManager.default
+            .url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+            .appendingPathComponent("MatrixNet", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.appendingPathComponent("matrixnet.store")
     }
 
-    /// The persistent container holding all stored models, in the App Group
-    /// container. If an earlier build left a single-model store there, SwiftData
-    /// cannot widen it to the unified schema and throws; we then reset that store
-    /// once (its contents were a transient baseline) and recreate every table.
+    /// The persistent container holding all stored models, at the app-private
+    /// URL. If an earlier build left an incompatible store there, SwiftData
+    /// throws; we then reset that store once and recreate every table.
     public static func make() throws -> ModelContainer {
-        try make(configuration: configuration)
+        try make(configuration: ModelConfiguration(schema: schema, url: storeURL()))
     }
 
     static func make(configuration: ModelConfiguration) throws -> ModelContainer {

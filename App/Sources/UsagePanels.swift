@@ -121,11 +121,13 @@ struct UsageBarRow<Leading: View>: View {
                 leading
                 Text(verbatim: title)
                     .lineLimit(1)
-                    .truncationMode(.middle)
+                    .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .help(title)
                 Text(verbatim: value)
                     .font(Theme.mono(11))
                     .foregroundStyle(.secondary)
+                    .layoutPriority(1)
             }
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {

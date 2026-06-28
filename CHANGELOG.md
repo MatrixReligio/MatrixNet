@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Status:** Phase 1. Until version `1.0.0`, public interfaces and behavior may
 > change without notice.
 
+## [0.1.26] - 2026-06-28
+
+### Fixed
+- **No more "wants to access data from other apps" prompt at launch.** The usage
+  database lived in the App Group container, where CoreData/SwiftData access made
+  macOS show the app-data prompt on every launch. It now lives in the app's own
+  `Application Support/MatrixNet` folder (alongside the GeoIP and threat data),
+  private to MatrixNet, so the prompt no longer appears.
+- **Long process names no longer clip in the Usage list.** Bundle-id-style names
+  (e.g. a network extension) truncate cleanly with an ellipsis and show the full
+  name on hover.
+
 ## [0.1.25] - 2026-06-28
 
 ### Fixed
