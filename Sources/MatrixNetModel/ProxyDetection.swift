@@ -31,6 +31,16 @@ public struct ProxyDetector: Sendable {
         if remote.address.scope == .loopback, loopbackProxyPorts.contains(remote.port) { return true }
         return false
     }
+
+    /// Whether traffic to `remote` is proxied — either through an explicit local
+    /// proxy, or because the system's default route is a tunnel (e.g. Loon/Surge
+    /// in TUN mode) carrying all internet-bound traffic. When tunneled, only
+    /// global (internet) destinations count; loopback and LAN traffic does not
+    /// traverse the tunnel.
+    public func routesThroughProxyOrTunnel(_ remote: Endpoint, systemTunneled: Bool) -> Bool {
+        if routesThroughProxy(remote) { return true }
+        return systemTunneled && remote.address.scope == .global
+    }
 }
 
 /// Recognises NetworkExtension VPN/tunnel and proxy-engine processes — the ones

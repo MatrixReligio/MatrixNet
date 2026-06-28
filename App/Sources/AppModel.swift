@@ -166,6 +166,9 @@ public final class AppModel {
                 // so they win over reverse-DNS PTR records (often CDN wildcards).
                 let observed = await aggregator.hostnameSnapshot()
                 let hostnames = reverseDNS.merging(observed) { _, exact in exact }
+                // Keep proxy/tunnel state current so the proxy share reflects a
+                // VPN/proxy toggled on or off mid-session (cheap SC reads).
+                ProxyInfo.refresh()
                 self?.publish(snapshot, hostnames: hostnames, session: session, apps: apps)
                 await self?.flushUsage(now: Date())
                 await self?.flushFingerprints(now: Date())

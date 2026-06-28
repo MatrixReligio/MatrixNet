@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.3.1] - 2026-06-28
+
+### Fixed
+- **Proxy share now reflects TUN-mode tunnels (Loon/Surge/Clash).** The Overview
+  "through proxy" figure only counted connections to an explicit local proxy
+  port, so it read 0% for a system tunnelled at the route level (Loon in TUN
+  mode sets no system proxy and apps connect to real destinations). It now also
+  detects when the default route egresses through a tunnel interface (utun/…)
+  and counts internet-bound connections accordingly.
+
 ## [1.3.0] - 2026-06-28
 
 ### Added
