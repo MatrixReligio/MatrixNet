@@ -61,4 +61,16 @@ if ! codesign -d --entitlements - "$WIDGET" 2>/dev/null \
   codesign -d --entitlements - "$WIDGET" 2>/dev/null | grep -A3 application-groups >&2 || true
   exit 1
 fi
+
+# The main app must keep the same App Group entitlement: without it, the moment
+# the app touches its Group Container macOS shows the "wants to access data from
+# other apps" TCC prompt to every user, on every launch. Assert it survived
+# signing so a dropped entitlement fails the build instead of shipping.
+echo "==> Verifying app App Group entitlement"
+if ! codesign -d --entitlements - "$APP" 2>/dev/null \
+    | grep -q "4DUQGD879H.com.matrixreligio.matrixnet"; then
+  echo "ERROR: app is missing the App Group entitlement after signing" >&2
+  codesign -d --entitlements - "$APP" 2>/dev/null | grep -A3 application-groups >&2 || true
+  exit 1
+fi
 echo "OK"
