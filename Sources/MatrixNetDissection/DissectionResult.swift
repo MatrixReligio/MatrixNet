@@ -71,17 +71,21 @@ public struct DissectedPacket: Sendable {
     public let fiveTuple: FiveTuple?
     public let summary: String
     public let hostnames: [HostnameObservation]
+    /// The JA4 TLS client fingerprint, when this packet is a TLS ClientHello.
+    public let tlsClientFingerprint: String?
 
     public init(
         layers: [DissectionNode],
         fiveTuple: FiveTuple?,
         summary: String,
-        hostnames: [HostnameObservation] = []
+        hostnames: [HostnameObservation] = [],
+        tlsClientFingerprint: String? = nil
     ) {
         self.layers = layers
         self.fiveTuple = fiveTuple
         self.summary = summary
         self.hostnames = hostnames
+        self.tlsClientFingerprint = tlsClientFingerprint
     }
 
     /// The chain of short protocol names, e.g. `["Ethernet", "IPv4", "TCP"]`.

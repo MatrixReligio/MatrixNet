@@ -35,6 +35,7 @@ public struct PacketDissector: Sendable {
         )
 
         var hostnames = [HostnameObservation]()
+        var tlsClientFingerprint: String?
         if let application = parseApplicationLayer(
             bytes,
             ports: (transport.sourcePort, transport.destinationPort),
@@ -43,13 +44,15 @@ public struct PacketDissector: Sendable {
         ) {
             layers.append(application.node)
             hostnames = application.hostnames
+            tlsClientFingerprint = application.fingerprint
         }
 
         return DissectedPacket(
             layers: layers,
             fiveTuple: fiveTuple,
             summary: summarize(layers, fiveTuple: fiveTuple),
-            hostnames: hostnames
+            hostnames: hostnames,
+            tlsClientFingerprint: tlsClientFingerprint
         )
     }
 
@@ -57,12 +60,20 @@ public struct PacketDissector: Sendable {
     /// failure simply omits the application layer (never throws). Also returns any
     /// hostnames observed: DNS answers (answer IP → queried name) and a TLS
     /// ClientHello's SNI (destination IP → server name).
+    /// The application-layer dissection: its node, any hostnames observed, and a
+    /// JA4 client fingerprint when the payload is a TLS ClientHello.
+    private struct ApplicationLayer {
+        let node: DissectionNode
+        let hostnames: [HostnameObservation]
+        let fingerprint: String?
+    }
+
     private func parseApplicationLayer(
         _ bytes: [UInt8],
         ports: (source: UInt16, destination: UInt16),
         destination: IPAddress,
         at offset: Int
-    ) -> (node: DissectionNode, hostnames: [HostnameObservation])? {
+    ) -> ApplicationLayer? {
         guard offset < bytes.count else { return nil }
         if ports.source == 53 || ports.destination == 53 {
             guard let dns = try? DNSDissector.dissect(bytes, at: offset) else { return nil }
@@ -75,17 +86,17 @@ public struct PacketDissector: Sendable {
                 guard let name = queriedName ?? HostnameNormalizer.normalize(answer.name) else { return nil }
                 return HostnameObservation(ip: ip, name: name)
             }
-            return (dns.node, hostnames)
+            return ApplicationLayer(node: dns.node, hostnames: hostnames, fingerprint: nil)
         }
         if ports.source == 443 || ports.destination == 443 || TLSDissector.looksLikeTLS(bytes, at: offset) {
             guard let tls = try? TLSDissector.dissect(bytes, at: offset) else { return nil }
             let hostnames = (tls.serverName.flatMap(HostnameNormalizer.normalize))
                 .map { [HostnameObservation(ip: destination, name: $0)] } ?? []
-            return (tls.node, hostnames)
+            return ApplicationLayer(node: tls.node, hostnames: hostnames, fingerprint: tls.clientFingerprint)
         }
         if ports.source == 80 || ports.destination == 80 || HTTPDissector.looksLikeHTTP(bytes, at: offset) {
             guard let node = try? HTTPDissector.dissect(bytes, at: offset) else { return nil }
-            return (node, [])
+            return ApplicationLayer(node: node, hostnames: [], fingerprint: nil)
         }
         return nil
     }
