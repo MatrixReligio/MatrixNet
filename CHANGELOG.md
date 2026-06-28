@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.1.0] - 2026-06-28
+
+### Added
+- **Export usage as CSV or JSON.** The Usage tab can export the current period's
+  per-app/country/domain totals for reporting, billing, or audit — RFC-4180 CSV
+  and pretty JSON, with ISO-8601 timestamps.
+- **pcapng exports carry process attribution.** Each exported packet now includes
+  an `opt_comment` with the owning process and PID, so Wireshark shows which app
+  sent every packet — something Wireshark cannot derive on its own.
+
 ## [1.0.0] - 2026-06-28
 
 First stable release. MatrixNet is a feature-complete, passive macOS network

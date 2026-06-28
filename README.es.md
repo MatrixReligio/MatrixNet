@@ -46,6 +46,7 @@ MatrixNet es estrictamente **pasivo — observar, nunca bloquear**. Sin cortafue
 - Una nueva **pestaña Uso** que responde a «¿adónde se fue mi ancho de banda?»: las apps, países y dominios con más bytes en **Hoy / 7 días / 30 días / tu ciclo de facturación**, con un gráfico de tendencia de descarga/subida.
 - Se construye a partir de cubos por hora guardados localmente (90 días por omisión, configurable), de modo que los totales sobreviven al reinicio, a diferencia del Monitor de Actividad, que vuelve a cero.
 - Selecciona una app para acotar los desgloses por país y dominio a esa app, y define un **día de reinicio del ciclo** para que la ventana «Ciclo» coincida con tu plan.
+- **Exporta** el periodo actual como CSV o JSON para informes, facturación o auditoría.
 
 ### 🔬 Análisis profundo de paquetes
 - Captura paquete a paquete donde **cada paquete lleva su PID propietario**.

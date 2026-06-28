@@ -46,6 +46,7 @@ MatrixNet ist streng **passiv — beobachten, niemals blockieren**. Keine Firewa
 - Ein neuer **Tab „Verbrauch“**, der beantwortet, „wohin meine Bandbreite geflossen ist“: die wichtigsten Apps, Länder und Domains nach Bytes über **Heute / 7 Tage / 30 Tage / deinen Abrechnungszyklus**, mit einem Download-/Upload-Trenddiagramm.
 - Basiert auf lokal gespeicherten Stundenbuckets (standardmäßig 90 Tage, konfigurierbar), sodass Summen einen Neustart überstehen — anders als die Aktivitätsanzeige, die auf null zurücksetzt.
 - Wähle eine App, um die Länder- und Domain-Aufschlüsselung auf sie zu beschränken, und lege einen **Abrechnungs-Reset-Tag** fest, damit das Fenster „Zyklus“ zu deinem Tarif passt.
+- **Exportiere** den aktuellen Zeitraum als CSV oder JSON für Reporting, Abrechnung oder Audit.
 
 ### 🔬 Tiefe Paketanalyse
 - Erfassung Paket für Paket, bei der **jedes Paket seine besitzende PID trägt**.

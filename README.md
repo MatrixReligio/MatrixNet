@@ -82,6 +82,7 @@ fighting it.
   totals survive relaunch — unlike Activity Monitor, which resets to zero.
 - Select an app to scope the country and domain breakdowns to just that app, and
   set a **billing-cycle reset day** so the "Cycle" window matches your plan.
+- **Export** the current period as CSV or JSON for reporting, billing, or audit.
 
 ### 🔬 Deep Packet Analysis
 - Per-packet capture where **every packet carries its owning PID**.

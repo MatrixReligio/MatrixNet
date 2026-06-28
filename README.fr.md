@@ -46,6 +46,7 @@ MatrixNet est strictement **passif — observer, jamais bloquer**. Pas de pare-f
 - Un nouvel **onglet Utilisation** qui répond à « où est passée ma bande passante » : les principales apps, pays et domaines par octets sur **Aujourd’hui / 7 jours / 30 jours / votre cycle de facturation**, avec un graphique de tendance téléchargement/téléversement.
 - Construit à partir de compartiments horaires conservés localement (90 jours par défaut, configurable), les totaux survivent au redémarrage — contrairement au Moniteur d’activité, qui repart de zéro.
 - Sélectionnez une app pour limiter les répartitions par pays et par domaine à celle-ci, et définissez un **jour de réinitialisation du cycle** pour que la fenêtre « Cycle » corresponde à votre forfait.
+- **Exportez** la période en cours en CSV ou JSON pour le reporting, la facturation ou l'audit.
 
 ### 🔬 Analyse approfondie des paquets
 - Capture paquet par paquet où **chaque paquet porte le PID propriétaire**.
