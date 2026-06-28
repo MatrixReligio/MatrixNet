@@ -1,7 +1,9 @@
+import MatrixNetModel
+
 /// Dissects a TCP header (RFC 9293), decoding the flag bits and honouring the
 /// data-offset field for the payload boundary.
 enum TCPDissector {
-    static func dissect(_ bytes: [UInt8], at start: Int) throws -> TransportLayerResult {
+    static func dissect(_ bytes: [UInt8], at start: Int, segmentEnd: Int) throws -> TransportLayerResult {
         var reader = ByteReader(bytes, offset: start)
         let sourcePort = try reader.readUInt16()
         let destinationPort = try reader.readUInt16()
@@ -15,6 +17,8 @@ enum TCPDissector {
         _ = try reader.readUInt16() // urgent pointer
 
         let headerLength = max(20, dataOffsetWords * 4)
+        let payloadOffset = start + headerLength
+        let payloadLength = max(0, segmentEnd - payloadOffset)
 
         let fields = [
             DissectionField(name: "Source Port", value: "\(sourcePort)", byteRange: start ..< start + 2),
@@ -34,7 +38,13 @@ enum TCPDissector {
             node: node,
             sourcePort: sourcePort,
             destinationPort: destinationPort,
-            payloadOffset: start + headerLength
+            payloadOffset: payloadOffset,
+            tcpSegment: TCPSegment(
+                flags: TCPFlags(rawValue: flags),
+                sequence: sequence,
+                acknowledgement: acknowledgement,
+                payloadLength: payloadLength
+            )
         )
     }
 
@@ -74,7 +84,8 @@ enum UDPDissector {
             node: node,
             sourcePort: sourcePort,
             destinationPort: destinationPort,
-            payloadOffset: start + headerLength
+            payloadOffset: start + headerLength,
+            tcpSegment: nil
         )
     }
 }

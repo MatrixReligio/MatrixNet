@@ -22,10 +22,7 @@ enum IPv4Dissector {
         let destinationBytes = try reader.readBytes(4)
 
         // Consume any options so a bogus IHL is rejected rather than over-read.
-        let optionsLength = headerLength - 20
-        if optionsLength > 0 {
-            try reader.skip(optionsLength)
-        }
+        if headerLength > 20 { try reader.skip(headerLength - 20) }
 
         guard let source = IPAddress(bytes: sourceBytes),
               let destination = IPAddress(bytes: destinationBytes)
@@ -67,6 +64,7 @@ enum IPv4Dissector {
             node: node,
             ipProtocol: ipProtocol,
             payloadOffset: start + headerLength,
+            payloadEnd: min(start + Int(totalLength), bytes.count),
             source: source,
             destination: destination
         )

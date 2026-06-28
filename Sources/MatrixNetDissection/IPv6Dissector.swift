@@ -49,6 +49,7 @@ enum IPv6Dissector {
             node: node,
             ipProtocol: nextHeader,
             payloadOffset: start + headerLength,
+            payloadEnd: min(start + headerLength + Int(payloadLength), bytes.count),
             source: source,
             destination: destination
         )

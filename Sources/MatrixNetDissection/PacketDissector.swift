@@ -23,7 +23,12 @@ public struct PacketDissector: Sendable {
         layers.append(network.node)
 
         let proto = TransportProtocol(ipProtocolNumber: network.ipProtocol)
-        guard let transport = parseTransportLayer(bytes, proto: proto, at: network.payloadOffset) else {
+        guard let transport = parseTransportLayer(
+            bytes,
+            proto: proto,
+            at: network.payloadOffset,
+            segmentEnd: network.payloadEnd
+        ) else {
             return DissectedPacket(layers: layers, fiveTuple: nil, summary: summarize(layers, fiveTuple: nil))
         }
         layers.append(transport.node)
@@ -53,7 +58,8 @@ public struct PacketDissector: Sendable {
             fiveTuple: fiveTuple,
             summary: summarize(layers, fiveTuple: fiveTuple),
             hostnames: hostnames,
-            tlsClientFingerprint: tlsClientFingerprint
+            tlsClientFingerprint: tlsClientFingerprint,
+            tcpSegment: transport.tcpSegment
         )
     }
 
@@ -147,10 +153,11 @@ public struct PacketDissector: Sendable {
     private func parseTransportLayer(
         _ bytes: [UInt8],
         proto: TransportProtocol,
-        at offset: Int
+        at offset: Int,
+        segmentEnd: Int
     ) -> TransportLayerResult? {
         switch proto {
-        case .tcp: try? TCPDissector.dissect(bytes, at: offset)
+        case .tcp: try? TCPDissector.dissect(bytes, at: offset, segmentEnd: segmentEnd)
         case .udp: try? UDPDissector.dissect(bytes, at: offset)
         default: nil
         }

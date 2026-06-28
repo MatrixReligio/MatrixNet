@@ -14,6 +14,11 @@ struct NetworkLayerResult {
     let ipProtocol: UInt8
     /// Absolute offset where the transport layer begins.
     let payloadOffset: Int
+    /// Absolute offset where the IP datagram's payload ends (from the IP length
+    /// field, clamped to the buffer), so a transport layer can size its payload
+    /// without trusting the captured buffer length (which may include link-layer
+    /// padding).
+    let payloadEnd: Int
     let source: IPAddress
     let destination: IPAddress
 }
@@ -25,6 +30,8 @@ struct TransportLayerResult {
     let destinationPort: UInt16
     /// Absolute offset where the application payload begins.
     let payloadOffset: Int
+    /// The structured TCP fields, when the transport is TCP (nil for UDP).
+    let tcpSegment: TCPSegment?
 }
 
 enum HexFormat {

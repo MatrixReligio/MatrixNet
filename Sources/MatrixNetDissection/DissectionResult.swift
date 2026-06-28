@@ -73,19 +73,23 @@ public struct DissectedPacket: Sendable {
     public let hostnames: [HostnameObservation]
     /// The JA4 TLS client fingerprint, when this packet is a TLS ClientHello.
     public let tlsClientFingerprint: String?
+    /// The structured TCP header fields, when this packet is TCP (for quality).
+    public let tcpSegment: TCPSegment?
 
     public init(
         layers: [DissectionNode],
         fiveTuple: FiveTuple?,
         summary: String,
         hostnames: [HostnameObservation] = [],
-        tlsClientFingerprint: String? = nil
+        tlsClientFingerprint: String? = nil,
+        tcpSegment: TCPSegment? = nil
     ) {
         self.layers = layers
         self.fiveTuple = fiveTuple
         self.summary = summary
         self.hostnames = hostnames
         self.tlsClientFingerprint = tlsClientFingerprint
+        self.tcpSegment = tcpSegment
     }
 
     /// The chain of short protocol names, e.g. `["Ethernet", "IPv4", "TCP"]`.
