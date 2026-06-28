@@ -64,4 +64,58 @@ enum QUICInitialCrypto {
         }
         return output
     }
+
+    /// Fully decrypts a QUIC v1 Initial packet to its frame payload, or nil if it
+    /// is not a v1 Initial / fails authentication. Passive: keys come from the
+    /// public DCID-derived secret, never a handshake secret.
+    static func decryptInitial(_ packet: [UInt8]) -> [UInt8]? {
+        guard let header = QUICInitial.parse(packet), header.version == 1 else { return nil }
+        let keys = initialSecrets(dcid: header.dcid)
+        let sampleStart = header.pnOffset + 4
+        guard sampleStart + 16 <= packet.count else { return nil }
+        let mask = headerProtectionMask(hp: keys.hp, sample: Array(packet[sampleStart ..< sampleStart + 16]))
+
+        let firstByte = packet[0] ^ (mask[0] & 0x0F)
+        let pnLength = Int(firstByte & 0x03) + 1
+        let payloadStart = header.pnOffset + pnLength
+        let payloadEnd = header.pnOffset + header.length
+        guard payloadStart <= packet.count, payloadEnd <= packet.count, payloadEnd - payloadStart >= 16 else {
+            return nil
+        }
+
+        var pnBytes = [UInt8]()
+        for index in 0 ..< pnLength {
+            pnBytes.append(packet[header.pnOffset + index] ^ mask[1 + index])
+        }
+
+        var aad = [firstByte]
+        aad.append(contentsOf: packet[1 ..< header.pnOffset])
+        aad.append(contentsOf: pnBytes)
+
+        let body = Array(packet[payloadStart ..< payloadEnd])
+        let ciphertext = Array(body.prefix(body.count - 16))
+        let tag = Array(body.suffix(16))
+
+        var nonce = keys.iv
+        for index in 0 ..< pnLength {
+            nonce[nonce.count - pnLength + index] ^= pnBytes[index]
+        }
+        return try? aesGCMOpen(key: keys.key, nonce: nonce, ciphertext: ciphertext, tag: tag, aad: aad)
+    }
+
+    private static func aesGCMOpen(
+        key: [UInt8],
+        nonce: [UInt8],
+        ciphertext: [UInt8],
+        tag: [UInt8],
+        aad: [UInt8]
+    ) throws -> [UInt8] {
+        let box = try AES.GCM.SealedBox(
+            nonce: AES.GCM.Nonce(data: Data(nonce)),
+            ciphertext: Data(ciphertext),
+            tag: Data(tag)
+        )
+        let plaintext = try AES.GCM.open(box, using: SymmetricKey(data: Data(key)), authenticating: Data(aad))
+        return Array(plaintext)
+    }
 }
