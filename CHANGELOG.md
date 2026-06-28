@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.4.1] - 2026-06-28
+
+### Fixed
+- **World map and country flags were blank in released builds.** The GeoIP
+  database (`geoip.dat`) is generated, not committed, and the release workflow
+  never built it — so shipped apps had no database and the map showed 0 locatable
+  connections. The release now builds and bundles `geoip.dat` (latest DB-IP
+  dataset, with a month fallback) and fails the build if it is missing.
+
+### Changed
+- **Datasets self-heal and hot-load.** When no GeoIP or threat database is present
+  (a fresh or mis-packaged install), the app now downloads one immediately on
+  launch — ignoring the weekly throttle — and swaps it in live, instead of waiting
+  up to a week. The check time is recorded only on success (or on failure when a
+  database already exists), so a failed first attempt retries on the next launch.
+  Both datasets continue to refresh automatically from their rolling GitHub
+  releases (`geoip-latest` monthly, `threatlist-latest` weekly).
+
 ## [1.4.0] - 2026-06-28
 
 ### Added
