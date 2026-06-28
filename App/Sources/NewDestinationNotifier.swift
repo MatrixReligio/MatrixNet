@@ -20,9 +20,12 @@ final class NewDestinationNotifier {
 
     /// Posts a new-destination notification if the rate-limit policy allows it.
     /// `country` is the human-readable region name; `host` is the destination that
-    /// triggered it, when known.
-    func notify(app: String, country: String, host: String?, now: Date = Date()) {
-        guard policy.shouldNotify(key: app + "\u{1F}" + country, now: now) else { return }
+    /// triggered it, when known. Returns whether a notification was actually
+    /// posted, so the caller only commits the destination to its baseline once it
+    /// has been surfaced (a rate-limited destination is retried next tick).
+    @discardableResult
+    func notify(app: String, country: String, host: String?, now: Date = Date()) -> Bool {
+        guard policy.shouldNotify(key: app + "\u{1F}" + country, now: now) else { return false }
         let content = UNMutableNotificationContent()
         content.title = String(localized: "New destination")
         if let host {
@@ -33,5 +36,6 @@ final class NewDestinationNotifier {
         content.sound = .default
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
+        return true
     }
 }

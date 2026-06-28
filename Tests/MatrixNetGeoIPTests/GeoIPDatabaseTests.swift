@@ -31,6 +31,16 @@ struct GeoIPDatabaseTests {
         #expect(try sampleDatabase().country(for: #require(IPAddress("203.0.113.1"))) == nil)
     }
 
+    @Test("placeholder country codes resolve to nil, not a fake country")
+    func placeholderCountryIsNil() throws {
+        // DB-IP marks reserved/unallocated ranges "ZZ"/"XX"/"??"; these are not
+        // real countries and must not surface as a destination.
+        let database = GeoIPDatabase(ranges: [
+            .init(start: ipValue("203.0.113.0"), end: ipValue("203.0.113.255"), country: "ZZ")
+        ])
+        #expect(try database.country(for: #require(IPAddress("203.0.113.5"))) == nil)
+    }
+
     @Test("builds flag emoji from country codes")
     func flags() {
         #expect(GeoIPDatabase.flag(for: "US") == "🇺🇸")

@@ -63,7 +63,9 @@ public struct GeoIPDatabase: Sendable {
             } else if value > range.end {
                 low = mid + 1
             } else {
-                return range.country
+                // DB-IP marks reserved/unallocated (but globally-routed) ranges
+                // with placeholder codes; treat them as unknown, not a country.
+                return Self.placeholderCodes.contains(range.country.uppercased()) ? nil : range.country
             }
         }
         return nil

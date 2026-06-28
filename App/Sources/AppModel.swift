@@ -314,28 +314,38 @@ public final class AppModel {
                 now: now,
                 learningWindow: learningWindow
             )
-            guard verdict != .known else { continue }
-
-            // Record the new (app, country) into both the in-memory baseline and
-            // the persistent store.
-            if var existing = knownDestinations[app] {
-                existing.countries.insert(country)
-                knownDestinations[app] = existing
-            } else {
-                knownDestinations[app] = AppBaseline(countries: [country], firstSeen: now)
-            }
-            try? destinationBaselineStore?.record(app: app, country: country, at: now)
-
-            if verdict == .alert, alertsEnabled {
+            switch verdict {
+            case .known:
+                continue
+            case .learning:
+                recordDestination(app: app, country: country, now: now)
+            case .alert:
+                // Only commit to the baseline once the alert is actually
+                // surfaced; a rate-limited destination stays unrecorded so the
+                // next tick retries it (otherwise it would be silently promoted
+                // to "known" and never alert). When alerts are off (or no
+                // notifier), record unconditionally so the baseline still grows.
+                guard alertsEnabled, let notifier = newDestinationNotifier else {
+                    recordDestination(app: app, country: country, now: now)
+                    continue
+                }
                 let region = Locale.current.localizedString(forRegionCode: country) ?? country
-                newDestinationNotifier?.notify(
-                    app: app,
-                    country: region,
-                    host: connection.remoteHostname,
-                    now: now
-                )
+                if notifier.notify(app: app, country: region, host: connection.remoteHostname, now: now) {
+                    recordDestination(app: app, country: country, now: now)
+                }
             }
         }
+    }
+
+    /// Adds an (app, country) to the in-memory baseline and the persistent store.
+    private func recordDestination(app: String, country: String, now: Date) {
+        if var existing = knownDestinations[app] {
+            existing.countries.insert(country)
+            knownDestinations[app] = existing
+        } else {
+            knownDestinations[app] = AppBaseline(countries: [country], firstSeen: now)
+        }
+        try? destinationBaselineStore?.record(app: app, country: country, at: now)
     }
 
     /// Hourly usage rows for the Usage tab over the given reporting period.
