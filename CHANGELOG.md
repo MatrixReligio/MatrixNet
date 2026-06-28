@@ -5,8 +5,21 @@ All notable changes to MatrixNet are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-> **Status:** Phase 1. Until version `1.0.0`, public interfaces and behavior may
-> change without notice.
+> This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
+> incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
+
+## [1.0.0] - 2026-06-28
+
+First stable release. MatrixNet is a feature-complete, passive macOS network
+monitor and deep packet inspector: live per-app connections, packet dissection
+with per-packet app attribution, an offline world map, per-app usage reports,
+SNI/DNS hostname enrichment, phoning-home alerts, a desktop widget, and a menu
+bar agent — in eight languages, with notarized in-app updates.
+
+### Changed
+- Adopted [Semantic Versioning](https://semver.org) (MAJOR.MINOR.PATCH) and
+  dropped the "Phase 1 / work in progress / roadmap" framing from the README;
+  the app is stable and the project now versions by impact, not by phase.
 
 ## [0.1.27] - 2026-06-28
 

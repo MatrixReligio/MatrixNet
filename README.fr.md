@@ -18,7 +18,7 @@ Un moniteur réseau et analyseur de paquets approfondi pour macOS, 100 % natif S
 [![Passive](https://img.shields.io/badge/passive-zero--conflict-8A2BE2)](#confidentialité)
 [![No telemetry](https://img.shields.io/badge/telemetry-none-success)](#confidentialité)
 
-> **État : Phase 1, en cours de développement.** MatrixNet est un projet à un stade précoce, en développement actif. L'architecture est arrêtée et les bibliothèques de base sont construites en test-first, mais l'app n'est pas encore complète et il n'y a pas de version stable. Les interfaces, commandes et l'UI peuvent changer.
+> **100 % passif — observer, jamais bloquer.** MatrixNet ne lit que les statistiques du noyau et une copie de chaque paquet ; il fonctionne donc aux côtés de n'importe quel proxy, filtre ou VPN sans conflit. Pas de pare-feu, pas d'interception du trafic, pas de déchiffrement HTTPS.
 
 ---
 
@@ -26,7 +26,7 @@ Un moniteur réseau et analyseur de paquets approfondi pour macOS, 100 % natif S
 
 Depuis une décennie, deux outils règnent sur le réseau macOS. **Little Snitch** vous dit *quelle app* se connecte où. **Wireshark** montre *chaque octet sur le fil* — sans savoir quelle app l'a produit. MatrixNet réunit les deux dans une seule app native : la surveillance des connexions par app au-dessus, la dissection au niveau paquet en dessous, et une couche de corrélation qui relie chaque paquet capturé au processus et à la connexion auxquels il appartient.
 
-La phase 1 est strictement **passive — observer, jamais bloquer**. Pas de pare-feu, pas d'interception du trafic, pas de déchiffrement HTTPS (voir la [Feuille de route](#feuille-de-route) pour la suite). Comme elle se contente d'observer, MatrixNet fonctionne aux côtés du proxy, du filtre ou du VPN que vous utilisez déjà, sans les gêner.
+MatrixNet est strictement **passif — observer, jamais bloquer**. Pas de pare-feu, pas d'interception du trafic, pas de déchiffrement HTTPS. Comme il se contente d'observer, MatrixNet fonctionne aux côtés du proxy, du filtre ou du VPN que vous utilisez déjà, sans les gêner.
 
 ## Fonctionnalités
 
@@ -79,7 +79,7 @@ La phase 1 est strictement **passive — observer, jamais bloquer**. Pas de pare
 
 ## Pourquoi MatrixNet ?
 
-| | Little Snitch | Wireshark | **MatrixNet (Phase 1)** |
+| | Little Snitch | Wireshark | **MatrixNet** |
 |---|:---:|:---:|:---:|
 | Vue des connexions par app | ✅ | ❌ | ✅ |
 | Dissection au niveau paquet | ❌ | ✅ | ✅ |
@@ -164,14 +164,15 @@ L'assistant existe uniquement pour satisfaire l'exigence root de BPF/PKTAP. Il n
 
 MatrixNet traite tout localement. Il n'envoie aucune donnée hors de votre machine, n'a pas de télémétrie, ne requiert aucun compte et ne parle à aucun serveur. Captures, historique et réglages ne vivent que sur votre disque.
 
-## Feuille de route
+## Gestion des versions
 
-La phase 1 se limite volontairement à la surveillance et à l'analyse passives. Prévu pour des phases ultérieures (non implémenté et non garanti) :
+MatrixNet suit le [versionnage sémantique](https://semver.org/lang/fr/) : **MAJEUR.MINEUR.CORRECTIF**.
 
-- **Pare-feu / blocage** — un mode d'interception optionnel (probablement via `NEFilterDataProvider`), avec un avertissement clair sur les conflits possibles avec d'autres filtres au niveau socket.
-- **Analyse native par IA** — requêtes en langage naturel sur votre trafic, détection automatique de traqueurs / anomalies / fuites de vie privée.
-- **Déchiffrement HTTPS (MITM)** — interception TLS optionnelle pour inspection en clair.
-- Capture distante / mobile, un moteur de règles et une couverture de protocoles plus large façon Wireshark.
+- **MAJEUR** — changements incompatibles ou réorientation fondamentale de l'app.
+- **MINEUR** — nouvelles fonctionnalités rétrocompatibles.
+- **CORRECTIF** — corrections de bogues rétrocompatibles.
+
+Chaque version est notariée et distribuée via la mise à jour intégrée. Voir le [CHANGELOG](./CHANGELOG.md) pour les changements de chaque version.
 
 ## Contribuer
 

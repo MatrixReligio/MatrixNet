@@ -20,10 +20,9 @@ for *what is on the wire* — and every packet knows which app sent it.
 [![Passive](https://img.shields.io/badge/passive-zero--conflict-8A2BE2)](#privacy)
 [![No telemetry](https://img.shields.io/badge/telemetry-none-success)](#privacy)
 
-> **Status: Phase 1, work in progress.** MatrixNet is an early-stage project
-> under active development. The architecture is settled and the core libraries
-> are being built test-first, but the app is not yet feature-complete and there
-> is no stable release. Interfaces, commands, and the UI are subject to change.
+> **100% passive — observe, never block.** MatrixNet reads only from the kernel's
+> statistics and a copy of each packet, so it runs alongside any proxy, filter, or
+> VPN without conflict. No firewall, no traffic interception, no HTTPS decryption.
 
 ---
 
@@ -36,10 +35,10 @@ app: per-app connection monitoring on top, packet-level dissection underneath,
 and a correlation layer that ties every captured packet back to the process and
 connection it belongs to.
 
-Phase 1 is strictly **passive — observe, never block**. There is no firewall, no
-traffic interception, and no HTTPS decryption (see the [Roadmap](#roadmap) for
-what comes later). Because it only observes, MatrixNet runs alongside whatever
-proxy, filter, or VPN you already use without fighting it.
+MatrixNet is strictly **passive — observe, never block**. There is no firewall,
+no traffic interception, and no HTTPS decryption. Because it only observes,
+MatrixNet runs alongside whatever proxy, filter, or VPN you already use without
+fighting it.
 
 ## Features
 
@@ -138,7 +137,7 @@ proxy, filter, or VPN you already use without fighting it.
 
 ## Why MatrixNet?
 
-| | Little Snitch | Wireshark | **MatrixNet (Phase 1)** |
+| | Little Snitch | Wireshark | **MatrixNet** |
 |---|:---:|:---:|:---:|
 | Per-app connection view | ✅ | ❌ | ✅ |
 | Packet-level dissection | ❌ | ✅ | ✅ |
@@ -266,19 +265,16 @@ MatrixNet processes everything locally. It sends no data off your machine, has n
 telemetry, requires no account, and talks to no server. Captures, history, and
 settings live only on your disk.
 
-## Roadmap
+## Versioning
 
-Phase 1 is intentionally scoped to passive monitoring and analysis. Planned for
-later phases (not implemented, and not guaranteed):
+MatrixNet follows [Semantic Versioning](https://semver.org): **MAJOR.MINOR.PATCH**.
 
-- **Firewall / blocking** — an opt-in interception mode (likely via
-  `NEFilterDataProvider`), with a clear warning about potential conflicts with
-  other socket-layer filters.
-- **AI-native analysis** — natural-language queries over your traffic, automatic
-  tracker / anomaly / privacy-leak detection.
-- **HTTPS decryption (MITM)** — opt-in TLS interception for plaintext inspection.
-- Remote / mobile capture, a rule engine, and broader Wireshark-style protocol
-  coverage.
+- **MAJOR** — incompatible changes or a fundamental shift in what the app does.
+- **MINOR** — new, backward-compatible features.
+- **PATCH** — backward-compatible bug fixes.
+
+Every release is notarized and delivered through the in-app updater. See the
+[CHANGELOG](./CHANGELOG.md) for what changed in each version.
 
 ## Contributing
 
