@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Status:** Phase 1. Until version `1.0.0`, public interfaces and behavior may
 > change without notice.
 
+## [0.1.24] - 2026-06-28
+
+### Added
+- **New-destination ("phoning home") alerts.** Opt-in, non-blocking notifications
+  when a known app first reaches a country it has never reached before — Little
+  Snitch's core insight without the firewall or the alert-flood. A per-app
+  15-minute learning window quietly establishes each app's normal destinations
+  first (so multi-country CDNs don't flood on first run), and alerts are
+  rate-limited. Entirely passive and on-device; enable it in Settings → General.
+
+### Fixed
+- **The Usage tab now fills during ordinary monitoring.** It previously only
+  counted packet-capture-derived bytes, so without the capture helper running it
+  stayed stuck on "Gathering usage…"; usage now also accrues from passive
+  connection statistics, the same source as the Overview top talkers.
+
 ## [0.1.23] - 2026-06-28
 
 ### Changed

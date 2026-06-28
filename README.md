@@ -60,6 +60,10 @@ proxy, filter, or VPN you already use without fighting it.
 - **Threat-IP flagging** — remote addresses on a public threat-intelligence
   blocklist are flagged with a ⚠️ badge (advisory only — MatrixNet labels, it
   never blocks).
+- **New-destination ("phoning home") alerts** — opt-in, non-blocking
+  notifications when a known app first reaches a country it has never reached
+  before. A per-app learning window and rate-limiting keep it quiet; it's the
+  insight of an outbound firewall without the blocking or the alert-flood.
 - Hostname enrichment from **TLS SNI and DNS** — the exact host an app requested,
   read straight from the ClientHello and DNS answers **without any decryption**,
   and preferred over reverse-DNS PTR records (which are often CDN wildcards). A
