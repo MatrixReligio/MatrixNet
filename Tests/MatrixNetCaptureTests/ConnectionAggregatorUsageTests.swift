@@ -15,6 +15,27 @@ struct ConnectionAggregatorUsageTests {
         )
     }
 
+    @Test("usage accrues from NStat counts even without packet capture")
+    func nstatUsageWithoutPackets() async throws {
+        let aggregator = ConnectionAggregator()
+        let connection = try connection(50050)
+        await aggregator.apply(.added(connection)) // baseline
+        await aggregator.apply(.counts(
+            id: connection.id,
+            ConnectionCounts(
+                bytesIn: 900,
+                bytesOut: 100,
+                packetsIn: 6,
+                packetsOut: 4,
+                timestamp: Date(timeIntervalSince1970: 5)
+            )
+        ))
+        let snapshot = await aggregator.usageSnapshot()
+        #expect(snapshot.contains { flow in
+            flow.address.description == "1.1.1.1" && flow.bytesIn == 900 && flow.bytesOut == 100
+        })
+    }
+
     @Test("packet bytes accumulate per app+address and survive connection close")
     func survivesClose() async throws {
         let aggregator = ConnectionAggregator()

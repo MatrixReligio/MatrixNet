@@ -42,6 +42,12 @@ public actor ConnectionAggregator {
     /// accounted for. Keyed by `"app\u{1F}address"`.
     private var usageByFlow: [String: UsageFlowTotal] = [:]
 
+    /// NStat-derived per-(app, address) usage, accumulated from connection-counter
+    /// deltas so the Usage tab works during ordinary passive monitoring (when
+    /// packet capture is not running). Packet-derived `usageByFlow` is preferred
+    /// when capturing; this is the always-on fallback.
+    private var nstatUsageByFlow: [String: UsageFlowTotal] = [:]
+
     /// A monotonic byte total for one app talking to one destination address.
     public struct UsageFlowTotal: Sendable {
         public let app: String
@@ -99,9 +105,11 @@ public actor ConnectionAggregator {
     }
 
     /// Monotonic per-(app, address) usage totals for the Usage tab (these survive
-    /// connection close, unlike the per-connection map).
+    /// connection close, unlike the per-connection map). Prefers packet-derived
+    /// figures while capturing (accurate under a proxy); otherwise falls back to
+    /// the NStat-derived totals so usage accrues during ordinary monitoring.
     public func usageSnapshot() -> [UsageFlowTotal] {
-        Array(usageByFlow.values)
+        usageByFlow.isEmpty ? Array(nstatUsageByFlow.values) : Array(usageByFlow.values)
     }
 
     /// Accumulates the positive growth of a connection's counters into the global
@@ -126,6 +134,16 @@ public actor ConnectionAggregator {
         traffic.bytesIn &+= deltaIn
         traffic.bytesOut &+= deltaOut
         trafficByApp[key] = traffic
+
+        // Mirror the per-app delta into a per-(app, address) total so the Usage
+        // tab has data even without packet capture (survives connection close).
+        let address = connection.fiveTuple.destination.address
+        let flowKey = "\(connection.app.displayName)\u{1F}\(address.description)"
+        var flow = nstatUsageByFlow[flowKey]
+            ?? UsageFlowTotal(app: connection.app.displayName, address: address, bytesIn: 0, bytesOut: 0)
+        flow.bytesIn &+= deltaIn
+        flow.bytesOut &+= deltaOut
+        nstatUsageByFlow[flowKey] = flow
     }
 
     /// Session-cumulative byte totals (monotonic; survive connection removal).
@@ -151,6 +169,7 @@ public actor ConnectionAggregator {
         packetBytesByConn.removeAll()
         packetTrafficByApp.removeAll()
         usageByFlow.removeAll()
+        nstatUsageByFlow.removeAll()
         sessionBytesIn = 0
         sessionBytesOut = 0
     }
