@@ -53,6 +53,21 @@ public actor ConnectionAggregator {
     /// de-duplicated by app + fingerprint.
     private var fingerprintsByApp: [String: Set<String>] = [:]
 
+    /// One `FlowQualityTracker` per live flow, fed segment-by-segment while
+    /// capturing. Keyed by `FlowKey` (direction-insensitive) so both directions
+    /// of a flow accumulate into the same tracker.
+    private var qualityByFlow: [FlowKey: FlowQualityTracker] = [:]
+    /// The app + destination a flow's quality belongs to, captured at record time
+    /// so the snapshot survives the connection's removal from the live set.
+    private var qualityApp: [FlowKey: (app: String, address: IPAddress)] = [:]
+
+    /// The passively measured quality of one app's flow to a destination.
+    public struct AppFlowQuality: Sendable, Equatable {
+        public let app: String
+        public let address: IPAddress
+        public let quality: FlowQuality
+    }
+
     /// A monotonic byte total for one app talking to one destination address.
     public struct UsageFlowTotal: Sendable {
         public let app: String
@@ -176,6 +191,8 @@ public actor ConnectionAggregator {
         usageByFlow.removeAll()
         nstatUsageByFlow.removeAll()
         fingerprintsByApp.removeAll()
+        qualityByFlow.removeAll()
+        qualityApp.removeAll()
         sessionBytesIn = 0
         sessionBytesOut = 0
     }
@@ -278,6 +295,31 @@ public actor ConnectionAggregator {
     public func fingerprintSnapshot() -> [AppFingerprintObservation] {
         fingerprintsByApp.flatMap { app, fingerprints in
             fingerprints.map { AppFingerprintObservation(app: app, ja4: $0) }
+        }
+    }
+
+    /// Feeds one observed TCP segment into the quality tracker for its flow.
+    /// Dropped when the flow cannot be resolved to a tracked connection.
+    public func recordTCP(
+        _ segment: TCPSegment,
+        timestampMicros: UInt64,
+        inbound: Bool,
+        flowKey: FlowKey,
+        pid: Int32
+    ) async {
+        guard let id = await correlator.connectionID(forPacketFlow: flowKey, pid: pid),
+              let connection = connections[id] else { return }
+        var tracker = qualityByFlow[flowKey] ?? FlowQualityTracker()
+        tracker.ingest(timestampMicros: timestampMicros, inbound: inbound, segment: segment)
+        qualityByFlow[flowKey] = tracker
+        qualityApp[flowKey] = (connection.app.displayName, connection.fiveTuple.destination.address)
+    }
+
+    /// A snapshot of every tracked flow's quality, attributed to its app.
+    public func qualitySnapshot() -> [AppFlowQuality] {
+        qualityByFlow.compactMap { key, tracker in
+            guard let owner = qualityApp[key] else { return nil }
+            return AppFlowQuality(app: owner.app, address: owner.address, quality: tracker.quality)
         }
     }
 }
