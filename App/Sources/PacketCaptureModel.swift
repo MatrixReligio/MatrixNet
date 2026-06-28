@@ -176,6 +176,13 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
         let dissected: DissectedPacket
     }
 
+    /// A captured ClientHello's JA4 fingerprint awaiting per-app attribution.
+    private struct CapturedFingerprint {
+        let ja4: String
+        let flowKey: FlowKey
+        let pid: Int32
+    }
+
     private func append(_ rows: [DissectedRow]) {
         for row in rows {
             packets.append(PacketRow(
@@ -230,11 +237,18 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
             )
         }
         let hostnames = rows.flatMap(\.dissected.hostnames)
-        guard !attributions.isEmpty || !hostnames.isEmpty else { return }
+        let fingerprints = rows.compactMap { row -> CapturedFingerprint? in
+            guard let ja4 = row.dissected.tlsClientFingerprint, let tuple = row.dissected.fiveTuple else { return nil }
+            return CapturedFingerprint(ja4: ja4, flowKey: tuple.flowKey, pid: row.packet.pid)
+        }
+        guard !attributions.isEmpty || !hostnames.isEmpty || !fingerprints.isEmpty else { return }
         Task.detached {
             await attribution.attributePackets(attributions)
             for observation in hostnames {
                 await attribution.recordHostname(observation.name, for: observation.ip)
+            }
+            for fingerprint in fingerprints {
+                await attribution.recordFingerprint(fingerprint.ja4, flowKey: fingerprint.flowKey, pid: fingerprint.pid)
             }
         }
     }

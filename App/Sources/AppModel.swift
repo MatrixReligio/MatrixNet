@@ -1,5 +1,6 @@
 import Foundation
 import MatrixNetCapture
+import MatrixNetDissection
 import MatrixNetModel
 import MatrixNetStore
 import Observation
@@ -80,6 +81,12 @@ public final class AppModel {
     private var lastCompactedHour: Date?
     private let destinationBaselineStore: DestinationBaselineStore?
     private var knownDestinations: [String: AppBaseline] = [:]
+    private let fingerprintStore: FingerprintStore?
+    /// Per-app TLS client fingerprints, loaded from the store and refreshed on
+    /// each flush. Read by the connection inspector. Populated only while packet
+    /// capture is active (a ClientHello is required to compute JA4).
+    private var fingerprintsByApp: [String: [StoredFingerprint]] = [:]
+    private var lastFingerprintFlush = Date.distantPast
     private var pumpTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
     private var lastMetricsWrite = Date.distantPast
@@ -94,8 +101,10 @@ public final class AppModel {
         historyStore = container.map(HistoryStore.init(container:))
         usageStore = container.map(UsageStore.init(container:))
         destinationBaselineStore = container.map(DestinationBaselineStore.init(container:))
+        fingerprintStore = container.map(FingerprintStore.init(container:))
         performUsageLaunchMaintenance()
         knownDestinations = (try? destinationBaselineStore?.load()) ?? [:]
+        fingerprintsByApp = (try? fingerprintStore?.load()) ?? [:]
     }
 
     /// The total number of currently active (not closed) connections.
@@ -159,6 +168,7 @@ public final class AppModel {
                 let hostnames = reverseDNS.merging(observed) { _, exact in exact }
                 self?.publish(snapshot, hostnames: hostnames, session: session, apps: apps)
                 await self?.flushUsage(now: Date())
+                await self?.flushFingerprints(now: Date())
                 try? await Task.sleep(for: .seconds(1))
             }
         }
@@ -471,5 +481,36 @@ struct TopTalker: Identifiable {
 
     var id: AppIdentity.ID {
         app.id
+    }
+}
+
+// MARK: - TLS client fingerprints (JA4)
+
+extension AppModel {
+    /// The TLS client fingerprints observed for an app, most recently seen first.
+    /// Empty until packet capture has seen a ClientHello from the app.
+    public func fingerprints(for app: String) -> [StoredFingerprint] {
+        (fingerprintsByApp[app] ?? []).sorted { $0.lastSeen > $1.lastSeen }
+    }
+
+    /// Persists newly observed TLS client fingerprints and refreshes the in-memory
+    /// map the inspector reads. Throttled to ≈ 30s, like usage. The human label is
+    /// derived here (the store layer has no JA4 knowledge).
+    func flushFingerprints(now: Date) async {
+        guard let fingerprintStore, now.timeIntervalSince(lastFingerprintFlush) >= 30 else { return }
+        lastFingerprintFlush = now
+        let observations = await aggregator.fingerprintSnapshot()
+        guard !observations.isEmpty else { return }
+        for observation in observations {
+            let label = JA4Identifier.identify(observation.ja4)?.name
+            try? fingerprintStore.record(
+                app: observation.app,
+                ja4: observation.ja4,
+                label: label,
+                transport: "tcp",
+                at: now
+            )
+        }
+        fingerprintsByApp = (try? fingerprintStore.load()) ?? fingerprintsByApp
     }
 }

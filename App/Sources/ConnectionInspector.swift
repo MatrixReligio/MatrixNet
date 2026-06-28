@@ -1,9 +1,12 @@
 import MatrixNetModel
+import MatrixNetStore
 import SwiftUI
 
 /// Detail inspector for the selected connection: identity, endpoints, counters.
 struct ConnectionInspector: View {
     let connection: Connection?
+    @Environment(AppModel.self) private var model
+    @Environment(PacketCaptureModel.self) private var capture
 
     var body: some View {
         if let connection {
@@ -51,6 +54,7 @@ struct ConnectionInspector: View {
                         Text(connection.state == .active ? LocalizedStringKey("Active") : LocalizedStringKey("Closed"))
                     }
                 }
+                fingerprintSection(for: connection)
             }
             .formStyle(.grouped)
         } else {
@@ -59,6 +63,35 @@ struct ConnectionInspector: View {
                 systemImage: "hand.point.up.left",
                 description: Text("Select a connection to inspect its endpoints and traffic.")
             )
+        }
+    }
+
+    /// The app's observed JA4 TLS client fingerprints — which TLS stacks the
+    /// process has been seen using. Requires packet capture (a ClientHello);
+    /// shows guidance otherwise.
+    @ViewBuilder
+    private func fingerprintSection(for connection: Connection) -> some View {
+        let fingerprints = model.fingerprints(for: connection.app.displayName)
+        Section("TLS Fingerprint") {
+            if fingerprints.isEmpty {
+                Text(capture.isCapturing
+                    ? LocalizedStringKey("No TLS fingerprint observed yet for this app.")
+                    : LocalizedStringKey("Enable packet capture in the Packets tab to see TLS fingerprints."))
+                    .foregroundStyle(.secondary)
+                    .font(.callout)
+            } else {
+                ForEach(fingerprints, id: \.ja4) { fingerprint in
+                    LabeledContent {
+                        mono(fingerprint.ja4)
+                    } label: {
+                        if let label = fingerprint.label {
+                            Text(verbatim: label)
+                        } else {
+                            Text("Unknown stack")
+                        }
+                    }
+                }
+            }
         }
     }
 
