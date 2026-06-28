@@ -26,6 +26,14 @@ respective authors.
   The pcapng files MatrixNet exports are designed to be opened in Wireshark.
   https://www.wireshark.org
 
+- JA4 TLS client fingerprint
+  MatrixNet computes the JA4 TLS client fingerprint from the ClientHello. The
+  JA4 algorithm is by FoxIO, LLC and is licensed BSD-3-Clause with an explicit
+  patent grant/waiver for JA4 itself. MatrixNet implements only JA4 (the client
+  fingerprint); it does not implement the JA4+ methods (JA4S/JA4H/JA4X/JA4T/…)
+  that are governed by the separate FoxIO License 1.1.
+  https://github.com/FoxIO-LLC/ja4
+
 - Apple system frameworks and interfaces
   MatrixNet relies on macOS system facilities, including the NetworkStatistics
   framework (the kernel connection-attribution mechanism used by nettop and

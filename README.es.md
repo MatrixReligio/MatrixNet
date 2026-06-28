@@ -51,6 +51,7 @@ MatrixNet es estrictamente **pasivo — observar, nunca bloquear**. Sin cortafue
 ### 🔬 Análisis profundo de paquetes
 - Captura paquete a paquete donde **cada paquete lleva su PID propietario**.
 - Disección sólida de los protocolos más importantes: **Ethernet, IPv4, IPv6, TCP, UDP, ICMP, DNS, TLS (handshake / SNI / certificado) y HTTP/1.1**.
+- **Huella de cliente TLS JA4, por app** —— deduce de forma pasiva la pila TLS de cada app a partir del ClientHello (motor de navegador, Go, curl, biblioteca sospechosa) sin descifrado; se muestra en la capa TLS y por app en el inspector de conexiones, con las pilas reconocidas etiquetadas.
 - Una vista de tres paneles al estilo Wireshark: lista de paquetes, árbol de detalle de protocolos y hexadecimal sincronizado.
 - Reensamblado «Seguir flujo» y un lenguaje de filtros de visualización para acotar la captura.
 - Filtrar paquetes hasta una sola app o una sola conexión.

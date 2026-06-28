@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.2.0] - 2026-06-28
+
+### Added
+- **JA4 TLS client fingerprinting, per app.** MatrixNet passively computes the
+  JA4 fingerprint from each TLS ClientHello and attributes it to the originating
+  process, so you can see which TLS stack each app uses (a browser engine vs Go
+  vs curl vs a suspicious library) — entirely without decryption. The fingerprint
+  appears on the TLS layer in the Packets inspector and per app in the connection
+  inspector, with recognized stacks labelled. Requires packet capture (a
+  ClientHello is needed to compute JA4). The JA4 algorithm is © FoxIO, BSD-3.
+
 ## [1.1.0] - 2026-06-28
 
 ### Added

@@ -25,26 +25,26 @@ SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
 if [ -d "$SPARKLE" ]; then
   echo "==> Signing Sparkle components"
   SV="$SPARKLE/Versions/B"
-  codesign --force --timestamp --options runtime --sign "$IDENTITY" \
+  codesign --force $TS --options runtime --sign "$IDENTITY" \
     "$SV/XPCServices/Downloader.xpc" \
     "$SV/XPCServices/Installer.xpc"
-  codesign --force --timestamp --options runtime --sign "$IDENTITY" \
+  codesign --force $TS --options runtime --sign "$IDENTITY" \
     "$SV/Updater.app"
-  codesign --force --timestamp --options runtime --sign "$IDENTITY" \
+  codesign --force $TS --options runtime --sign "$IDENTITY" \
     "$SV/Autoupdate"
-  codesign --force --timestamp --options runtime --sign "$IDENTITY" "$SPARKLE"
+  codesign --force $TS --options runtime --sign "$IDENTITY" "$SPARKLE"
 fi
 
 echo "==> Signing privileged helper"
-codesign --force --timestamp --options runtime --sign "$IDENTITY" "$HELPER"
+codesign --force $TS --options runtime --sign "$IDENTITY" "$HELPER"
 
 echo "==> Signing widget extension"
-codesign --force --timestamp --options runtime \
+codesign --force $TS --options runtime \
   --entitlements Widget/MatrixNetWidget.entitlements \
   --sign "$IDENTITY" "$WIDGET"
 
 echo "==> Signing app"
-codesign --force --timestamp --options runtime \
+codesign --force $TS --options runtime \
   --entitlements App/MatrixNet.entitlements \
   --sign "$IDENTITY" "$APP"
 

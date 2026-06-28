@@ -30,9 +30,12 @@ public final class DestinationBaselineStore {
         return DestinationBaselineStore(container: container)
     }
 
-    /// A persistent store under Application Support.
+    /// A persistent store backed by the one shared, app-private container.
+    /// Routes through `SharedModelContainer` so it never creates a stray
+    /// `default.store` at the top of Application Support (a location shared with
+    /// other apps, which trips the macOS "access other apps' data" prompt).
     public static func persistent() throws -> DestinationBaselineStore {
-        try DestinationBaselineStore(container: ModelContainer(for: KnownDestinationRecord.self))
+        try DestinationBaselineStore(container: SharedModelContainer.make())
     }
 
     /// Records that `app` reached `country`, ignoring duplicates.

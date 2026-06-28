@@ -88,6 +88,10 @@ fighting it.
 - Per-packet capture where **every packet carries its owning PID**.
 - Solid dissection of the protocols that matter most: **Ethernet, IPv4, IPv6,
   TCP, UDP, ICMP, DNS, TLS (handshake / SNI / certificate), and HTTP/1.1**.
+- **JA4 TLS client fingerprinting, per app** — passively derive each app's TLS
+  stack from the ClientHello (a browser engine vs Go vs curl vs a suspicious
+  library) without any decryption; shown on the TLS layer and per app in the
+  connection inspector, with recognized stacks labelled.
 - A Wireshark-style three-pane view: packet list, protocol detail tree, and
   synchronized hex.
 - Follow Stream reassembly and a display-filter language to slice the capture.

@@ -51,6 +51,7 @@ MatrixNet ist streng **passiv — beobachten, niemals blockieren**. Keine Firewa
 ### 🔬 Tiefe Paketanalyse
 - Erfassung Paket für Paket, bei der **jedes Paket seine besitzende PID trägt**.
 - Solide Zerlegung der wichtigsten Protokolle: **Ethernet, IPv4, IPv6, TCP, UDP, ICMP, DNS, TLS (Handshake / SNI / Zertifikat) und HTTP/1.1**.
+- **JA4-TLS-Client-Fingerprinting, pro App** —— leite die TLS-Bibliothek jeder App passiv aus dem ClientHello ab (Browser-Engine vs. Go vs. curl vs. verdächtige Bibliothek), ohne Entschlüsselung; angezeigt auf der TLS-Ebene und pro App im Verbindungsinspektor, mit Kennzeichnung erkannter Stacks.
 - Eine Drei-Fenster-Ansicht im Wireshark-Stil: Paketliste, Protokolldetailbaum und synchronisierte Hex-Ansicht.
 - „Stream folgen“-Reassemblierung und eine Anzeigefiltersprache zum Eingrenzen der Aufzeichnung.
 - Pakete bis auf eine einzelne App oder eine einzelne Verbindung filtern.
