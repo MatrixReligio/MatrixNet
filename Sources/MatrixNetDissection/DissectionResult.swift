@@ -51,17 +51,37 @@ public struct DissectionNode: Sendable {
     }
 }
 
+/// A hostname observed in a packet (TLS SNI or a DNS answer) bound to the IP it
+/// describes, for enriching the IP→hostname map without any decryption.
+public struct HostnameObservation: Sendable, Equatable {
+    public let ip: IPAddress
+    public let name: String
+
+    public init(ip: IPAddress, name: String) {
+        self.ip = ip
+        self.name = name
+    }
+}
+
 /// The result of dissecting one packet: an ordered list of protocol layers, the
-/// correlatable five-tuple when present, and a one-line summary.
+/// correlatable five-tuple when present, a one-line summary, and any hostnames
+/// observed in the payload.
 public struct DissectedPacket: Sendable {
     public let layers: [DissectionNode]
     public let fiveTuple: FiveTuple?
     public let summary: String
+    public let hostnames: [HostnameObservation]
 
-    public init(layers: [DissectionNode], fiveTuple: FiveTuple?, summary: String) {
+    public init(
+        layers: [DissectionNode],
+        fiveTuple: FiveTuple?,
+        summary: String,
+        hostnames: [HostnameObservation] = []
+    ) {
         self.layers = layers
         self.fiveTuple = fiveTuple
         self.summary = summary
+        self.hostnames = hostnames
     }
 
     /// The chain of short protocol names, e.g. `["Ethernet", "IPv4", "TCP"]`.
