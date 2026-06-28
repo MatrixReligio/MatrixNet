@@ -61,6 +61,8 @@ public final class AppModel {
 
     /// Posts threat-connection notifications; set by the app delegate at launch.
     var threatNotifier: ThreatNotifier?
+    /// Posts new-destination notifications; set by the app delegate at launch.
+    var newDestinationNotifier: NewDestinationNotifier?
     private let preferences = Preferences(defaults: SharedMetricsStore.sharedDefaults ?? .standard)
 
     private var monitor: NetworkStatisticsMonitor?
@@ -73,6 +75,8 @@ public final class AppModel {
     private var lastUsageSeen: [String: UsageTotals] = [:]
     private var lastUsageFlush = Date.distantPast
     private var lastCompactedHour: Date?
+    private let destinationBaselineStore = try? DestinationBaselineStore.persistent()
+    private var knownDestinations: [String: AppBaseline] = [:]
     private var pumpTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
     private var lastMetricsWrite = Date.distantPast
@@ -84,6 +88,7 @@ public final class AppModel {
 
     public init() {
         performUsageLaunchMaintenance()
+        knownDestinations = (try? destinationBaselineStore?.load()) ?? [:]
     }
 
     /// The total number of currently active (not closed) connections.
@@ -205,6 +210,7 @@ public final class AppModel {
             },
             enabled: preferences.threatNotificationsEnabled
         )
+        detectNewDestinations(now: Date())
 
         activeAppCount = OverviewStats.activeAppCount(connections)
         countriesReached = OverviewStats.countriesReached(connections) { GeoIP.country(for: $0) }
@@ -289,6 +295,47 @@ public final class AppModel {
             )
         }
         try? historyStore.record(summaries)
+    }
+
+    /// Classifies each active connection's destination country against the
+    /// per-app baseline, learning new destinations silently during an app's first
+    /// 15 minutes and alerting (when enabled) on genuinely new countries after.
+    private func detectNewDestinations(now: Date) {
+        let learningWindow: TimeInterval = 900
+        let alertsEnabled = preferences.newDestinationAlertsEnabled
+        for connection in connections where connection.state == .active {
+            guard let country = GeoIP.country(for: connection.fiveTuple.destination.address) else { continue }
+            let app = connection.app.displayName
+            let baseline = knownDestinations[app]
+            let verdict = NewDestinationDetector.classify(
+                country: country,
+                knownCountries: baseline?.countries ?? [],
+                appFirstSeen: baseline?.firstSeen,
+                now: now,
+                learningWindow: learningWindow
+            )
+            guard verdict != .known else { continue }
+
+            // Record the new (app, country) into both the in-memory baseline and
+            // the persistent store.
+            if var existing = knownDestinations[app] {
+                existing.countries.insert(country)
+                knownDestinations[app] = existing
+            } else {
+                knownDestinations[app] = AppBaseline(countries: [country], firstSeen: now)
+            }
+            try? destinationBaselineStore?.record(app: app, country: country, at: now)
+
+            if verdict == .alert, alertsEnabled {
+                let region = Locale.current.localizedString(forRegionCode: country) ?? country
+                newDestinationNotifier?.notify(
+                    app: app,
+                    country: region,
+                    host: connection.remoteHostname,
+                    now: now
+                )
+            }
+        }
     }
 
     /// Hourly usage rows for the Usage tab over the given reporting period.

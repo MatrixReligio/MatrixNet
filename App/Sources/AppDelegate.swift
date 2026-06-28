@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
     let capture = PacketCaptureModel()
     let notifier = ThreatNotifier()
+    let destinationNotifier = NewDestinationNotifier()
 
     private var preferences: Preferences {
         Preferences(defaults: SharedMetricsStore.sharedDefaults ?? .standard)
@@ -24,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         capture.attribution = model.aggregator
         model.threatNotifier = notifier
+        model.newDestinationNotifier = destinationNotifier
         model.start()
         ProxyInfo.refresh()
         Task.detached(priority: .background) { await GeoIP.updateIfNeeded() }
