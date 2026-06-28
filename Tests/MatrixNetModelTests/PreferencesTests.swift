@@ -18,6 +18,7 @@ struct PreferencesTests {
         #expect(prefs.homeRegion == nil)
         #expect(prefs.usageRetentionDays == 90)
         #expect(prefs.billingCycleResetDay == 1)
+        #expect(prefs.newDestinationAlertsEnabled == false)
     }
 
     @Test("billing cycle reset day clamps to 1...28")

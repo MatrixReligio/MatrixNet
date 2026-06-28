@@ -18,6 +18,7 @@ public struct Preferences {
         case showDomains = "pref.showDomains"
         case usageRetentionDays = "pref.usageRetentionDays"
         case billingCycleResetDay = "pref.billingCycleResetDay"
+        case newDestinationAlertsEnabled = "pref.newDestinationAlertsEnabled"
     }
 
     private let defaults: UserDefaults
@@ -64,6 +65,13 @@ public struct Preferences {
     public var showDomains: Bool {
         get { bool(.showDomains, default: true) }
         nonmutating set { setBool(newValue, .showDomains) }
+    }
+
+    /// Whether to post a notification when a known app first reaches a country it
+    /// has never reached before (advisory only — never blocks).
+    public var newDestinationAlertsEnabled: Bool {
+        get { bool(.newDestinationAlertsEnabled, default: false) }
+        nonmutating set { setBool(newValue, .newDestinationAlertsEnabled) }
     }
 
     /// How many days of per-app usage history to retain.
