@@ -42,11 +42,15 @@ enum QUICDissector {
             }
         }
 
+        // Bound the node to *this* packet, not the rest of the datagram: a UDP
+        // datagram may coalesce an Initial with a following Handshake/0-RTT packet
+        // (RFC 9000 §12.2). header.pnOffset/length are in `packet` coordinates.
+        let packetEnd = min(start + header.pnOffset + header.length, bytes.count)
         let node = DissectionNode(
             label: "QUIC",
             shortName: "QUIC",
             fields: fields,
-            byteRange: start ..< bytes.count
+            byteRange: start ..< packetEnd
         )
         return Result(node: node, serverName: serverName, clientFingerprint: clientFingerprint)
     }

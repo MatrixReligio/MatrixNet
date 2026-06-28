@@ -18,4 +18,14 @@ struct QUICDissectorTests {
     func nonQUIC() {
         #expect(QUICDissector.dissect([0x40, 0x00, 0x00, 0x00], at: 0) == nil)
     }
+
+    /// With trailing (coalesced/padding) bytes after the Initial, the node's
+    /// byteRange must stop at the Initial's end, not run to the buffer end.
+    @Test("byteRange does not over-claim trailing coalesced bytes")
+    func byteRangeBounded() throws {
+        let initial = hexBytes(QUICTestVectors.appendixAProtectedClientInitial)
+        let withTrailing = initial + [UInt8](repeating: 0xFF, count: 200)
+        let result = try #require(QUICDissector.dissect(withTrailing, at: 0))
+        #expect(result.node.byteRange.upperBound == initial.count)
+    }
 }
