@@ -68,6 +68,15 @@ proxy, filter, or VPN you already use without fighting it.
 - Connection history you can look back through ("which app connected where
   yesterday").
 
+### 📊 Usage Reports
+- A **Usage tab** that answers "where did my bandwidth go": the top apps,
+  countries, and domains by bytes over **Today / 7 days / 30 days / your billing
+  cycle**, with a download/upload trend chart.
+- Built from hourly buckets kept locally (default 90 days, configurable), so
+  totals survive relaunch — unlike Activity Monitor, which resets to zero.
+- Select an app to scope the country and domain breakdowns to just that app, and
+  set a **billing-cycle reset day** so the "Cycle" window matches your plan.
+
 ### 🔬 Deep Packet Analysis
 - Per-packet capture where **every packet carries its owning PID**.
 - Solid dissection of the protocols that matter most: **Ethernet, IPv4, IPv6,

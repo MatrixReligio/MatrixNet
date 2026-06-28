@@ -41,6 +41,11 @@ La fase 1 es estrictamente **pasiva — observar, nunca bloquear**. Sin cortafue
 - Una **pestaña Mapa** dibuja un globo punteado del mundo real, sin conexión (Natural Earth, sin teselas de mapa), con arcos luminosos desde este Mac hacia cada país con el que habla — el tamaño del nodo según el número de conexiones, los destinos de amenaza en rojo.
 - Un historial de conexiones para revisar («qué app se conectó a dónde ayer»).
 
+### 📊 Informes de uso
+- Una nueva **pestaña Uso** que responde a «¿adónde se fue mi ancho de banda?»: las apps, países y dominios con más bytes en **Hoy / 7 días / 30 días / tu ciclo de facturación**, con un gráfico de tendencia de descarga/subida.
+- Se construye a partir de cubos por hora guardados localmente (90 días por omisión, configurable), de modo que los totales sobreviven al reinicio, a diferencia del Monitor de Actividad, que vuelve a cero.
+- Selecciona una app para acotar los desgloses por país y dominio a esa app, y define un **día de reinicio del ciclo** para que la ventana «Ciclo» coincida con tu plan.
+
 ### 🔬 Análisis profundo de paquetes
 - Captura paquete a paquete donde **cada paquete lleva su PID propietario**.
 - Disección sólida de los protocolos más importantes: **Ethernet, IPv4, IPv6, TCP, UDP, ICMP, DNS, TLS (handshake / SNI / certificado) y HTTP/1.1**.

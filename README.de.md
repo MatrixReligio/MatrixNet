@@ -41,6 +41,11 @@ Phase 1 ist streng **passiv — beobachten, niemals blockieren**. Keine Firewall
 - Ein **Karten-Tab** zeichnet einen realweltlichen, offline gepunkteten Globus (Natural Earth, keine Kartenkacheln) mit leuchtenden Bögen von diesem Mac zu jedem Land, mit dem es spricht — Knotengröße nach Verbindungsanzahl, Bedrohungsziele in Rot.
 - Ein Verbindungsverlauf zum Zurückblicken („welche App hat sich gestern wohin verbunden“).
 
+### 📊 Verbrauchsberichte
+- Ein neuer **Tab „Verbrauch“**, der beantwortet, „wohin meine Bandbreite geflossen ist“: die wichtigsten Apps, Länder und Domains nach Bytes über **Heute / 7 Tage / 30 Tage / deinen Abrechnungszyklus**, mit einem Download-/Upload-Trenddiagramm.
+- Basiert auf lokal gespeicherten Stundenbuckets (standardmäßig 90 Tage, konfigurierbar), sodass Summen einen Neustart überstehen — anders als die Aktivitätsanzeige, die auf null zurücksetzt.
+- Wähle eine App, um die Länder- und Domain-Aufschlüsselung auf sie zu beschränken, und lege einen **Abrechnungs-Reset-Tag** fest, damit das Fenster „Zyklus“ zu deinem Tarif passt.
+
 ### 🔬 Tiefe Paketanalyse
 - Erfassung Paket für Paket, bei der **jedes Paket seine besitzende PID trägt**.
 - Solide Zerlegung der wichtigsten Protokolle: **Ethernet, IPv4, IPv6, TCP, UDP, ICMP, DNS, TLS (Handshake / SNI / Zertifikat) und HTTP/1.1**.

@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Status:** Phase 1. Until version `1.0.0`, public interfaces and behavior may
 > change without notice.
 
+## [0.1.22] - 2026-06-28
+
+### Added
+- **Usage tab — "where did my bandwidth go".** A new top-level tab reports the
+  top apps, countries, and domains by bytes over Today / 7 days / 30 days / your
+  billing cycle, with a download/upload trend chart. Usage is accumulated into
+  hourly buckets kept locally (default 90 days, configurable in Settings → Data),
+  so totals survive relaunch instead of resetting to zero. Select an app to scope
+  the country and domain breakdowns, and set a billing-cycle reset day so the
+  "Cycle" window matches your plan. Fully passive, on-device, and offline.
+
 ## [0.1.21] - 2026-06-28
 
 ### Fixed
