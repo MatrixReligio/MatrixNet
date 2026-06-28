@@ -37,7 +37,7 @@ Phase 1 ist streng **passiv — beobachten, niemals blockieren**. Keine Firewall
 - Aus den Ports abgeleitete **Client/Server-Rolle** (hat dieser Host die Verbindung aufgebaut oder angenommen?).
 - **Proxy- und VPN/Tunnel-Erkennung** — Verbindungen, deren Gegenstelle Ihr konfigurierter oder lokaler Proxy ist, werden markiert, und Prozesse, die den Verkehr anderer Apps weiterleiten (NetworkExtension-Tunnel), erhalten ein Abzeichen, sodass klar ist, wann Verkehr umgeleitet wird.
 - **Markierung von Bedrohungs-IPs** — Remote-Adressen auf einer öffentlichen Threat-Intelligence-Blockliste werden mit einem ⚠️-Abzeichen gekennzeichnet (nur als Hinweis — MatrixNet kennzeichnet, blockiert nie).
-- DNS-Anreicherung führt beobachtete IPs auf Hostnamen zurück, mit einem Umschalter per Klick, um in den Ansichten Verbindungen und Pakete **Domainnamen oder rohe IPs** zu zeigen.
+- Hostnamen-Anreicherung aus **TLS SNI und DNS** — der exakte Host, den eine App angefragt hat, direkt aus dem ClientHello und den DNS-Antworten gelesen, **ganz ohne Entschlüsselung**, und bevorzugt gegenüber Reverse-DNS-PTR-Einträgen (oft CDN-Wildcards). Ein Umschalter per Klick zeigt **Domainnamen oder rohe IPs** in den Ansichten Verbindungen und Pakete.
 - Ein **Karten-Tab** zeichnet einen realweltlichen, offline gepunkteten Globus (Natural Earth, keine Kartenkacheln) mit leuchtenden Bögen von diesem Mac zu jedem Land, mit dem es spricht — Knotengröße nach Verbindungsanzahl, Bedrohungsziele in Rot.
 - Ein Verbindungsverlauf zum Zurückblicken („welche App hat sich gestern wohin verbunden“).
 

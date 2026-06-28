@@ -37,7 +37,7 @@ La phase 1 est strictement **passive — observer, jamais bloquer**. Pas de pare
 - **Rôle client/serveur** déduit des ports (cet hôte a-t-il initié ou accepté la connexion ?).
 - **Conscience des proxys et VPN/tunnels** — les connexions dont le distant est votre proxy configuré ou local sont signalées, et les processus qui relaient le trafic d'autres apps (tunnels NetworkExtension) portent un badge, pour voir clairement quand le trafic est routé.
 - **Marquage des IP à risque** — les adresses distantes figurant sur une liste publique de renseignement de menaces sont signalées par un badge ⚠️ (à titre indicatif — MatrixNet étiquette, ne bloque jamais).
-- L'enrichissement DNS remonte des IP observées vers les noms d'hôtes, avec une bascule en un clic pour afficher **noms de domaine ou IP brutes** dans les vues Connexions et Paquets.
+- Enrichissement des noms d'hôtes via **TLS SNI et DNS** — l'hôte exact demandé par une app, lu directement dans le ClientHello et les réponses DNS **sans aucun déchiffrement**, et préféré aux enregistrements PTR de DNS inverse (souvent des jokers CDN). Une bascule en un clic affiche **noms de domaine ou IP brutes** dans les vues Connexions et Paquets.
 - Un **onglet Carte** dessine un globe pointillé du monde réel, hors ligne (Natural Earth, sans tuiles), avec des arcs lumineux de ce Mac vers chaque pays auquel il parle — taille des nœuds selon le nombre de connexions, destinations à risque en rouge.
 - Un historique des connexions consultable (« quelle app s'est connectée où hier »).
 

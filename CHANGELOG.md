@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Status:** Phase 1. Until version `1.0.0`, public interfaces and behavior may
 > change without notice.
 
+## [0.1.23] - 2026-06-28
+
+### Changed
+- **Accurate hostnames from TLS SNI and DNS.** Connections, Packets, Usage, and
+  the Map now show the host an app actually requested, read from the TLS
+  ClientHello's Server Name Indication and from DNS answers — with no decryption
+  or MITM — and preferred over reverse-DNS PTR records, which are frequently
+  generic CDN wildcards. The toggle between domain names and raw IPs is unchanged.
+
 ## [0.1.22] - 2026-06-28
 
 ### Added
