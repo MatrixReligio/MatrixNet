@@ -55,6 +55,7 @@ MatrixNet es estrictamente **pasivo — observar, nunca bloquear**. Sin cortafue
 - **Visibilidad de HTTP/3 / QUIC** — descifra de forma pasiva el QUIC Initial (claves públicas derivadas del DCID, RFC 9001 — sin secreto ni MITM) para leer el SNI, el ALPN y la versión de cada conexión HTTP/3, y calcular su JA4 de QUIC, todo por app.
 - **Calidad de red por app** — mide de forma pasiva el RTT de handshake TCP, las retransmisiones y el tiempo de establecimiento de cada conexión, mostrado en el inspector de conexiones (solo con captura; sin sondas).
 - **DNS cifrado por app** — descubre qué apps siguen usando DNS en texto plano frente a DoT, DoQ o DoH (con el resolver identificado), clasificado a partir de la 5-tupla y el nombre de host — sin captura de paquetes.
+- **Cronología de actividad por app** — una franja por app muestra cuándo estuvo activa (por hora o día) a partir del uso almacenado, para que destaque la actividad en segundo plano o nocturna.
 - Una vista de tres paneles al estilo Wireshark: lista de paquetes, árbol de detalle de protocolos y hexadecimal sincronizado.
 - Reensamblado «Seguir flujo» y un lenguaje de filtros de visualización para acotar la captura.
 - Filtrar paquetes hasta una sola app o una sola conexión.

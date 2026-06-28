@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.6.0] - 2026-06-29
+
+### Added
+- **Per-app activity timeline.** The Usage tab gains a Timeline mode: one heat
+  strip per app showing when it was active on the network — hourly cells for
+  Today, daily cells for longer windows — built from the already-persisted usage
+  (no packet capture). Spot background or overnight activity and each app's
+  rhythm at a glance.
+
+### Fixed
+- **Centered the Packets empty states.** The "No Packet Selected" and capture
+  states now fill and center in their panes instead of sitting at the top/edge.
+
 ## [1.5.0] - 2026-06-29
 
 ### Added

@@ -101,6 +101,8 @@ fighting it.
 - **Per-app encrypted DNS** — see which apps still use plaintext DNS vs DoT, DoQ,
   or DoH (with the resolver named), classified from the 5-tuple and hostname — no
   packet capture required.
+- **Per-app activity timeline** — a heat strip per app showing when it was active
+  (by hour or day) from persisted usage, so background/overnight activity stands out.
 - A Wireshark-style three-pane view: packet list, protocol detail tree, and
   synchronized hex.
 - Follow Stream reassembly and a display-filter language to slice the capture.
