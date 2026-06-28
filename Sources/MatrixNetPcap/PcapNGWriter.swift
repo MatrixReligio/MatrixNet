@@ -20,11 +20,13 @@ public struct PcapNGWriter {
         sectionHeaderBlock() + interfaceDescriptionBlock()
     }
 
-    /// An Enhanced Packet Block for one captured packet (interface 0).
+    /// An Enhanced Packet Block for one captured packet (interface 0), with an
+    /// optional `opt_comment` carrying the owning process.
     public func packet(_ record: CapturedRecord) -> [UInt8] {
         let paddedDataLength = (record.data.count + 3) & ~3
-        // type+len(8) + interfaceID+tsHigh+tsLow+capLen+origLen(20) + data + trailing(4)
-        let totalLength = UInt32(32 + paddedDataLength)
+        let options = optionsBlock(comment: record.comment)
+        // type+len(8) + interfaceID+tsHigh+tsLow+capLen+origLen(20) + data + options + trailing(4)
+        let totalLength = UInt32(32 + paddedDataLength + options.count)
         var writer = LittleEndianWriter()
         writer.u32(Self.enhancedPacketType)
         writer.u32(totalLength)
@@ -35,7 +37,24 @@ public struct PcapNGWriter {
         writer.u32(UInt32(record.originalLength))
         writer.raw(record.data)
         writer.pad32()
+        writer.raw(options)
         writer.u32(totalLength)
+        return writer.bytes
+    }
+
+    /// The block options: an `opt_comment` (code 1) plus `opt_endofopt` (code 0),
+    /// or empty when there is no comment (so plain blocks are byte-for-byte as
+    /// before).
+    private func optionsBlock(comment: String?) -> [UInt8] {
+        guard let comment, !comment.isEmpty else { return [] }
+        let value = Array(comment.utf8)
+        var writer = LittleEndianWriter()
+        writer.u16(1) // opt_comment
+        writer.u16(UInt16(truncatingIfNeeded: value.count))
+        writer.raw(value)
+        writer.pad32()
+        writer.u16(0) // opt_endofopt
+        writer.u16(0)
         return writer.bytes
     }
 

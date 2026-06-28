@@ -14,11 +14,15 @@ public struct CapturedRecord: Sendable, Equatable {
     public let originalLength: Int
     /// The captured bytes (possibly truncated to the snap length).
     public let data: [UInt8]
+    /// An optional per-packet comment (pcapng `opt_comment`), used to carry the
+    /// owning process so Wireshark shows app attribution alongside each packet.
+    public let comment: String?
 
-    public init(timestampMicros: UInt64, originalLength: Int, data: [UInt8]) {
+    public init(timestampMicros: UInt64, originalLength: Int, data: [UInt8], comment: String? = nil) {
         self.timestampMicros = timestampMicros
         self.originalLength = originalLength
         self.data = data
+        self.comment = comment
     }
 }
 
