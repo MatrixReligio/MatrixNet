@@ -28,6 +28,16 @@ xcodebuild -project MatrixNet.xcodeproj -scheme "$SCHEME" -configuration Release
 echo "==> Signing (Developer ID, inside-out)"
 ./scripts/sign.sh "$APP"
 
+# A release must ship the GeoIP database (gitignored; built before this script in
+# CI/locally). Without it the world map and country flags are blank — fail the
+# release rather than silently shipping a broken map (regression guard).
+GEOIP="$APP/Contents/Resources/geoip.dat"
+if [ ! -s "$GEOIP" ] || [ "$(stat -f%z "$GEOIP")" -lt 1000000 ]; then
+  echo "ERROR: $GEOIP missing or too small — run scripts/build-geoip.sh before releasing." >&2
+  exit 1
+fi
+echo "==> GeoIP database bundled ($(stat -f%z "$GEOIP") bytes)"
+
 mkdir -p "$DIST"
 DMG="$DIST/MatrixNet-$VERSION.dmg"
 

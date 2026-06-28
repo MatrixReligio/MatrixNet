@@ -50,4 +50,43 @@ struct GeoIPUpdatePolicyTests {
         bytes += Array("US".utf8) // country
         #expect(GeoIPUpdatePolicy.isValidDatabase(Data(bytes)))
     }
+
+    // MARK: - shouldDownload
+
+    @Test("with no database, download regardless of the throttle")
+    func downloadWhenEmpty() {
+        let recent = now.addingTimeInterval(-60)
+        // Throttle would normally block, but an empty install must self-heal.
+        #expect(GeoIPUpdatePolicy.shouldDownload(hasDatabase: false, force: false, now: now, lastChecked: recent))
+    }
+
+    @Test("with a database, respect the throttle")
+    func downloadRespectsThrottleWhenPresent() {
+        let recent = now.addingTimeInterval(-60)
+        #expect(!GeoIPUpdatePolicy.shouldDownload(hasDatabase: true, force: false, now: now, lastChecked: recent))
+        let old = now.addingTimeInterval(-(8 * 24 * 60 * 60))
+        #expect(GeoIPUpdatePolicy.shouldDownload(hasDatabase: true, force: false, now: now, lastChecked: old))
+    }
+
+    @Test("force always downloads")
+    func downloadWhenForced() {
+        let recent = now.addingTimeInterval(-60)
+        #expect(GeoIPUpdatePolicy.shouldDownload(hasDatabase: true, force: true, now: now, lastChecked: recent))
+    }
+
+    // MARK: - shouldRecordCheck (throttle only when we won't strand an empty install)
+
+    @Test("record the check on success")
+    func recordOnSuccess() {
+        #expect(GeoIPUpdatePolicy.shouldRecordCheck(succeeded: true, hasDatabase: false))
+        #expect(GeoIPUpdatePolicy.shouldRecordCheck(succeeded: true, hasDatabase: true))
+    }
+
+    @Test("on failure, record only when a database already exists")
+    func recordOnFailure() {
+        // Have a working DB → throttle the next check despite the failure.
+        #expect(GeoIPUpdatePolicy.shouldRecordCheck(succeeded: false, hasDatabase: true))
+        // No DB → keep retrying every launch until one is obtained.
+        #expect(!GeoIPUpdatePolicy.shouldRecordCheck(succeeded: false, hasDatabase: false))
+    }
 }

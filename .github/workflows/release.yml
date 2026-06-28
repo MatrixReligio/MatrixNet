@@ -28,6 +28,18 @@ jobs:
           brew untap aws/tap 2>/dev/null || true
           brew install xcodegen create-dmg
 
+      - name: Build GeoIP database (bundled; gitignored + monthly)
+        # geoip.dat is gitignored (large, refreshed monthly) so a plain checkout
+        # has none — build it from the latest DB-IP dataset BEFORE the app build
+        # so it is bundled. Without this the shipped app's world map and country
+        # flags are blank. Fall back to last month if this month is not published.
+        run: |
+          set -euo pipefail
+          if ! ./scripts/build-geoip.sh "$(date +%Y-%m)"; then
+            ./scripts/build-geoip.sh "$(date -v-1m +%Y-%m)"
+          fi
+          ls -la App/Resources/geoip.dat
+
       - name: Fetch Sparkle tools (generate_appcast, sign_update)
         env:
           SPARKLE_VERSION: "2.9.3"

@@ -33,6 +33,16 @@ enum GeoIP {
             self.database = database
             lock.unlock()
         }
+
+        /// Whether a usable (non-empty) database is loaded. An absent or empty
+        /// database means lookups return nil, so the updater treats it as "none"
+        /// and downloads one immediately instead of waiting for the weekly window.
+        var hasDatabase: Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            guard let database else { return false }
+            return !database.isEmpty
+        }
     }
 
     private static let storage = Storage(loadBest())
@@ -91,29 +101,43 @@ enum GeoIP {
     static func updateIfNeeded(now: Date = Date(), force: Bool = false) async {
         let defaults = UserDefaults.standard
         let lastChecked = defaults.object(forKey: lastCheckedKey) as? Date
-        guard force || GeoIPUpdatePolicy.shouldCheck(now: now, lastChecked: lastChecked) else { return }
-        defaults.set(now, forKey: lastCheckedKey)
-
+        let hasDatabase = storage.hasDatabase
+        guard GeoIPUpdatePolicy.shouldDownload(
+            hasDatabase: hasDatabase, force: force, now: now, lastChecked: lastChecked
+        ) else { return }
         guard let destination = downloadedURL else { return }
+
+        let succeeded = await downloadAndInstall(to: destination)
+        // Throttle the next check only when it won't strand an empty install:
+        // on success always, on failure only if a usable database already exists.
+        if GeoIPUpdatePolicy.shouldRecordCheck(succeeded: succeeded, hasDatabase: hasDatabase) {
+            defaults.set(now, forKey: lastCheckedKey)
+        }
+    }
+
+    /// Downloads, validates, installs, and hot-swaps the database. Returns whether
+    /// a fresh database was successfully installed.
+    private static func downloadAndInstall(to destination: URL) async -> Bool {
         do {
             var request = URLRequest(url: remoteURL)
             request.timeoutInterval = 30
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return }
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return false }
             guard GeoIPUpdatePolicy.isValidDatabase(data) else {
                 log.warning("Downloaded GeoIP database failed validation; keeping current.")
-                return
+                return false
             }
             try FileManager.default.createDirectory(
                 at: destination.deletingLastPathComponent(), withIntermediateDirectories: true
             )
             try data.write(to: destination, options: .atomic)
-            if let fresh = GeoIPDatabase(data: data) {
-                storage.replace(with: fresh)
-                log.info("GeoIP database updated (\(data.count) bytes).")
-            }
+            guard let fresh = GeoIPDatabase(data: data) else { return false }
+            storage.replace(with: fresh)
+            log.info("GeoIP database updated (\(data.count) bytes).")
+            return true
         } catch {
             log.debug("GeoIP update skipped: \(error.localizedDescription, privacy: .public)")
+            return false
         }
     }
 }

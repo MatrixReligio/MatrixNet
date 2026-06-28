@@ -76,4 +76,28 @@ struct ThreatUpdatePolicyTests {
         #expect(!ThreatUpdatePolicy.isValidDatabase(ThreatDatabase(addresses: []).serialized()))
         #expect(!ThreatUpdatePolicy.isValidDatabase(Data([0, 1])))
     }
+
+    @Test("with no database, download regardless of the throttle")
+    func downloadWhenEmpty() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let recent = now.addingTimeInterval(-60)
+        #expect(ThreatUpdatePolicy.shouldDownload(hasDatabase: false, force: false, now: now, lastChecked: recent))
+    }
+
+    @Test("with a database, respect the throttle unless forced")
+    func downloadThrottle() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let recent = now.addingTimeInterval(-60)
+        #expect(!ThreatUpdatePolicy.shouldDownload(hasDatabase: true, force: false, now: now, lastChecked: recent))
+        #expect(ThreatUpdatePolicy.shouldDownload(hasDatabase: true, force: true, now: now, lastChecked: recent))
+        let old = now.addingTimeInterval(-ThreatUpdatePolicy.checkInterval - 1)
+        #expect(ThreatUpdatePolicy.shouldDownload(hasDatabase: true, force: false, now: now, lastChecked: old))
+    }
+
+    @Test("record the check on success; on failure only when a database exists")
+    func recordCheck() {
+        #expect(ThreatUpdatePolicy.shouldRecordCheck(succeeded: true, hasDatabase: false))
+        #expect(ThreatUpdatePolicy.shouldRecordCheck(succeeded: false, hasDatabase: true))
+        #expect(!ThreatUpdatePolicy.shouldRecordCheck(succeeded: false, hasDatabase: false))
+    }
 }
