@@ -30,7 +30,7 @@ struct ConnectionInspector: View {
                     }
                     roleContent(connection.fiveTuple.role)
                     if ProxyInfo.routesThroughProxy(connection.fiveTuple.destination) {
-                        LabeledContent("Routing") { Text("Through proxy") }
+                        LabeledContent("Routing") { Text("Through proxy or tunnel") }
                     } else if ProxyInfo.isTunnel(connection.app.displayName) {
                         LabeledContent("Routing") { Text("VPN/proxy tunnel") }
                     }

@@ -83,7 +83,7 @@ struct ConnectionsView: View {
                         Image(systemName: "arrow.triangle.branch")
                             .font(.caption2)
                             .foregroundStyle(Theme.advisory)
-                            .help("Routed through your local/configured proxy.")
+                            .help("Routed through a proxy or system tunnel.")
                     }
                 }
                 .help(remoteLabel(connection))
