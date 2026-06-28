@@ -230,8 +230,14 @@ public actor ConnectionAggregator {
         await correlator.connectionID(forPacketFlow: flowKey, pid: pid)
     }
 
-    /// Records a DNS-observed hostname for later enrichment.
+    /// Records a DNS- or SNI-observed hostname for later enrichment.
     public func recordHostname(_ hostname: String, for ip: IPAddress) async {
         await correlator.recordHostname(hostname, for: ip)
+    }
+
+    /// The full IP→hostname table observed from SNI and DNS, for enriching the
+    /// connection snapshot (preferred over reverse DNS).
+    public func hostnameSnapshot() async -> [IPAddress: String] {
+        await correlator.allHostnames()
     }
 }

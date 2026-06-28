@@ -70,6 +70,11 @@ public actor FlowCorrelator {
         hostnamesByIP[ip]
     }
 
+    /// The full IP→hostname table observed so far (SNI + DNS enrichment).
+    public func allHostnames() -> [IPAddress: String] {
+        hostnamesByIP
+    }
+
     /// All currently tracked connections.
     public var allConnections: [Connection] {
         Array(connectionsByID.values)
