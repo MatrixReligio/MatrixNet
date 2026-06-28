@@ -92,6 +92,9 @@ fighting it.
   stack from the ClientHello (a browser engine vs Go vs curl vs a suspicious
   library) without any decryption; shown on the TLS layer and per app in the
   connection inspector, with recognized stacks labelled.
+- **HTTP/3 / QUIC visibility** — passively decrypt the QUIC Initial (public,
+  DCID-derived keys per RFC 9001 — no secret, no MITM) to read each HTTP/3
+  connection's SNI, ALPN, and version, and compute its QUIC JA4, all per app.
 - A Wireshark-style three-pane view: packet list, protocol detail tree, and
   synchronized hex.
 - Follow Stream reassembly and a display-filter language to slice the capture.

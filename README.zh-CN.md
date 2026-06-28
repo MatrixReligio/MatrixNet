@@ -52,6 +52,7 @@ MatrixNet 严格保持**被动 —— 只观察,绝不拦截**。没有防火墙
 - 逐包捕获,**每个数据包都携带其归属 PID**。
 - 扎实解析最关键的协议:**Ethernet、IPv4、IPv6、TCP、UDP、ICMP、DNS、TLS(握手 / SNI / 证书)与 HTTP/1.1**。
 - **JA4 TLS 客户端指纹(按应用)** —— 不解密,从 ClientHello 被动推断每个 App 的 TLS 栈(浏览器内核 / Go / curl / 可疑库);显示在 TLS 层与连接检查器,已识别的栈会标注。
+- **HTTP/3 / QUIC 可见性** —— 被动解密 QUIC Initial(RFC 9001 的公开 DCID 派生密钥,无需机密、不中间人)读出每条 HTTP/3 连接的 SNI、ALPN、版本,并算出 QUIC JA4,全部按应用归属。
 - Wireshark 风格的三栏视图:包列表、协议详情树,以及同步的十六进制视图。
 - Follow Stream 流重组,以及切分捕获的显示过滤语言。
 - 可将数据包过滤到单个 App 或单条连接。

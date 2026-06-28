@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.3.0] - 2026-06-28
+
+### Added
+- **HTTP/3 and QUIC visibility.** MatrixNet now passively decrypts the QUIC
+  Initial packet — using the public, DCID-derived keys from RFC 9001, never a
+  handshake secret — to read each HTTP/3 connection's SNI, ALPN, and QUIC
+  version, and computes a QUIC JA4 fingerprint (transport `q`), all attributed
+  per app. This closes the blind spot where roughly a fifth of web traffic
+  (Google, YouTube, Instagram, …) runs over QUIC and was previously only guessed
+  at by port. Shown on the QUIC layer in the Packets inspector and folded into
+  the per-app TLS fingerprints and hostname enrichment.
+
 ## [1.2.0] - 2026-06-28
 
 ### Added
