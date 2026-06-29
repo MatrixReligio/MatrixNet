@@ -8,6 +8,12 @@
 
 **Tech Stack:** Swift 6(strict concurrency)、Swift Testing、SwiftPM 纯核心包、SwiftUI(设置 UI)、Sparkle(发版)。
 
+> **⚠️ 2026-06-29 纠偏(已验证,覆盖下方部分原计划)**:lsof 证实 NStat 给代理连接报的 5-tuple 与 utun 包一致(都用网关 `198.19.0.1`);`Tests/MatrixNetCaptureTests/ConnectionAggregatorProxyTests.swift` 证实**现有 flowKey 管线在抓包开启时本就恢复代理连接真实字节,`recordHostname` 也已挂上 SNI 域名**。因此:
+> - Phase 0 的 `TunneledFlowReconstructor`/`TunneledFlowStitch` **已删除(冗余,commit 7c7645d)**;保留 `FakeIPClassifier` + 特征化测试。
+> - **"进代理流量 0" 根因 = 未开包捕获(NStat-only)**——物理限制(无包即无字节,任何被动手段都变不出)。
+> - **真正剩余工作**:① fake-IP geo 守卫(Task 1.4)② proxyShare 按字节(1.3)③ en0 relay 去重(1.2)④ 可选 DoH geo(Phase 2,已验证可行)⑤ **新增** NStat-only 诚实 UX:代理流标"需开启包捕获才能统计流量",替代误导性的 0。
+> - 下方 **Task 1.1(接 reconstructor)作废**,由 ⑤ + "抓包模式下 geo 用域名而非 fake-IP" 取代。Task 1.2/1.3/1.4、Phase 2/3 仍有效。
+
 ## Global Constraints(逐条来自 spec / 项目约定,精确值)
 
 - 目标版本 **1.8.0**(MINOR),build 39;版本真源 = `project.yml` 两处 `info.properties` + `settings.base`(MARKETING_VERSION/CURRENT_PROJECT_VERSION)。
@@ -344,14 +350,13 @@ public enum TunneledFlowStitch {
 
 ## Phase 1 — 接入 app(缝合键修复 + 按字节 proxyShare + fake-IP GeoIP 守卫 + en0 去重)
 
-### Task 1.0: 真机校核 NStat 代理连接的 5-tuple(决定缝合键)
+### Task 1.0: 缝合键校核 ✅ 已完成(2026-06-29,lsof 非 sudo)
 
-> 这是诚实步骤,不是占位符:Phase 0 的缝合按 flowKey;但 NStat 对代理连接报的 source 可能是 app 真实本地址而非网关 `198.19.0.1`,导致 flowKey 对不上。先用真机确认。
+实测:所有代理连接的 socket 本地址 = TUN 网关 `198.19.0.1`(如 `198.19.0.1:49224->198.0.0.70:443`),与 utun 包 src 一致。`lsof` 与 NStat 同源(内核 socket 信息),故 **NStat 连接 5-tuple == utun 包 5-tuple → flowKey 缝合成立,无需改键。**
 
-- [ ] **Step 1:** 运行 app(`scripts/smoke.sh` 正签启动,**不要 ad-hoc**,避免 TCC 弹窗),开 Loon TUN,记录一条已知连接在 Connections 里的 source/dest。
-- [ ] **Step 2:** 对照 `sudo tcpdump -n -i 'pktap,all' -k 'port 443'` 中同 app 同 dst 的 utun 包 source。
-- [ ] **Step 3:** 若两者 source 一致(都是网关)→ Task 0.3 的 flowKey 缝合成立,无需改;若不一致 → 把缝合键改为 `(app PID + fake dst IP:port)`,更新 `TunneledFlowStitch.matches` 与其测试,再绿。
-- [ ] **Step 4:** commit(若有改动)`-m "fix(proxy): align stitch key with observed NStat 5-tuple"`。
+**新增前置(Task 1.0b,先于 1.1):核实"抓包开启时现有 attributePackets 是否已归并 utun 字节"。** 既然 flowKey 一致,现有按 flowKey 的关联可能已处理字节 → 那 Phase 1 重心应是 **域名(SNI 替换 fake-IP 展示)+ fake-IP geo 守卫 + 按字节 proxyShare + en0 去重**,而非重复造字节归并。
+- [ ] 读 `PacketCaptureModel.swift` 的 packet→`PacketAttribution` 路径:确认 utun(DLT=rawIP)包是否被送进 `attributePackets`、其 flowKey 是否正确、SNI 是否已被提取并 `recordHostname`。
+- [ ] 据真实现状改写下方 1.1 的具体改动(可能从"造缝合"缩成"补域名+守卫"),避免冗余。
 
 ### Task 1.1: 捕获管线产出 onTunnel/outbound/sni,喂给 reconstructor
 

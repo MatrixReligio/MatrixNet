@@ -5,6 +5,8 @@
 - **状态**: 设计(待 spec review)
 - **关联**: [[matrixnet-project]]、`docs/superpowers/notes/capture-spike.md`、功能 ③ ECH/SNI 降级
 
+> **⚠️ 2026-06-29 纠偏(已验证)**:lsof + 特征化测试证实**现有 flowKey 管线在抓包开启时已恢复代理连接真实字节+SNI 域名**。故 §6.2 `TunneledFlowReconstructor` 与 §6.3 缝合**作废删除**(冗余);保留 §6.1 `FakeIPClassifier`。**"进代理流量 0" 根因 = 未开包捕获(NStat-only),物理限制**。真正剩余:§6.1 geo 守卫 + §6.5 proxyShare 按字节 + §6.7 en0 去重 + §6.6 DoH geo + 新增"NStat-only 诚实 UX(代理流标需开捕获)"。
+
 ## 1. 背景与问题
 
 当本机运行 **TUN 模式本地代理**(Loon / 旧版 Surge / Clash,含 **fake-IP 模式**)时,MatrixNet 当前表现:
@@ -97,5 +99,6 @@
 用户(资深网络专家)要求:凡"待确认"的底层行为,**先写最小 demo 真机验证,通过才采用;不可行立即汇报**(见 [[demo-first-verify-assumptions]])。本功能需先验证:
 
 - **假设 A(已验证 ✅,2026-06-29)→ Phase 2 采用**:Loon TUN 下 `doh-probe.swift` 实测:`getaddrinfo("www.cloudflare.com")` → `198.0.0.142`(fake,被劫持);**DoH `https://1.1.1.1/dns-query` → `104.16.123.96 / 104.16.124.96`(真实)**。证实只有 DoH(HTTPS 加密、IP 字面量端点)能在 TUN 下拿真实 IP;明文 DNS 不可用。**采用方案**:URLSession 请求 `https://1.1.1.1/dns-query`,`accept: application/dns-json`,取 Answer 中 type==1(A)记录。
-- **假设 B(决定缝合键)**:NStat 对代理连接报的 source 是网关 `198.19.0.1` 还是 app 真实本地址(Plan Task 1.0 真机校核)。
+- **假设 B(已验证 ✅,2026-06-29 lsof 实测)→ flowKey 缝合成立**:代理 socket 本地址 = TUN 网关 `198.19.0.1`(与 utun 包 src 一致;`lsof` 与 NStat 读同一内核 socket 信息),故 NStat 连接 5-tuple == utun 包 5-tuple,Task 0.3 的 flowKey 缝合**无需改键**。
+  - **推论(须核实,勿假设)**:既然 flowKey 本就一致,现有 `ConnectionAggregator.attributePackets`(也按 flowKey 关联)在**抓包开启**时可能已把 utun 字节归到代理连接 → "0 字节"或主要出现在 **NStat-only(未开包捕获)** 模式。Phase 1 须先读代码/真机核实当前行为,据此把功能重心放在真正缺的部分(域名 / fake-IP geo 守卫 / 按字节 proxyShare / 去重),而非重复造字节归并。
 - **假设 C(已验证 ✅)**:utun 出向腿带真实 app PID(spec §2 真机抓包已证)。
