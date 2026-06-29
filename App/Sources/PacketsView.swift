@@ -58,13 +58,13 @@ struct PacketsView: View {
         .searchable(text: $search, placement: .toolbar, prompt: "Filter by process, protocol, or address")
         .toolbar { toolbarContent }
         .onAppear { capture.refreshState() }
-        .task {
-            // Throttle the displayed list; freeze it while a packet is selected so
-            // a fast stream can't move rows under the cursor or clear the choice.
+        .task(id: selection) {
+            // While a packet is selected, freeze the list (the id change restarts
+            // this task and the guard stops it). Otherwise throttle refreshes so a
+            // fast stream can't move rows under the cursor or clear the selection.
+            guard selection == nil else { return }
             while !Task.isCancelled {
-                if selection == nil {
-                    displayedPackets = sortedPackets
-                }
+                displayedPackets = sortedPackets
                 try? await Task.sleep(for: .milliseconds(700))
             }
         }

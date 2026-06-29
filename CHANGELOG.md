@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.1] - 2026-06-29
+
+### Fixed
+- **Packets stay selectable during a fast capture.** The packet list is now
+  throttled and freezes while a packet is selected (with a Resume control), so a
+  high-rate capture stream no longer shifts rows out from under a click or clears
+  the selection.
+
 ## [1.8.0] - 2026-06-29
 
 ### Added
