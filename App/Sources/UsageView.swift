@@ -161,11 +161,33 @@ struct UsageView: View {
     private func breakdown(for rows: [UsageRow]) -> some View {
         switch dimension {
         case .app:
-            UsageAppRanking(items: UsageReport.byApp(rows), selectedApp: $selectedApp)
+            if let selectedApp {
+                appDrillDown(app: selectedApp, rows: rows)
+            } else {
+                UsageAppRanking(items: UsageReport.byApp(rows), selectedApp: $selectedApp)
+            }
         case .country:
             UsageCountryRanking(items: UsageReport.byCountry(scoped(rows)))
         case .domain:
             UsageDomainRanking(items: UsageReport.byDomain(scoped(rows), app: selectedApp))
+        }
+    }
+
+    /// Drill-down for one app under "By App": its country and domain breakdown,
+    /// with a control to return to the app list.
+    @ViewBuilder
+    private func appDrillDown(app: String, rows: [UsageRow]) -> some View {
+        let appRows = rows.filter { $0.app == app }
+        VStack(alignment: .leading, spacing: 12) {
+            Button {
+                selectedApp = nil
+            } label: {
+                Label(app, systemImage: "chevron.left")
+            }
+            .buttonStyle(.borderless)
+
+            UsageCountryRanking(items: UsageReport.byCountry(appRows))
+            UsageDomainRanking(items: UsageReport.byDomain(appRows, app: app))
         }
     }
 
