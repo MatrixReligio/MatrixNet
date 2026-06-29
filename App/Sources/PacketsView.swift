@@ -28,7 +28,8 @@ struct PacketsView: View {
     }
 
     private var selectedPacket: PacketRow? {
-        displayedPackets.first { $0.id == selection } ?? capture.packets.first { $0.id == selection }
+        guard let selection else { return nil }
+        return displayedPackets.first { $0.id == selection }
     }
 
     private var sortedPackets: [PacketRow] {
@@ -81,7 +82,7 @@ struct PacketsView: View {
                 if selection != nil {
                     pausedBanner
                 }
-                if capture.packets.isEmpty {
+                if displayedPackets.isEmpty {
                     waitingState
                 } else {
                     packetList
@@ -231,11 +232,11 @@ struct PacketsView: View {
         }
         ToolbarItem(placement: .primaryAction) {
             Button { capture.clear() } label: { Label("Clear", systemImage: "trash") }
-                .disabled(capture.packets.isEmpty)
+                .disabled(displayedPackets.isEmpty)
         }
         ToolbarItem(placement: .primaryAction) {
             Button { exportPcap() } label: { Label("Export", systemImage: "square.and.arrow.up") }
-                .disabled(capture.packets.isEmpty)
+                .disabled(displayedPackets.isEmpty)
         }
     }
 

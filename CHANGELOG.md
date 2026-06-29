@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.2] - 2026-06-29
+
+### Fixed
+- **Packets are now reliably selectable during a fast capture.** The packet view
+  still observed the live capture buffer (for its empty-state and counts), so it
+  re-rendered on every captured batch and clobbered clicks; it now reads only the
+  throttled, freeze-on-selection snapshot, so a selection holds and the list
+  freezes for inspection. Completes the 1.8.1 fix.
+- **The proxy engine's relay leg no longer double-counts in per-app totals while
+  capturing** — its bytes (which carry every app's traffic) are excluded from the
+  packet-derived top-talkers/usage so the real apps surface, while the
+  capture-off (NStat) path still keeps it as the only available signal.
+
 ## [1.8.1] - 2026-06-29
 
 ### Fixed
