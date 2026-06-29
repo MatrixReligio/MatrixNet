@@ -108,6 +108,15 @@ public actor ConnectionAggregator {
 
             guard let connection = connections[id] else { continue }
             let key = connection.app.displayName
+
+            // Exclude the proxy engine's own relay leg from the per-app aggregates:
+            // while capturing, each app's real bytes already arrive on the tunnel
+            // side, so counting the relay (which carries every app's traffic) too
+            // would double-represent it and crowd out the real apps. The
+            // per-connection tally above + the connections table still keep it; and
+            // without capture the NStat path keeps it as the only available signal.
+            guard !TunnelProcess.isTunnel(key) else { continue }
+
             var traffic = packetTrafficByApp[key] ?? AppTraffic(app: connection.app)
             traffic.app = connection.app
             if packet.inbound { traffic.bytesIn &+= bytes } else { traffic.bytesOut &+= bytes }
