@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.7] - 2026-06-30
+
+### Fixed
+- **Much lower CPU and energy use while monitoring.** Reverse-DNS lookups are a
+  *blocking* system call, and the app re-issued one for every destination without
+  a hostname on every ~1s refresh — and never remembered the misses. Most
+  addresses have no reverse record (CDN and cloud ranges, link-local peers, and
+  the synthetic addresses a VPN/proxy hands back all fail), so the same lookups
+  fired again every second and piled up on Swift's small cooperative thread pool,
+  burning CPU for results that will never exist. The resolver now (1) remembers a
+  failed lookup and retries it only after a cooldown, and (2) runs the blocking
+  call on a dedicated, bounded queue instead of the cooperative pool. On a machine
+  with a VPN/proxy active this cut the app's CPU from ~30% to ~3%. No change to
+  what you see — hostnames still resolve and the connection list is unchanged.
+
 ## [1.8.6] - 2026-06-29
 
 ### Fixed
