@@ -32,6 +32,54 @@ struct HostnameResolverTests {
         #expect(await resolver.snapshot()[target] == nil)
     }
 
+    @Test("remembers a failed lookup so it is not re-launched every call")
+    func negativeResultIsCachedWithinTTL() async throws {
+        let counter = LookupCounter()
+        let resolver = HostnameResolver { _ in
+            counter.increment()
+            return nil // never resolves (e.g. a fake-IP with no PTR record)
+        }
+        let target = try #require(IPAddress("203.0.113.7"))
+        await resolver.resolveIfNeeded([target])
+        try await Task.sleep(for: .milliseconds(60))
+        // A second round within the negative TTL must NOT launch another
+        // blocking lookup — otherwise the ~1s refresh loop re-resolves every
+        // non-resolving IP forever, saturating the lookup pool.
+        await resolver.resolveIfNeeded([target])
+        try await Task.sleep(for: .milliseconds(40))
+        #expect(counter.value == 1)
+    }
+
+    @Test("retries a failed lookup once the negative TTL has elapsed")
+    func negativeCacheExpiresAfterTTL() async throws {
+        let counter = LookupCounter()
+        let clock = MutableClock(start: Date(timeIntervalSince1970: 1_000))
+        let resolver = HostnameResolver(
+            lookup: { _ in
+                counter.increment()
+                return nil
+            },
+            negativeTTL: 60,
+            now: { clock.value }
+        )
+        let target = try #require(IPAddress("203.0.113.7"))
+        await resolver.resolveIfNeeded([target])
+        try await Task.sleep(for: .milliseconds(60))
+        #expect(counter.value == 1)
+
+        // Still inside the TTL window: must not retry.
+        clock.advance(30)
+        await resolver.resolveIfNeeded([target])
+        try await Task.sleep(for: .milliseconds(40))
+        #expect(counter.value == 1)
+
+        // Past the TTL: a transient miss is allowed to recover.
+        clock.advance(40)
+        await resolver.resolveIfNeeded([target])
+        try await Task.sleep(for: .milliseconds(60))
+        #expect(counter.value == 2)
+    }
+
     @Test("does not launch duplicate lookups for the same IP")
     func deduplicatesInFlight() async throws {
         let counter = LookupCounter()
@@ -59,5 +107,23 @@ private final class LookupCounter: @unchecked Sendable {
 
     func increment() {
         lock.withLock { count += 1 }
+    }
+}
+
+/// A hand-advanced clock so the negative-cache TTL can be tested deterministically.
+private final class MutableClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var date: Date
+
+    init(start: Date) {
+        date = start
+    }
+
+    var value: Date {
+        lock.withLock { date }
+    }
+
+    func advance(_ seconds: TimeInterval) {
+        lock.withLock { date += seconds }
     }
 }
