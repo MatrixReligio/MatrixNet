@@ -80,7 +80,7 @@ MatrixNet ist streng **passiv — beobachten, niemals blockieren**. Keine Firewa
 
 ### 🛡️ Datenschutz & null Konflikte
 - **Konfliktfrei per Design.** MatrixNet ist vollständig passiv: kein NetworkExtension, kein exklusiver Routing-/Proxy-Slot, nie im Paketpfad. Es koexistiert mit AdGuard, Surge, Little Snitch, LuLu und jedem VPN.
-- **100 % lokal.** Die gesamte Verarbeitung geschieht auf Ihrem Gerät. Keine Daten verlassen das Gerät. Keine Telemetrie. Kein Konto. Keine Cloud.
+- **100 % lokal, passive Erfassung.** Die gesamte Paket-/Verbindungsverarbeitung geschieht auf Ihrem Gerät — keine Telemetrie, kein Konto, keine Cloud. Die einzige mögliche Netzwerk-Anfrage ist die optionale GeoIP-Länderauflösung für *Proxy*-Flows (standardmäßig an, über verschlüsseltes DNS/DoH), in den Einstellungen abschaltbar.
 - **Geringste Rechte.** Die Verbindungsüberwachung benötigt keinerlei Autorisierung. Die Paketerfassung ist in einem minimalen, reinen Erfassungs-Helfer isoliert; das Parsen nicht vertrauenswürdiger Bytes läuft in der nicht privilegierten App.
 
 ## Warum MatrixNet?
@@ -168,7 +168,7 @@ Der Helfer existiert ausschließlich, um die root-Anforderung von BPF/PKTAP zu e
 
 ## Datenschutz
 
-MatrixNet verarbeitet alles lokal. Es sendet keine Daten von Ihrem Gerät, hat keine Telemetrie, erfordert kein Konto und spricht mit keinem Server. Aufzeichnungen, Verlauf und Einstellungen liegen nur auf Ihrer Festplatte.
+MatrixNet verarbeitet alles lokal — keine Telemetrie, kein Konto, keine Cloud. Die einzige mögliche Netzwerk-Anfrage ist die optionale GeoIP-Länderauflösung für Proxy-Flows (standardmäßig an): Wenn ein lokaler Proxy die echte Adresse verbirgt, wird die Domain über verschlüsseltes DNS (DoH) aufgelöst, um das Land zu ermitteln; in den Einstellungen abschaltbar, damit keine Daten Ihr Gerät verlassen. Aufzeichnungen, Verlauf und Einstellungen liegen nur auf Ihrer Festplatte.
 
 ## Versionierung
 

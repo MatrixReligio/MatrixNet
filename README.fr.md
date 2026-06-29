@@ -80,7 +80,7 @@ MatrixNet est strictement **passif — observer, jamais bloquer**. Pas de pare-f
 
 ### 🛡️ Confidentialité et zéro conflit
 - **Zéro conflit par conception.** MatrixNet est entièrement passif : aucun NetworkExtension, aucune réservation exclusive de routage/proxy, jamais sur le chemin des paquets. Il coexiste avec AdGuard, Surge, Little Snitch, LuLu et tout VPN.
-- **100 % local.** Tout le traitement a lieu sur votre machine. Aucune donnée ne quitte l'appareil. Pas de télémétrie. Pas de compte. Pas de cloud.
+- **100 % local, capture passive.** Tout le traitement des paquets/connexions a lieu sur votre machine — pas de télémétrie, pas de compte, pas de cloud. La seule requête réseau possible est la résolution GeoIP facultative du pays des flux *relayés* (activée par défaut, via DNS chiffré/DoH), désactivable dans les Réglages.
 - **Moindre privilège.** La surveillance des connexions ne demande aucune autorisation. La capture de paquets est isolée dans un assistant minimal dédié à la capture ; l'analyse des octets non fiables s'exécute dans l'app non privilégiée.
 
 ## Pourquoi MatrixNet ?
@@ -168,7 +168,7 @@ L'assistant existe uniquement pour satisfaire l'exigence root de BPF/PKTAP. Il n
 
 ## Confidentialité
 
-MatrixNet traite tout localement. Il n'envoie aucune donnée hors de votre machine, n'a pas de télémétrie, ne requiert aucun compte et ne parle à aucun serveur. Captures, historique et réglages ne vivent que sur votre disque.
+MatrixNet traite tout localement — pas de télémétrie, pas de compte, pas de cloud. La seule requête réseau possible est la résolution GeoIP facultative du pays des flux relayés (activée par défaut) : lorsqu'un proxy local masque l'adresse réelle, le domaine est résolu via DNS chiffré (DoH) pour retrouver le pays ; désactivez-la dans les Réglages pour qu'aucune donnée ne quitte votre machine. Captures, historique et réglages ne vivent que sur votre disque.
 
 ## Gestion des versions
 
