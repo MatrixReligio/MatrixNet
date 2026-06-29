@@ -10,12 +10,35 @@ struct ConnectionsView: View {
     @State private var sortOrder = [KeyPathComparator(\Connection.lastActivityAt, order: .reverse)]
     @State private var columns = TableColumnCustomization<Connection>()
     @State private var showInspector = true
+    /// Aggregate the table by app (default). Tap an app to drill into its flows.
+    @State private var groupByApp = true
+    /// When set (while grouping), the flat table shows just this app's flows.
+    @State private var drilledAppName: String?
+    @State private var groupSelection: AppConnectionGroup.ID?
     @AppStorage(Preferences.Key.showDomains.rawValue, store: SharedMetricsStore.sharedDefaults)
     private var showDomains = true
 
+    private var searchFiltered: [Connection] {
+        search.isEmpty ? model.connections : model.connections.filter { matches($0, search) }
+    }
+
+    /// Per-app rows for the aggregated view (busiest app first).
+    private var groups: [AppConnectionGroup] {
+        ConnectionGrouping.byApp(searchFiltered)
+    }
+
+    /// Flows for the flat table: all of them, or — when drilled into an app from
+    /// the grouped view — just that app's.
     private var filtered: [Connection] {
-        let base = search.isEmpty ? model.connections : model.connections.filter { matches($0, search) }
+        let base = drilledAppName.map { name in
+            searchFiltered.filter { $0.app.displayName == name }
+        } ?? searchFiltered
         return base.sorted(using: sortOrder)
+    }
+
+    /// Whether the aggregated app list (rather than the flat flow table) is shown.
+    private var showingGroups: Bool {
+        groupByApp && drilledAppName == nil
     }
 
     private var selectedConnection: Connection? {
@@ -28,6 +51,8 @@ struct ConnectionsView: View {
                 UnavailableStateView()
             } else if model.connections.isEmpty {
                 EmptyStateView()
+            } else if showingGroups {
+                appGroupTable
             } else {
                 table
             }
@@ -35,9 +60,54 @@ struct ConnectionsView: View {
         .navigationTitle("Connections")
         .searchable(text: $search, placement: .toolbar, prompt: "Filter by app, host, or IP")
         .toolbar { toolbarContent }
-        .inspector(isPresented: $showInspector) {
+        .inspector(isPresented: Binding(
+            get: { showInspector && !showingGroups },
+            set: { showInspector = $0 }
+        )) {
             ConnectionInspector(connection: selectedConnection)
                 .inspectorColumnWidth(min: 260, ideal: 300, max: 360)
+        }
+    }
+
+    /// The default aggregated view: one row per app (busiest first). Selecting a
+    /// row drills into that app's individual flows.
+    private var appGroupTable: some View {
+        Table(groups, selection: $groupSelection) {
+            TableColumn("Application") { group in
+                AppCell(app: group.app)
+            }
+            .width(min: 200, ideal: 300)
+
+            TableColumn("Flows") { group in
+                Text(verbatim: "\(group.connectionCount)")
+                    .font(Theme.mono(11)).monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .width(min: 48, ideal: 60, max: 90)
+
+            TableColumn("In") { group in
+                Text(Format.bytes(group.bytesIn))
+                    .font(Theme.mono(11)).monospacedDigit()
+                    .foregroundStyle(Theme.inbound)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .width(min: 56, ideal: 80, max: 140)
+
+            TableColumn("Out") { group in
+                Text(Format.bytes(group.bytesOut))
+                    .font(Theme.mono(11)).monospacedDigit()
+                    .foregroundStyle(Theme.outbound)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .width(min: 56, ideal: 80, max: 140)
+        }
+        .tableStyle(.inset)
+        .onChange(of: groupSelection) { _, newValue in
+            guard let id = newValue, let group = groups.first(where: { $0.id == id }) else { return }
+            drilledAppName = group.app.displayName
+            selection = nil
+            groupSelection = nil
         }
     }
 
@@ -121,8 +191,31 @@ struct ConnectionsView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            if let app = drilledAppName {
+                Button {
+                    drilledAppName = nil
+                } label: {
+                    Label(app, systemImage: "chevron.left")
+                }
+                .help("Back to apps")
+            }
+        }
         ToolbarItem(placement: .principal) {
             ThroughputSummary()
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                groupByApp.toggle()
+                drilledAppName = nil
+                selection = nil
+            } label: {
+                Label(
+                    groupByApp ? LocalizedStringKey("By App") : LocalizedStringKey("All Flows"),
+                    systemImage: groupByApp ? "square.stack.3d.up.fill" : "list.bullet"
+                )
+            }
+            .help("Group connections by app, or show every flow")
         }
         ToolbarItem(placement: .primaryAction) {
             Button {
