@@ -32,10 +32,10 @@ MatrixNet est strictement **passif — observer, jamais bloquer**. Pas de pare-f
 
 ### 🔭 Surveillance des connexions
 - Un **tableau de bord Aperçu** en direct : graphe de débit (dernière minute), indicateurs clés (connexions actives, total de session, apps actives, pays atteints, connexions à risque, part via proxy), répartition des protocoles, principaux pays de destination et une liste enrichie des plus gros consommateurs.
-- Liste des connexions en direct à l'échelle du système, par app : processus, hôte/IP distant, pays, débit montant/descendant, octets cumulés et cycle de vie de la connexion.
+- Liste des connexions en direct à l'échelle du système, par app : processus, hôte/IP distant, pays, débit montant/descendant, octets cumulés et cycle de vie de la connexion. Les vues Connexions, Historique et Usage regroupent par app par défaut — cliquez sur une app pour explorer ses flux individuels.
 - Attribution des processus par le noyau — le même mécanisme que `nettop` et le Moniteur d'activité — donc une attribution exacte sans course au polling.
 - **Rôle client/serveur** déduit des ports (cet hôte a-t-il initié ou accepté la connexion ?).
-- **Conscience des proxys et VPN/tunnels** — les connexions dont le distant est votre proxy configuré ou local sont signalées, et les processus qui relaient le trafic d'autres apps (tunnels NetworkExtension) portent un badge, pour voir clairement quand le trafic est routé.
+- **Conscience des proxys et VPN/tunnels** — les connexions dont le distant est votre proxy configuré ou local sont signalées, et les processus qui relaient le trafic d'autres apps (tunnels NetworkExtension) portent un badge, pour voir clairement quand le trafic est routé. Avec la capture de paquets active, une connexion relayée affiche tout de même son vrai domaine et son volume (lus sur l'interface tunnel), et la métrique « via proxy » est une part d'octets.
 - **Marquage des IP à risque** — les adresses distantes figurant sur une liste publique de renseignement de menaces sont signalées par un badge ⚠️ (à titre indicatif — MatrixNet étiquette, ne bloque jamais).
 - **Alertes de nouvelle destination (« phoning home »)** — facultatives et sans blocage : une notification lorsqu'une app connue atteint pour la première fois un pays jamais atteint auparavant. Une fenêtre d'apprentissage par app et une limitation de débit la gardent discrète — l'intérêt d'un pare-feu sortant, sans le blocage ni le déluge d'alertes.
 - Enrichissement des noms d'hôtes via **TLS SNI et DNS** — l'hôte exact demandé par une app, lu directement dans le ClientHello et les réponses DNS **sans aucun déchiffrement**, et préféré aux enregistrements PTR de DNS inverse (souvent des jokers CDN). Une bascule en un clic affiche **noms de domaine ou IP brutes** dans les vues Connexions et Paquets.
@@ -75,7 +75,7 @@ MatrixNet est strictement **passif — observer, jamais bloquer**. Pas de pare-f
 
 ### 🔄 Toujours à jour
 - **Mise à jour automatique intégrée** via [Sparkle](https://sparkle-project.org), avec des mises à jour signées EdDSA servies depuis les Releases GitHub. À la demande ou en arrière-plan chaque jour.
-- La **base GeoIP s'actualise automatiquement** en arrière-plan depuis le jeu de données mensuel DB-IP, pour que l'attribution par pays reste juste dans le temps. Elle couvre les destinations **IPv4 et IPv6**, afin que la carte et les métriques par pays ne sous-comptent pas le trafic IPv6.
+- La **base GeoIP s'actualise automatiquement** en arrière-plan depuis le jeu de données mensuel DB-IP, pour que l'attribution par pays reste juste dans le temps. Elle couvre les destinations **IPv4 et IPv6**, afin que la carte et les métriques par pays ne sous-comptent pas le trafic IPv6. Lorsqu'un proxy/tunnel local est actif, l'IP de destination est un substitut synthétique ; le pays est donc retrouvé à partir du vrai domaine (voir Confidentialité).
 - La **liste d'IP à risque s'actualise automatiquement** de la même façon, depuis l'agrégat public IPsum — l'app ne contacte jamais que sa propre ressource de version, jamais les flux en amont.
 
 ### 🛡️ Confidentialité et zéro conflit

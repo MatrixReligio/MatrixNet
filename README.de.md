@@ -32,10 +32,10 @@ MatrixNet ist streng **passiv — beobachten, niemals blockieren**. Keine Firewa
 
 ### 🔭 Verbindungsüberwachung
 - Ein Live-**Übersichts-Dashboard**: ein Durchsatzdiagramm (letzte Minute), Kennzahlen (aktive Verbindungen, Sitzungssumme, aktive Apps, erreichte Länder, Bedrohungsverbindungen, Anteil über Proxy), eine Protokollverteilung, die wichtigsten Zielländer und eine erweiterte Liste der größten Verursacher.
-- Systemweite Live-Verbindungsliste pro App: Prozess, Remote-Host/IP, Land, Up-/Download-Rate, kumulierte Bytes und Verbindungslebenszyklus.
+- Systemweite Live-Verbindungsliste pro App: Prozess, Remote-Host/IP, Land, Up-/Download-Rate, kumulierte Bytes und Verbindungslebenszyklus. Die Ansichten Verbindungen, Verlauf und Nutzung gruppieren standardmäßig nach App — klicken Sie auf eine App, um ihre einzelnen Flows aufzuschlüsseln.
 - Vom Kernel zugeordnete Prozesszugehörigkeit — derselbe Mechanismus wie bei `nettop` und der Aktivitätsanzeige — also genaue Zuordnung ohne Polling-Wettläufe.
 - Aus den Ports abgeleitete **Client/Server-Rolle** (hat dieser Host die Verbindung aufgebaut oder angenommen?).
-- **Proxy- und VPN/Tunnel-Erkennung** — Verbindungen, deren Gegenstelle Ihr konfigurierter oder lokaler Proxy ist, werden markiert, und Prozesse, die den Verkehr anderer Apps weiterleiten (NetworkExtension-Tunnel), erhalten ein Abzeichen, sodass klar ist, wann Verkehr umgeleitet wird.
+- **Proxy- und VPN/Tunnel-Erkennung** — Verbindungen, deren Gegenstelle Ihr konfigurierter oder lokaler Proxy ist, werden markiert, und Prozesse, die den Verkehr anderer Apps weiterleiten (NetworkExtension-Tunnel), erhalten ein Abzeichen, sodass klar ist, wann Verkehr umgeleitet wird. Bei aktiver Paketerfassung zeigt eine Proxy-Verbindung weiterhin ihre echte Domain und ihr Volumen (von der Tunnel-Schnittstelle gelesen), und die Kennzahl „über Proxy“ ist ein Byte-Anteil.
 - **Markierung von Bedrohungs-IPs** — Remote-Adressen auf einer öffentlichen Threat-Intelligence-Blockliste werden mit einem ⚠️-Abzeichen gekennzeichnet (nur als Hinweis — MatrixNet kennzeichnet, blockiert nie).
 - **Warnungen zu neuen Zielen („phoning home“)** — optional und ohne Blockieren: eine Benachrichtigung, wenn eine bekannte App zum ersten Mal ein Land erreicht, das sie noch nie erreicht hat. Ein Lernfenster pro App und eine Ratenbegrenzung halten es ruhig — der Nutzen einer ausgehenden Firewall, ohne Blockieren oder Benachrichtigungsflut.
 - Hostnamen-Anreicherung aus **TLS SNI und DNS** — der exakte Host, den eine App angefragt hat, direkt aus dem ClientHello und den DNS-Antworten gelesen, **ganz ohne Entschlüsselung**, und bevorzugt gegenüber Reverse-DNS-PTR-Einträgen (oft CDN-Wildcards). Ein Umschalter per Klick zeigt **Domainnamen oder rohe IPs** in den Ansichten Verbindungen und Pakete.
@@ -75,7 +75,7 @@ MatrixNet ist streng **passiv — beobachten, niemals blockieren**. Keine Firewa
 
 ### 🔄 Immer aktuell
 - **In-App-Auto-Update** über [Sparkle](https://sparkle-project.org) mit EdDSA-signierten Updates aus den GitHub-Releases. Auf Wunsch oder täglich im Hintergrund.
-- Die **GeoIP-Datenbank aktualisiert sich automatisch** im Hintergrund aus dem monatlichen DB-IP-Datensatz, damit die Länderzuordnung über die Zeit korrekt bleibt. Sie deckt sowohl **IPv4- als auch IPv6**-Ziele ab, sodass die Karte und die Länderkennzahlen den IPv6-Verkehr nicht zu niedrig ausweisen.
+- Die **GeoIP-Datenbank aktualisiert sich automatisch** im Hintergrund aus dem monatlichen DB-IP-Datensatz, damit die Länderzuordnung über die Zeit korrekt bleibt. Sie deckt sowohl **IPv4- als auch IPv6**-Ziele ab, sodass die Karte und die Länderkennzahlen den IPv6-Verkehr nicht zu niedrig ausweisen. Wenn ein lokaler Proxy/Tunnel aktiv ist, ist die Ziel-IP ein synthetischer Platzhalter; das Land wird daher aus der echten Domain ermittelt (siehe Datenschutz).
 - Die **Bedrohungs-IP-Liste aktualisiert sich genauso automatisch** aus dem öffentlichen IPsum-Aggregat — die App kontaktiert ausschließlich ihre eigene Release-Ressource, nie die Upstream-Feeds.
 
 ### 🛡️ Datenschutz & null Konflikte

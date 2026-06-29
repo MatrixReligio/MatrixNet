@@ -32,10 +32,10 @@ MatrixNet es estrictamente **pasivo — observar, nunca bloquear**. Sin cortafue
 
 ### 🔭 Supervisión de conexiones
 - Un **panel de Resumen** en vivo: gráfico de rendimiento (último minuto), métricas clave (conexiones activas, total de la sesión, apps activas, países alcanzados, conexiones de amenaza, porcentaje vía proxy), un desglose de protocolos, los principales países de destino y una lista enriquecida de los que más consumen.
-- Lista de conexiones en vivo a nivel de sistema y por app: proceso, host/IP remoto, país, velocidad de subida/bajada, bytes acumulados y ciclo de vida de la conexión.
+- Lista de conexiones en vivo a nivel de sistema y por app: proceso, host/IP remoto, país, velocidad de subida/bajada, bytes acumulados y ciclo de vida de la conexión. Las vistas Conexiones, Historial y Uso se agrupan por app de forma predeterminada — haz clic en una app para ver sus flujos individuales.
 - Atribución de procesos por el núcleo — el mismo mecanismo que usan `nettop` y el Monitor de Actividad — para una atribución exacta sin carreras de sondeo.
 - **Rol cliente/servidor** inferido de los puertos (¿este host inició o aceptó la conexión?).
-- **Conciencia de proxy y VPN/túnel** — las conexiones cuyo remoto es tu proxy configurado o local se marcan, y los procesos que retransmiten el tráfico de otras apps (túneles de NetworkExtension) llevan una insignia, para ver claramente cuándo se enruta el tráfico.
+- **Conciencia de proxy y VPN/túnel** — las conexiones cuyo remoto es tu proxy configurado o local se marcan, y los procesos que retransmiten el tráfico de otras apps (túneles de NetworkExtension) llevan una insignia, para ver claramente cuándo se enruta el tráfico. Con la captura de paquetes activada, una conexión por proxy sigue mostrando su dominio y volumen reales (leídos de la interfaz del túnel), y la métrica «vía proxy» es una parte de bytes.
 - **Marcado de IP de amenaza** — las direcciones remotas en una lista pública de inteligencia de amenazas se señalan con una insignia ⚠️ (solo informativo — MatrixNet etiqueta, nunca bloquea).
 - **Alertas de nuevo destino («phoning home»)** — opcionales y sin bloqueo: una notificación cuando una app conocida alcanza por primera vez un país al que nunca había llegado. Una ventana de aprendizaje por app y la limitación de frecuencia la mantienen discreta — la utilidad de un cortafuegos de salida, sin el bloqueo ni la avalancha de avisos.
 - Enriquecimiento de nombres de host mediante **TLS SNI y DNS** — el host exacto que solicitó una app, leído directamente del ClientHello y de las respuestas DNS **sin ningún descifrado**, y preferido frente a los registros PTR de DNS inverso (a menudo comodines de CDN). Un interruptor de un clic muestra **nombres de dominio o IP en crudo** en las vistas de Conexiones y Paquetes.
@@ -75,7 +75,7 @@ MatrixNet es estrictamente **pasivo — observar, nunca bloquear**. Sin cortafue
 
 ### 🔄 Siempre al día
 - **Actualización automática integrada** mediante [Sparkle](https://sparkle-project.org), con actualizaciones firmadas con EdDSA servidas desde las Releases de GitHub. A demanda o a diario en segundo plano.
-- La **base de datos GeoIP se actualiza automáticamente** en segundo plano desde el conjunto de datos mensual de DB-IP, para que la atribución por país siga siendo precisa con el tiempo. Cubre destinos tanto **IPv4 como IPv6**, de modo que el mapa y las métricas por país no subestiman el tráfico IPv6.
+- La **base de datos GeoIP se actualiza automáticamente** en segundo plano desde el conjunto de datos mensual de DB-IP, para que la atribución por país siga siendo precisa con el tiempo. Cubre destinos tanto **IPv4 como IPv6**, de modo que el mapa y las métricas por país no subestiman el tráfico IPv6. Cuando hay un proxy/túnel local activo, la IP de destino es un marcador sintético; el país se obtiene del dominio real (ver Privacidad).
 - La **lista de IP de amenaza se actualiza automáticamente** del mismo modo, desde el agregado público IPsum — la app solo contacta con su propio recurso de versión, nunca con las fuentes upstream.
 
 ### 🛡️ Privacidad y cero conflictos
