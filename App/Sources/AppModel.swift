@@ -1,6 +1,7 @@
 import Foundation
 import MatrixNetCapture
 import MatrixNetDissection
+import MatrixNetGeoIP
 import MatrixNetModel
 import MatrixNetStore
 import Observation
@@ -65,6 +66,17 @@ public final class AppModel {
     /// Posts new-destination notifications; set by the app delegate at launch.
     var newDestinationNotifier: NewDestinationNotifier?
     private let preferences = Preferences(defaults: SharedMetricsStore.sharedDefaults ?? .standard)
+
+    /// Recovers the real country of proxied (fake-IP) flows by resolving their
+    /// domain via DoH. Only invoked for proxied flows whose country is otherwise
+    /// unknown, and only when the preference is on — so a machine with no proxy
+    /// stays fully passive. Results land in `proxyCountryByHost` (host → ISO code).
+    private let proxyGeo = ActiveGeoResolver(
+        enabled: true,
+        resolver: DoHResolver(),
+        lookupCountry: { GeoIP.country(for: $0) }
+    )
+    private var proxyCountryByHost: [String: String] = [:]
 
     private var monitor: NetworkStatisticsMonitor?
     /// Shared with the packet pipeline so captured packets are attributed to the
@@ -237,23 +249,7 @@ public final class AppModel {
         )
         detectNewDestinations(now: Date())
 
-        activeAppCount = OverviewStats.activeAppCount(connections)
-        countriesReached = OverviewStats.countriesReached(connections) { GeoIP.country(for: $0) }
-        proxyShare = OverviewStats.proxyShare(connections) { ProxyInfo.routesThroughProxy($0) }
-        protocolMix = OverviewStats.protocolMix(connections)
-        destinationCountries = OverviewStats.destinationCountries(connections) { GeoIP.country(for: $0) }
-        threatCountries = Set(threats.compactMap { GeoIP.country(for: $0.fiveTuple.destination.address) })
-        var nameMap: [String: String] = [:]
-        for (ip, name) in hostnames {
-            nameMap[ip.description] = name
-        }
-        for connection in connections {
-            if let host = connection.remoteHostname {
-                nameMap[connection.fiveTuple.destination.address.description] = host
-            }
-        }
-        resolvedHostnames = nameMap
-        topTalkers = makeTopTalkers(connections: connections)
+        refreshOverview(connections: connections, threats: threats, hostnames: hostnames)
 
         updateThroughput(session: session)
         publishWidgetMetrics()
@@ -266,7 +262,7 @@ public final class AppModel {
         let activeByApp = Dictionary(grouping: connections.filter { $0.state == .active }, by: \.app)
         return topApps.prefix(8).map { entry in
             let conns = activeByApp[entry.app] ?? []
-            let flag = conns.lazy.compactMap { GeoIP.flag(for: $0.fiveTuple.destination.address) }.first
+            let flag = conns.lazy.compactMap { self.country(for: $0).flatMap(GeoIPDatabase.flag) }.first
             let isThreat = conns.contains { Threat.isThreat($0.fiveTuple.destination.address) }
             return TopTalker(
                 app: entry.app,
@@ -329,7 +325,7 @@ public final class AppModel {
         let learningWindow: TimeInterval = 900
         let alertsEnabled = preferences.newDestinationAlertsEnabled
         for connection in connections where connection.state == .active {
-            guard let country = GeoIP.country(for: connection.fiveTuple.destination.address) else { continue }
+            guard let country = country(for: connection) else { continue }
             let app = connection.app.displayName
             let baseline = knownDestinations[app]
             let verdict = NewDestinationDetector.classify(
@@ -589,5 +585,82 @@ public extension AppModel {
             cursor = cursor.addingTimeInterval(step)
         }
         return ActivityTimelineBuilder.build(rows: rows, hours: hours)
+    }
+}
+
+// MARK: - Proxy-aware geolocation
+
+extension AppModel {
+    /// A connection's destination country, proxy-aware. When a proxy/tunnel is
+    /// active for the destination the kernel IP is a synthetic fake-IP (or the
+    /// proxy's exit node) and must not be geolocated; use the DoH-resolved country
+    /// of the real domain instead (filled asynchronously into `proxyCountryByHost`).
+    /// With no proxy the IP is a real address and is geolocated normally.
+    func country(for connection: Connection) -> String? {
+        let destination = connection.fiveTuple.destination
+        if ProxyInfo.routesThroughProxy(destination) {
+            return connection.remoteHostname.flatMap { proxyCountryByHost[$0] }
+        }
+        return GeoIP.country(for: destination.address)
+    }
+
+    /// Destination-IP → ISO country map for the connection set, computed with the
+    /// proxy-aware rule above so fake-IP destinations are never mislabelled.
+    func proxyAwareCountryMap(_ connections: [Connection]) -> [IPAddress: String] {
+        var map: [IPAddress: String] = [:]
+        for connection in connections {
+            if let code = country(for: connection) {
+                map[connection.fiveTuple.destination.address] = code
+            }
+        }
+        return map
+    }
+
+    /// Kicks off DoH resolution for proxied flows whose country isn't cached yet,
+    /// when the preference is on. The next metrics pass reads the filled cache.
+    func resolveProxyCountries(_ connections: [Connection]) {
+        guard preferences.proxyGeoResolutionEnabled else { return }
+        let hosts = Set(connections.compactMap { connection -> String? in
+            guard ProxyInfo.routesThroughProxy(connection.fiveTuple.destination),
+                  let host = connection.remoteHostname,
+                  proxyCountryByHost[host] == nil else { return nil }
+            return host
+        })
+        guard !hosts.isEmpty else { return }
+        Task { [weak self, proxyGeo] in
+            for host in hosts {
+                if let code = await proxyGeo.country(forProxiedDomain: host) {
+                    self?.proxyCountryByHost[host] = code
+                }
+            }
+        }
+    }
+
+    /// Recomputes the Overview / Top-Talkers metrics from the latest snapshot:
+    /// proxy-aware geolocation, byte-weighted proxy share, and the IP→hostname map.
+    func refreshOverview(connections: [Connection], threats: [Connection], hostnames: [IPAddress: String]) {
+        activeAppCount = OverviewStats.activeAppCount(connections)
+        let ipCountry = proxyAwareCountryMap(connections)
+        countriesReached = OverviewStats.countriesReached(connections) { ipCountry[$0] }
+        proxyShare = OverviewStats.proxyShare(
+            connections,
+            isRelay: { ProxyInfo.isTunnel($0.app.displayName) },
+            routesThroughProxy: { ProxyInfo.routesThroughProxy($0) }
+        )
+        protocolMix = OverviewStats.protocolMix(connections)
+        destinationCountries = OverviewStats.destinationCountries(connections) { ipCountry[$0] }
+        threatCountries = Set(threats.compactMap { country(for: $0) })
+        resolveProxyCountries(connections)
+        var nameMap: [String: String] = [:]
+        for (ip, name) in hostnames {
+            nameMap[ip.description] = name
+        }
+        for connection in connections {
+            if let host = connection.remoteHostname {
+                nameMap[connection.fiveTuple.destination.address.description] = host
+            }
+        }
+        resolvedHostnames = nameMap
+        topTalkers = makeTopTalkers(connections: connections)
     }
 }

@@ -19,6 +19,7 @@ struct PreferencesTests {
         #expect(prefs.usageRetentionDays == 90)
         #expect(prefs.billingCycleResetDay == 1)
         #expect(prefs.newDestinationAlertsEnabled == false)
+        #expect(prefs.proxyGeoResolutionEnabled == true)
     }
 
     @Test("billing cycle reset day clamps to 1...28")

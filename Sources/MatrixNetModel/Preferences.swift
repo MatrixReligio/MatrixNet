@@ -19,6 +19,7 @@ public struct Preferences {
         case usageRetentionDays = "pref.usageRetentionDays"
         case billingCycleResetDay = "pref.billingCycleResetDay"
         case newDestinationAlertsEnabled = "pref.newDestinationAlertsEnabled"
+        case proxyGeoResolutionEnabled = "pref.proxyGeoResolutionEnabled"
     }
 
     private let defaults: UserDefaults
@@ -88,6 +89,16 @@ public struct Preferences {
             return min(28, max(1, raw))
         }
         nonmutating set { defaults.set(min(28, max(1, newValue)), forKey: Key.billingCycleResetDay.rawValue) }
+    }
+
+    /// Whether to actively resolve proxied flows' domains (via DoH) to recover
+    /// their country for the Map and country metrics. Default **on**, but it only
+    /// ever queries for proxied flows whose country is otherwise unknown, so a
+    /// machine with no local proxy stays fully passive. Makes an outbound DNS
+    /// query when it fires.
+    public var proxyGeoResolutionEnabled: Bool {
+        get { bool(.proxyGeoResolutionEnabled, default: true) }
+        nonmutating set { setBool(newValue, .proxyGeoResolutionEnabled) }
     }
 
     /// The ISO-2 region used as the Map's "home" anchor, or `nil` to follow the
