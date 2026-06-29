@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.3] - 2026-06-29
+
+### Fixed
+- **The throughput chart tooltip shows again when you click a point.** The
+  plot-area clip added in 1.8.0 (to stop the smooth curve overflowing the axes)
+  also clipped the selection tooltip; it now resolves within the plot so both the
+  overflow fix and the instantaneous-rate tooltip work.
+
 ## [1.8.2] - 2026-06-29
 
 ### Fixed

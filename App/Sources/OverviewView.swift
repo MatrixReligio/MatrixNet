@@ -163,7 +163,7 @@ private struct ThroughputChart: View {
                     .annotation(
                         position: .top,
                         spacing: 4,
-                        overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
+                        overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .plot))
                     ) {
                         tooltip(selectedSample)
                     }
