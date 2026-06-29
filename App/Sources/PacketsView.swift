@@ -11,6 +11,11 @@ struct PacketsView: View {
     @Environment(PacketCaptureModel.self) private var capture
     @Environment(AppModel.self) private var model
     @State private var selection: UInt64?
+    /// A throttled, freeze-on-selection snapshot of the live list, so a fast
+    /// capture stream doesn't shift rows out from under a click or drop the
+    /// selection. Refreshed a few times per second while nothing is selected,
+    /// and frozen while a packet is selected so it can be inspected.
+    @State private var displayedPackets: [PacketRow] = []
     @State private var search = ""
     @State private var sortOrder = [KeyPathComparator(\PacketRow.timestamp, order: .forward)]
     @State private var columns = TableColumnCustomization<PacketRow>()
@@ -23,7 +28,7 @@ struct PacketsView: View {
     }
 
     private var selectedPacket: PacketRow? {
-        capture.packets.first { $0.id == selection }
+        displayedPackets.first { $0.id == selection } ?? capture.packets.first { $0.id == selection }
     }
 
     private var sortedPackets: [PacketRow] {
@@ -53,6 +58,18 @@ struct PacketsView: View {
         .searchable(text: $search, placement: .toolbar, prompt: "Filter by process, protocol, or address")
         .toolbar { toolbarContent }
         .onAppear { capture.refreshState() }
+        .task {
+            // Throttle the displayed list; freeze it while a packet is selected so
+            // a fast stream can't move rows under the cursor or clear the choice.
+            while !Task.isCancelled {
+                if selection == nil {
+                    displayedPackets = sortedPackets
+                }
+                try? await Task.sleep(for: .milliseconds(700))
+            }
+        }
+        .onChange(of: search) { _, _ in displayedPackets = sortedPackets }
+        .onChange(of: sortOrder) { _, _ in displayedPackets = sortedPackets }
     }
 
     private var analyzer: some View {
@@ -60,6 +77,9 @@ struct PacketsView: View {
             VStack(spacing: 0) {
                 if let error = capture.lastError {
                     captureBanner(error)
+                }
+                if selection != nil {
+                    pausedBanner
                 }
                 if capture.packets.isEmpty {
                     waitingState
@@ -106,6 +126,20 @@ struct PacketsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    private var pausedBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "pause.circle.fill").foregroundStyle(Theme.accent)
+            Text("Live updates paused while a packet is selected.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("Resume") { selection = nil }.font(.caption)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Theme.accent.opacity(0.10))
+    }
+
     private func captureBanner(_ message: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.advisory)
@@ -118,7 +152,7 @@ struct PacketsView: View {
     }
 
     private var packetList: some View {
-        Table(sortedPackets, selection: $selection, sortOrder: $sortOrder, columnCustomization: $columns) {
+        Table(displayedPackets, selection: $selection, sortOrder: $sortOrder, columnCustomization: $columns) {
             TableColumn("Time", value: \.timestamp) {
                 Text(verbatim: Format.preciseTime($0.timestamp)).font(Theme.mono(11))
             }
