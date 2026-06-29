@@ -33,6 +33,8 @@ private struct GeneralSettings: View {
     private var threatNotifications = false
     @AppStorage(Preferences.Key.newDestinationAlertsEnabled.rawValue, store: SharedMetricsStore.sharedDefaults)
     private var newDestinationAlerts = false
+    @AppStorage(Preferences.Key.proxyGeoResolutionEnabled.rawValue, store: SharedMetricsStore.sharedDefaults)
+    private var proxyGeoResolution = true
     @AppStorage(Preferences.Key.homeRegion.rawValue, store: SharedMetricsStore.sharedDefaults)
     private var homeRegion = ""
     @State private var loginError: String?
@@ -90,6 +92,18 @@ private struct GeneralSettings: View {
                 Text("Alert when a known app first reaches a country it has never reached before.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Resolve proxied destinations’ country", isOn: $proxyGeoResolution)
+            } footer: {
+                Text(
+                    "When a local proxy hides the real address, look up the destination’s country " +
+                        "by resolving its domain over encrypted DNS (DoH). On by default, and only " +
+                        "for proxied flows — turn it off to keep monitoring fully passive."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
             Section {
