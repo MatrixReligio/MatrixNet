@@ -82,17 +82,26 @@ struct UsageView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Picker("Period", selection: $choice) {
-                    ForEach(PeriodChoice.allCases) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                // One control row: the reporting window on the left, the view mode
+                // on the right — distinct by role and position, instead of two
+                // stacked full-width segmented bars.
+                HStack(spacing: 16) {
+                    Picker("Period", selection: $choice) {
+                        ForEach(PeriodChoice.allCases) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
 
-                Picker("View", selection: $mode) {
-                    ForEach(ViewMode.allCases) { Text($0.title).tag($0) }
+                    Spacer(minLength: 12)
+
+                    Picker("View", selection: $mode) {
+                        ForEach(ViewMode.allCases) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
 
                 if mode == .timeline {
                     ActivityTimelineView(timeline: timeline)
