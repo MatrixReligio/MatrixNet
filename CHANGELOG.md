@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.5] - 2026-06-29
+
+### Fixed
+- **The desktop widget keeps refreshing instead of freezing.** The app's
+  per-change timeline reloads were still exhausting WidgetKit's daily refresh
+  budget on a busy machine — after which even the widget's own scheduled refresh
+  was dropped, leaving it frozen. The app now only writes the shared snapshot and
+  lets the widget refresh on its own budget-friendly schedule; for to-the-second
+  rates, use the menu bar.
+
 ## [1.8.4] - 2026-06-29
 
 ### Fixed

@@ -5,7 +5,6 @@ import MatrixNetGeoIP
 import MatrixNetModel
 import MatrixNetStore
 import Observation
-import WidgetKit
 
 /// Top-level observable state for the connection monitor. Bridges the passive,
 /// actor-isolated capture pipeline to SwiftUI on the main actor: it drains the
@@ -106,11 +105,6 @@ public final class AppModel {
     private var pumpTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
     private var lastMetricsWrite = Date.distantPast
-    private var lastWidgetReload = Date.distantPast
-    // The metrics last pushed to the widget, so we only spend a WidgetKit reload
-    // when the visible numbers actually change (idle reloads exhaust the daily
-    // refresh budget and freeze the widget).
-    private var lastReloadedSnapshot: MetricsSnapshot?
     private var lastHistoryWrite = Date.distantPast
     private var lastRateSampleAt = Date.distantPast
     private var lastRateBytesIn: UInt64 = 0
@@ -465,22 +459,12 @@ public final class AppModel {
             threatCount: threatCount,
             updatedAt: now
         )
-        guard SharedMetricsStore.write(snapshot, to: url) else { return }
-        // The app writes; the widget reads. Nudge WidgetKit to refresh — but
-        // reloadAllTimelines has a daily budget, and a fixed timer (even while
-        // idle) exhausts it so later reloads are dropped and the widget freezes.
-        // Reload only when the visible numbers actually change, and at most every
-        // 30s; the widget's own timeline policy ages the data between nudges.
-        let changed = lastReloadedSnapshot.map { prev in
-            prev.activeConnections != snapshot.activeConnections
-                || abs(prev.throughputIn - snapshot.throughputIn) > 1024
-                || abs(prev.throughputOut - snapshot.throughputOut) > 1024
-        } ?? true
-        if changed, now.timeIntervalSince(lastWidgetReload) >= 30 {
-            lastWidgetReload = now
-            lastReloadedSnapshot = snapshot
-            WidgetCenter.shared.reloadAllTimelines()
-        }
+        // The app only WRITES the snapshot; the widget refreshes itself via its
+        // own timeline policy. App-driven reloadAllTimelines was removed: on a
+        // busy machine it fired constantly and exhausted WidgetKit's daily reload
+        // budget, after which even the widget's own refresh was dropped and it
+        // froze. Self-refresh stays within budget. (The menu bar shows live rates.)
+        SharedMetricsStore.write(snapshot, to: url)
     }
 }
 
