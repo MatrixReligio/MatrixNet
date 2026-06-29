@@ -41,19 +41,22 @@ struct HostnameResolverTests {
         }
         let target = try #require(IPAddress("203.0.113.7"))
         await resolver.resolveIfNeeded([target])
-        try await Task.sleep(for: .milliseconds(60))
-        // A second round within the negative TTL must NOT launch another
-        // blocking lookup — otherwise the ~1s refresh loop re-resolves every
-        // non-resolving IP forever, saturating the lookup pool.
+        // Wait (poll, not a fixed sleep — robust under CI load) for the first
+        // failing lookup to run and be recorded.
+        #expect(await poll { counter.value == 1 })
+
+        // A second round within the negative TTL must NOT launch another blocking
+        // lookup — otherwise the ~1s refresh loop re-resolves every non-resolving
+        // IP forever, saturating the lookup pool. The injected lookup is instant,
+        // so a wrongful re-launch would bump the counter almost immediately.
         await resolver.resolveIfNeeded([target])
-        try await Task.sleep(for: .milliseconds(40))
-        #expect(counter.value == 1)
+        #expect(await stays { counter.value == 1 })
     }
 
     @Test("retries a failed lookup once the negative TTL has elapsed")
     func negativeCacheExpiresAfterTTL() async throws {
         let counter = LookupCounter()
-        let clock = MutableClock(start: Date(timeIntervalSince1970: 1_000))
+        let clock = MutableClock(start: Date(timeIntervalSince1970: 1000))
         let resolver = HostnameResolver(
             lookup: { _ in
                 counter.increment()
@@ -64,20 +67,17 @@ struct HostnameResolverTests {
         )
         let target = try #require(IPAddress("203.0.113.7"))
         await resolver.resolveIfNeeded([target])
-        try await Task.sleep(for: .milliseconds(60))
-        #expect(counter.value == 1)
+        #expect(await poll { counter.value == 1 })
 
         // Still inside the TTL window: must not retry.
         clock.advance(30)
         await resolver.resolveIfNeeded([target])
-        try await Task.sleep(for: .milliseconds(40))
-        #expect(counter.value == 1)
+        #expect(await stays { counter.value == 1 })
 
         // Past the TTL: a transient miss is allowed to recover.
         clock.advance(40)
         await resolver.resolveIfNeeded([target])
-        try await Task.sleep(for: .milliseconds(60))
-        #expect(counter.value == 2)
+        #expect(await poll { counter.value == 2 })
     }
 
     @Test("does not launch duplicate lookups for the same IP")
@@ -108,6 +108,28 @@ private final class LookupCounter: @unchecked Sendable {
     func increment() {
         lock.withLock { count += 1 }
     }
+}
+
+/// Polls `condition` until it holds or the timeout elapses. Returns whether it
+/// became true — robust against CI load where a fixed sleep would be flaky.
+private func poll(timeout: Duration = .seconds(5), _ condition: @Sendable () async -> Bool) async -> Bool {
+    let deadline = ContinuousClock.now.advanced(by: timeout)
+    while ContinuousClock.now < deadline {
+        if await condition() { return true }
+        try? await Task.sleep(for: .milliseconds(10))
+    }
+    return await condition()
+}
+
+/// Asserts a condition *stays* true across a short window — used to prove a
+/// negative (no extra work happened). Returns false the moment it breaks.
+private func stays(for duration: Duration = .milliseconds(200), _ condition: @Sendable () async -> Bool) async -> Bool {
+    let deadline = ContinuousClock.now.advanced(by: duration)
+    while ContinuousClock.now < deadline {
+        if await !condition() { return false }
+        try? await Task.sleep(for: .milliseconds(10))
+    }
+    return await condition()
 }
 
 /// A hand-advanced clock so the negative-cache TTL can be tested deterministically.
