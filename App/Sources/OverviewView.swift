@@ -175,6 +175,9 @@ private struct ThroughputChart: View {
         }
         .chartForegroundStyleScale([downLabel: Theme.inbound, upLabel: Theme.outbound])
         .chartLegend(position: .top, alignment: .trailing, spacing: 4)
+        // Clip the plot so the smooth (monotone) area/line can't overshoot past
+        // the left/right edge of the coordinate space and spill outside the axes.
+        .chartPlotStyle { $0.clipped() }
         .chartXSelection(value: $selectedTime)
         // Pin "now" to the right edge with a stable 60s window so the axis reads
         // 60s … 15s … now left to right.
