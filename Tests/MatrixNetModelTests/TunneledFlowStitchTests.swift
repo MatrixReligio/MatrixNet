@@ -70,4 +70,28 @@ struct TunneledFlowStitchTests {
         #expect(TunneledFlowStitch.matches(connection: conn, flow: matching))
         #expect(!TunneledFlowStitch.matches(connection: conn, flow: nonMatching))
     }
+
+    @Test func mergePreservesExistingHostnameWhenFlowDomainIsNil() throws {
+        // QUIC / ECH / 非 TLS 流没有 SNI,merge 不能清掉 DNS 富化得来的 hostname
+        let gateway = try address("198.19.0.1")
+        let fake = try address("198.0.0.60")
+        let ft = tuple(gateway: gateway, srcPort: 52750, fake: fake)
+        var conn = connection(for: ft)
+        conn.remoteHostname = "cloudflare.com" // 已由 DNS 富化得到
+
+        let flowNoDomain = TunneledFlowReconstructor.ReconstructedFlow(
+            flowKey: ft.flowKey,
+            pid: 1778,
+            domain: nil,
+            fakeDestination: ft.destination,
+            bytesOut: 800,
+            bytesIn: 3200
+        )
+
+        let merged = TunneledFlowStitch.merge(connection: conn, flow: flowNoDomain)
+
+        #expect(merged.bytesOut == 800)
+        #expect(merged.bytesIn == 3200)
+        #expect(merged.remoteHostname == "cloudflare.com") // 不被清空
+    }
 }

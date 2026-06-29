@@ -95,5 +95,8 @@ struct TunneledFlowReconstructorTests {
         let flow = try #require(sut.flows().first)
         #expect(flow.pid == 24179) // 出向腿 PID 覆盖入向腿 PID
         #expect(flow.domain == "api.anthropic.com")
+        // 出向腿到达后,fakeDestination 取 destination(而非入向首包的 source)
+        #expect(flow.fakeDestination.address == fake) // 198.0.0.16
+        #expect(flow.fakeDestination.port == 443)
     }
 }
