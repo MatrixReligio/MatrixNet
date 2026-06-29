@@ -116,14 +116,17 @@ fighting it.
   process metadata — to hand off to Wireshark.
 
 ### 🖥️ Desktop Widget
-- A WidgetKit widget (small / medium / large) shows live active-connection count,
+- A WidgetKit widget (small / medium / large) shows active-connection count,
   up/down throughput, session totals, the top talking apps, and a threat-hit
   count — right on your desktop or in Notification Center.
+- It updates live while the app window is focused; in the background macOS caps
+  third-party widget refreshes to roughly every 30 minutes (WidgetKit's daily
+  budget). For to-the-second rates, watch the menu bar.
 
 ### 🧭 Menu Bar & Background
 - Lives in the **menu bar** with a live ↓/↑ throughput readout, and keeps
-  monitoring after you close the main window — so the desktop widget never goes
-  stale.
+  monitoring after you close the main window — so the shared data the widget reads
+  stays current even when the app is in the background.
 - Optional **menu-bar-only mode** hides the Dock icon entirely.
 - **Launch at login** and a **Settings window** (⌘,) for background mode,
   threat-connection notifications, automatic update checks, and on-demand dataset

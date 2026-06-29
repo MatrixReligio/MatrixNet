@@ -76,13 +76,14 @@ struct MetricsProvider: TimelineProvider {
     }
 
     func getTimeline(in _: Context, completion: @escaping (Timeline<MetricsEntry>) -> Void) {
-        // The app nudges WidgetKit (reloadAllTimelines) whenever it writes fresh
-        // metrics; this short policy is just a fallback so the widget still ages
-        // its data if the app stops running.
+        // While the app is foreground it nudges WidgetKit on fresh writes (those
+        // reloads are budget-exempt). This policy is the background fallback for
+        // when the app is closed or backgrounded. WidgetKit budgets a
+        // frequently-viewed widget at ~40–70 refreshes per rolling 24h, so we ask
+        // for one every 30 minutes (~48/day) — comfortably within budget and
+        // spread evenly, so it never front-loads and then freezes for the day.
         let entry = MetricsEntry(date: Date(), snapshot: load())
-        // Budget-friendly fallback so the widget still ages if the app stops
-        // nudging; the running app drives timely refreshes on real changes.
-        completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(300))))
+        completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(1800))))
     }
 
     private func load() -> MetricsSnapshot {

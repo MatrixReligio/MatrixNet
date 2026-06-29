@@ -62,10 +62,11 @@ MatrixNet ist streng **passiv — beobachten, niemals blockieren**. Keine Firewa
 - Ausgewählte Pakete oder ganze Sitzungen als **pcapng** exportieren — samt Prozess-Metadaten pro Paket — zur Übergabe an Wireshark.
 
 ### 🖥️ Schreibtisch-Widget
-- Ein WidgetKit-Widget (klein / mittel / groß) zeigt live die Anzahl aktiver Verbindungen, Up-/Download-Durchsatz, Sitzungssummen, die aktivsten Apps und einen Bedrohungszähler — direkt auf dem Schreibtisch oder in der Mitteilungszentrale.
+- Ein WidgetKit-Widget (klein / mittel / groß) zeigt die Anzahl aktiver Verbindungen, Up-/Download-Durchsatz, Sitzungssummen, die aktivsten Apps und einen Bedrohungszähler — direkt auf dem Schreibtisch oder in der Mitteilungszentrale.
+- Es aktualisiert sich live, solange das App-Fenster im Vordergrund ist; im Hintergrund begrenzt macOS die Aktualisierung von Drittanbieter-Widgets auf etwa alle 30 Minuten (WidgetKits Tagesbudget). Für sekundengenaue Raten dient die Menüleiste.
 
 ### 🧭 Menüleiste & Hintergrund
-- Lebt in der **Menüleiste** mit einer Live-Anzeige des ↓/↑-Durchsatzes und überwacht weiter, nachdem Sie das Hauptfenster geschlossen haben — damit das Schreibtisch-Widget nie veraltet.
+- Lebt in der **Menüleiste** mit einer Live-Anzeige des ↓/↑-Durchsatzes und überwacht weiter, nachdem Sie das Hauptfenster geschlossen haben — damit die geteilten Daten, die das Widget liest, auch bei App im Hintergrund aktuell bleiben.
 - Ein optionaler **Nur-Menüleisten-Modus** blendet das Dock-Symbol vollständig aus.
 - **Beim Anmelden starten** und ein **Einstellungsfenster** (⌘,) für den Hintergrundmodus, Bedrohungsverbindungs-Benachrichtigungen, automatische Updateprüfungen und das manuelle Aktualisieren der Datensätze.
 - **Benachrichtigungen zu Bedrohungsverbindungen** — warnen Sie, wenn eine aktive Verbindung eine markierte Adresse erreicht (nur Hinweis; MatrixNet blockiert nie).

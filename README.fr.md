@@ -62,10 +62,11 @@ MatrixNet est strictement **passif — observer, jamais bloquer**. Pas de pare-f
 - Export des paquets sélectionnés ou de sessions entières en **pcapng** — avec les métadonnées de processus par paquet — pour les passer à Wireshark.
 
 ### 🖥️ Widget de bureau
-- Un widget WidgetKit (petit / moyen / grand) affiche en direct le nombre de connexions actives, le débit montant/descendant, les totaux de session, les apps les plus actives et un compteur de menaces — sur le bureau ou dans le centre de notifications.
+- Un widget WidgetKit (petit / moyen / grand) affiche le nombre de connexions actives, le débit montant/descendant, les totaux de session, les apps les plus actives et un compteur de menaces — sur le bureau ou dans le centre de notifications.
+- Il se met à jour en direct quand la fenêtre de l'app est au premier plan ; en arrière-plan, macOS limite le rafraîchissement des widgets tiers à environ une fois toutes les 30 minutes (budget quotidien de WidgetKit). Pour des débits à la seconde, consultez la barre des menus.
 
 ### 🧭 Barre des menus et arrière-plan
-- Présent dans la **barre des menus** avec un débit ↓/↑ en direct, et continue de surveiller après la fermeture de la fenêtre principale — pour que le widget ne soit jamais obsolète.
+- Présent dans la **barre des menus** avec un débit ↓/↑ en direct, et continue de surveiller après la fermeture de la fenêtre principale — afin que les données partagées que le widget lit restent à jour même lorsque l'app est en arrière-plan.
 - Un **mode barre des menus uniquement** optionnel masque entièrement l'icône du Dock.
 - **Lancement à l'ouverture de session** et une **fenêtre Réglages** (⌘,) pour le mode arrière-plan, les notifications de connexions à risque, la recherche automatique de mises à jour et l'actualisation à la demande des jeux de données.
 - **Notifications de connexions à risque** — vous alertent quand une connexion active atteint une adresse signalée (à titre indicatif ; MatrixNet ne bloque jamais).

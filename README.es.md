@@ -62,10 +62,11 @@ MatrixNet es estrictamente **pasivo — observar, nunca bloquear**. Sin cortafue
 - Exportar paquetes seleccionados o sesiones enteras a **pcapng** — incluyendo metadatos de proceso por paquete — para pasarlos a Wireshark.
 
 ### 🖥️ Widget de escritorio
-- Un widget de WidgetKit (pequeño / mediano / grande) muestra en vivo el número de conexiones activas, el rendimiento de subida/bajada, los totales de la sesión, las apps más activas y un recuento de amenazas — en el escritorio o en el Centro de notificaciones.
+- Un widget de WidgetKit (pequeño / mediano / grande) muestra el número de conexiones activas, el rendimiento de subida/bajada, los totales de la sesión, las apps más activas y un recuento de amenazas — en el escritorio o en el Centro de notificaciones.
+- Se actualiza en vivo mientras la ventana de la app está en primer plano; en segundo plano, macOS limita el refresco de los widgets de terceros a aproximadamente una vez cada 30 minutos (presupuesto diario de WidgetKit). Para tasas al segundo, mira la barra de menús.
 
 ### 🧭 Barra de menús y segundo plano
-- Vive en la **barra de menús** con una lectura en vivo del rendimiento ↓/↑, y sigue supervisando tras cerrar la ventana principal — para que el widget de escritorio nunca quede desactualizado.
+- Vive en la **barra de menús** con una lectura en vivo del rendimiento ↓/↑, y sigue supervisando tras cerrar la ventana principal — para que los datos compartidos que lee el widget se mantengan actualizados incluso con la app en segundo plano.
 - Un **modo solo barra de menús** opcional oculta por completo el icono del Dock.
 - **Abrir al iniciar sesión** y una **ventana de Ajustes** (⌘,) para el modo en segundo plano, las notificaciones de conexiones de amenaza, la búsqueda automática de actualizaciones y la actualización a demanda de los conjuntos de datos.
 - **Notificaciones de conexiones de amenaza** — te avisan cuando una conexión activa alcanza una dirección marcada (solo informativo; MatrixNet nunca bloquea).

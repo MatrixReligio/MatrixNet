@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import MatrixNetCapture
 import MatrixNetDissection
@@ -5,6 +6,7 @@ import MatrixNetGeoIP
 import MatrixNetModel
 import MatrixNetStore
 import Observation
+import WidgetKit
 
 /// Top-level observable state for the connection monitor. Bridges the passive,
 /// actor-isolated capture pipeline to SwiftUI on the main actor: it drains the
@@ -105,6 +107,8 @@ public final class AppModel {
     private var pumpTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
     private var lastMetricsWrite = Date.distantPast
+    private var lastWidgetReload = Date.distantPast
+    private let widgetReloadGate = WidgetReloadGate(minInterval: 10)
     private var lastHistoryWrite = Date.distantPast
     private var lastRateSampleAt = Date.distantPast
     private var lastRateBytesIn: UInt64 = 0
@@ -459,12 +463,18 @@ public final class AppModel {
             threatCount: threatCount,
             updatedAt: now
         )
-        // The app only WRITES the snapshot; the widget refreshes itself via its
-        // own timeline policy. App-driven reloadAllTimelines was removed: on a
-        // busy machine it fired constantly and exhausted WidgetKit's daily reload
-        // budget, after which even the widget's own refresh was dropped and it
-        // froze. Self-refresh stays within budget. (The menu bar shows live rates.)
         SharedMetricsStore.write(snapshot, to: url)
+
+        // Nudge WidgetKit to pick up the fresh snapshot — but ONLY while the app
+        // is in the foreground, where app-initiated reloads are exempt from the
+        // daily refresh budget. Reloading while backgrounded (as earlier versions
+        // did on every write) burns the ~40–70/day budget within minutes and then
+        // freezes the widget for the rest of the window. While backgrounded we
+        // stay silent and let the widget's `.after` policy age it within budget.
+        if widgetReloadGate.shouldReload(isForeground: NSApp.isActive, now: now, lastReload: lastWidgetReload) {
+            lastWidgetReload = now
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 }
 
