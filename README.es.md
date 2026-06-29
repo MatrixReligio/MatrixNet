@@ -6,6 +6,8 @@
 
 Un monitor de red y analizador de paquetes en profundidad para macOS, 100 % nativo en SwiftUI. Tan sencillo como el Monitor de Actividad para saber *quién está en la red*, tan profundo como Wireshark para *qué circula por el cable* — y cada paquete sabe qué app lo envió.
 
+<a href="https://www.producthunt.com/posts/matrixnet" target="_blank"><picture><source media="(prefers-color-scheme: dark)" srcset="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1183718&theme=dark" /><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1183718&theme=light" alt="MatrixNet on Product Hunt" width="250" height="54" /></picture></a>
+
 [![CI](https://github.com/MatrixReligio/MatrixNet/actions/workflows/ci.yml/badge.svg)](https://github.com/MatrixReligio/MatrixNet/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%2026%2B-black)](#requisitos)

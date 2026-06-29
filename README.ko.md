@@ -6,6 +6,8 @@
 
 100% 네이티브 SwiftUI로 만든 macOS용 네트워크 모니터 겸 심층 패킷 분석기입니다. *누가 네트워크에 있는지* 는 활성 상태 보기처럼 손쉽게, *회선에 무엇이 흐르는지* 는 Wireshark처럼 깊게 — 그리고 모든 패킷은 자신을 보낸 앱을 알고 있습니다.
 
+<a href="https://www.producthunt.com/posts/matrixnet" target="_blank"><picture><source media="(prefers-color-scheme: dark)" srcset="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1183718&theme=dark" /><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1183718&theme=light" alt="MatrixNet on Product Hunt" width="250" height="54" /></picture></a>
+
 [![CI](https://github.com/MatrixReligio/MatrixNet/actions/workflows/ci.yml/badge.svg)](https://github.com/MatrixReligio/MatrixNet/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%2026%2B-black)](#시스템-요구-사항)
