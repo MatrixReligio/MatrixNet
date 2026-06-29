@@ -60,6 +60,50 @@ struct OverviewStatsTests {
         #expect(abs(share - 2.0 / 3.0) < 0.0001)
     }
 
+    @Test("proxy share weights by bytes when byte data is present")
+    func proxyShareByBytes() throws {
+        // One proxied flow with most of the bytes; two direct flows with few.
+        let connections = try [
+            connection(pid: 1, dest: "198.18.0.9", bytes: 9000), // proxied
+            connection(pid: 2, dest: "8.8.8.8", bytes: 500), // direct
+            connection(pid: 3, dest: "1.1.1.1", bytes: 500) // direct
+        ]
+        let proxied: Set = ["198.18.0.9"]
+        let share = OverviewStats.proxyShare(connections) { proxied.contains($0.address.description) }
+        // bytes: 9000 / 10000 = 0.9 (count would be only 1/3 ≈ 0.33)
+        #expect(abs(share - 0.9) < 0.0001)
+    }
+
+    @Test("proxy share excludes relay (tunnel-process) legs from the ratio")
+    func proxyShareExcludesRelay() throws {
+        let connections = try [
+            connection(pid: 1, dest: "198.18.0.9", bytes: 800), // app, proxied
+            connection(pid: 2, dest: "8.8.8.8", bytes: 200), // app, direct
+            connection(pid: 99, dest: "203.0.113.7", bytes: 5000) // relay upstream (excluded)
+        ]
+        let proxied: Set = ["198.18.0.9"]
+        let relayPids: Set<Int32> = [99]
+        let share = OverviewStats.proxyShare(
+            connections,
+            isRelay: { relayPids.contains($0.app.pid) },
+            routesThroughProxy: { proxied.contains($0.address.description) }
+        )
+        // relay excluded → 800 / (800 + 200) = 0.8
+        #expect(abs(share - 0.8) < 0.0001)
+    }
+
+    @Test("proxy share falls back to connection count when no byte data")
+    func proxyShareCountFallback() throws {
+        let connections = try [
+            connection(pid: 1, dest: "10.0.0.1", bytes: 0),
+            connection(pid: 2, dest: "10.0.0.2", bytes: 0),
+            connection(pid: 3, dest: "8.8.8.8", bytes: 0)
+        ]
+        let proxied: Set = ["10.0.0.1", "10.0.0.2"]
+        let share = OverviewStats.proxyShare(connections) { proxied.contains($0.address.description) }
+        #expect(abs(share - 2.0 / 3.0) < 0.0001)
+    }
+
     @Test("protocol mix classifies by service port and sums to one")
     func protocolMix() throws {
         let connections = try [

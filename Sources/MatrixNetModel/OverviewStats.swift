@@ -52,19 +52,39 @@ public enum OverviewStats {
         return seen.count
     }
 
-    /// Fraction (0...1) of active connections whose remote routes through a proxy.
-    /// The check receives the full remote endpoint because proxy detection is
-    /// port-sensitive (loopback + a known proxy port).
+    /// Fraction (0...1) of active traffic routed through a proxy/tunnel, weighted
+    /// by bytes when byte data is available (i.e. while capturing), and falling
+    /// back to the fraction of proxied *connections* when it is not (NStat-only
+    /// monitoring, where proxied flows report 0 bytes — counting would otherwise
+    /// collapse to 0% even with the proxy clearly in use).
+    ///
+    /// Relay legs — the proxy engine's own upstream connections (e.g. a
+    /// `…TunnelProvider` to the remote node) — are excluded via `isRelay` so the
+    /// relayed bytes are not double-counted against the apps that originated them.
+    /// `routesThroughProxy` receives the full remote endpoint because proxy
+    /// detection is port-sensitive (loopback + a known proxy port) and, for TUN
+    /// flows, fake-IP/tunnel aware.
     public static func proxyShare(
         _ connections: [Connection],
+        isRelay: (Connection) -> Bool = { _ in false },
         routesThroughProxy: (Endpoint) -> Bool
     ) -> Double {
-        let activeConnections = active(connections)
-        guard !activeConnections.isEmpty else { return 0 }
-        let proxied = activeConnections.reduce(0) {
+        let considered = active(connections).filter { !isRelay($0) }
+        guard !considered.isEmpty else { return 0 }
+
+        let totalBytes = considered.reduce(UInt64(0)) { $0 &+ $1.totalBytes }
+        if totalBytes > 0 {
+            let proxiedBytes = considered.reduce(UInt64(0)) {
+                $0 &+ (routesThroughProxy($1.fiveTuple.destination) ? $1.totalBytes : 0)
+            }
+            return Double(proxiedBytes) / Double(totalBytes)
+        }
+
+        // No byte data (NStat-only) → fall back to the proxied-connection fraction.
+        let proxiedCount = considered.reduce(0) {
             $0 + (routesThroughProxy($1.fiveTuple.destination) ? 1 : 0)
         }
-        return Double(proxied) / Double(activeConnections.count)
+        return Double(proxiedCount) / Double(considered.count)
     }
 
     /// A best-effort application-protocol label from the well-known service port
