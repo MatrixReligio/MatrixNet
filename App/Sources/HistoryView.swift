@@ -14,16 +14,38 @@ struct HistoryView: View {
     @State private var columns = TableColumnCustomization<ConnectionHistoryRecord>()
     @State private var selection: PersistentIdentifier?
     @State private var showInspector = true
+    /// Aggregate history by app (default). Tap an app to drill into its entries.
+    @State private var groupByApp = true
+    @State private var drilledAppName: String?
+    @State private var groupSelection: String?
 
-    private var filtered: [ConnectionHistoryRecord] {
+    private var searchRangeFiltered: [ConnectionHistoryRecord] {
         let cutoff = range.cutoff
         let needle = search.lowercased()
-        let base = records.filter { record in
+        return records.filter { record in
             if let cutoff, record.lastSeen < cutoff { return false }
             guard !needle.isEmpty else { return true }
             return record.appName.lowercased().contains(needle) || record.remoteHost.lowercased().contains(needle)
         }
+    }
+
+    private var historyGroups: [AppHistoryGroup] {
+        Dictionary(grouping: searchRangeFiltered, by: \.appName)
+            .map { AppHistoryGroup(appName: $0.key, records: $0.value) }
+            .sorted { lhs, rhs in
+                lhs.totalBytes != rhs.totalBytes ? lhs.totalBytes > rhs.totalBytes : lhs.appName < rhs.appName
+            }
+    }
+
+    private var filtered: [ConnectionHistoryRecord] {
+        let base = drilledAppName.map { name in
+            searchRangeFiltered.filter { $0.appName == name }
+        } ?? searchRangeFiltered
         return base.sorted(using: sortOrder)
+    }
+
+    private var showingGroups: Bool {
+        groupByApp && drilledAppName == nil
     }
 
     private var selectedRecord: ConnectionHistoryRecord? {
@@ -38,6 +60,8 @@ struct HistoryView: View {
                     systemImage: "clock.arrow.circlepath",
                     description: Text("Connections you make while monitoring is on are recorded here.")
                 )
+            } else if showingGroups {
+                appGroupTable
             } else {
                 table
             }
@@ -45,7 +69,10 @@ struct HistoryView: View {
         .navigationTitle("History")
         .searchable(text: $search, placement: .toolbar, prompt: "Filter history")
         .toolbar { toolbarContent }
-        .inspector(isPresented: $showInspector) {
+        .inspector(isPresented: Binding(
+            get: { showInspector && !showingGroups },
+            set: { showInspector = $0 }
+        )) {
             HistoryDetail(record: selectedRecord)
                 .inspectorColumnWidth(min: 240, ideal: 280, max: 340)
         }
@@ -54,6 +81,43 @@ struct HistoryView: View {
                 records = model.recentHistory()
                 try? await Task.sleep(for: .seconds(3))
             }
+        }
+    }
+
+    /// The default aggregated view: one row per app (busiest first). Selecting a
+    /// row drills into that app's individual history entries.
+    private var appGroupTable: some View {
+        Table(historyGroups, selection: $groupSelection) {
+            TableColumn("Application") { group in
+                Text(group.appName).lineLimit(1).truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading).help(group.appName)
+            }
+            .width(min: 160, ideal: 240)
+            TableColumn("Hosts") { group in
+                Text(verbatim: "\(group.hostCount)").font(Theme.mono(11)).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .width(min: 48, ideal: 60, max: 90)
+            TableColumn("In") { group in
+                Text(Format.bytes(UInt64(max(0, group.bytesIn)))).font(Theme.mono(11)).foregroundStyle(Theme.inbound)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .width(min: 56, ideal: 80, max: 140)
+            TableColumn("Out") { group in
+                Text(Format.bytes(UInt64(max(0, group.bytesOut)))).font(Theme.mono(11)).foregroundStyle(Theme.outbound)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .width(min: 56, ideal: 80, max: 140)
+            TableColumn("Last") { group in
+                Text(group.lastSeen, format: .dateTime.month().day().hour().minute())
+            }
+            .width(min: 100, ideal: 120, max: 180)
+        }
+        .onChange(of: groupSelection) { _, newValue in
+            guard let name = newValue else { return }
+            drilledAppName = name
+            selection = nil
+            groupSelection = nil
         }
     }
 
@@ -104,6 +168,16 @@ struct HistoryView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            if let app = drilledAppName {
+                Button {
+                    drilledAppName = nil
+                } label: {
+                    Label(app, systemImage: "chevron.left")
+                }
+                .help("Back to apps")
+            }
+        }
         ToolbarItem(placement: .principal) {
             Picker("Time Range", selection: $range) {
                 ForEach(HistoryRange.allCases) { Text($0.label).tag($0) }
@@ -111,6 +185,19 @@ struct HistoryView: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .fixedSize()
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                groupByApp.toggle()
+                drilledAppName = nil
+                selection = nil
+            } label: {
+                Label(
+                    groupByApp ? LocalizedStringKey("By App") : LocalizedStringKey("All Entries"),
+                    systemImage: groupByApp ? "square.stack.3d.up.fill" : "list.bullet"
+                )
+            }
+            .help("Group history by app, or show every entry")
         }
         ToolbarItem(placement: .primaryAction) {
             Button { showInspector.toggle() } label: {
@@ -144,6 +231,36 @@ private enum HistoryRange: String, CaseIterable, Identifiable {
         case .day: Date(timeIntervalSinceNow: -86400)
         case .week: Date(timeIntervalSinceNow: -604_800)
         }
+    }
+}
+
+/// One app's history entries collapsed into a single aggregated row.
+private struct AppHistoryGroup: Identifiable {
+    let appName: String
+    let records: [ConnectionHistoryRecord]
+
+    var id: String {
+        appName
+    }
+
+    var bytesIn: Int {
+        records.reduce(0) { $0 + $1.bytesIn }
+    }
+
+    var bytesOut: Int {
+        records.reduce(0) { $0 + $1.bytesOut }
+    }
+
+    var totalBytes: Int {
+        bytesIn + bytesOut
+    }
+
+    var hostCount: Int {
+        Set(records.map(\.remoteHost)).count
+    }
+
+    var lastSeen: Date {
+        records.map(\.lastSeen).max() ?? .distantPast
     }
 }
 
