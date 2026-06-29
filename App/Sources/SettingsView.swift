@@ -95,15 +95,11 @@ private struct GeneralSettings: View {
             }
 
             Section {
-                Toggle("Resolve proxied destinations’ country", isOn: $proxyGeoResolution)
+                Toggle("Resolve country for proxied destinations", isOn: $proxyGeoResolution)
             } footer: {
-                Text(
-                    "When a local proxy hides the real address, look up the destination’s country " +
-                        "by resolving its domain over encrypted DNS (DoH). On by default, and only " +
-                        "for proxied flows — turn it off to keep monitoring fully passive."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text("When a local proxy hides the real address, resolve the destination country over encrypted DNS (DoH). On by default, only for proxied flows — turn off to stay fully passive.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section {
