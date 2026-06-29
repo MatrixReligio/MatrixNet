@@ -10997,6 +10997,52 @@
           }
         }
       }
+    },
+    "Proxied traffic volume needs packet capture to be measured.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Volumen von Proxy-Verkehr wird mit aktiviertem Paketmitschnitt gemessen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El volumen del tráfico por proxy se mide activando la captura de paquetes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le volume du trafic relayé se mesure en activant la capture de paquets."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロキシ経由の通信量は、パケットキャプチャを有効にすると計測できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "프록시 트래픽 양은 패킷 캡처를 켜야 측정됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理流量的大小需开启包捕获才能统计。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理流量的大小需開啟封包擷取才能統計。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

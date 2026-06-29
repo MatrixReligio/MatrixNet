@@ -5,6 +5,7 @@ import SwiftUI
 /// kernel, in a precise sortable table with a detail inspector.
 struct ConnectionsView: View {
     @Environment(AppModel.self) private var model
+    @Environment(PacketCaptureModel.self) private var capture
     @State private var search = ""
     @State private var selection: Connection.ID?
     @State private var sortOrder = [KeyPathComparator(\Connection.lastActivityAt, order: .reverse)]
@@ -41,20 +42,45 @@ struct ConnectionsView: View {
         groupByApp && drilledAppName == nil
     }
 
+    /// Shown when capture is off but proxied flows are present: their byte volume
+    /// can't be measured without packet capture (the kernel reports 0 bytes for
+    /// tunneled sockets), so say so instead of silently showing 0.
+    private var showProxyCaptureHint: Bool {
+        !capture.isCapturing && searchFiltered.contains { ProxyInfo.routesThroughProxy($0.fiveTuple.destination) }
+    }
+
+    private var proxyCaptureHint: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "info.circle").foregroundStyle(Theme.advisory)
+            Text("Proxied traffic volume needs packet capture to be measured.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+        .background(Theme.advisory.opacity(0.10))
+    }
+
     private var selectedConnection: Connection? {
         model.connections.first { $0.id == selection }
     }
 
     var body: some View {
-        Group {
-            if model.monitoringUnavailable {
-                UnavailableStateView()
-            } else if model.connections.isEmpty {
-                EmptyStateView()
-            } else if showingGroups {
-                appGroupTable
-            } else {
-                table
+        VStack(spacing: 0) {
+            if showProxyCaptureHint {
+                proxyCaptureHint
+            }
+            Group {
+                if model.monitoringUnavailable {
+                    UnavailableStateView()
+                } else if model.connections.isEmpty {
+                    EmptyStateView()
+                } else if showingGroups {
+                    appGroupTable
+                } else {
+                    table
+                }
             }
         }
         .navigationTitle("Connections")
