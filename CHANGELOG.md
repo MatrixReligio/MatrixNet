@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.4] - 2026-06-29
+
+### Fixed
+- **The desktop widget no longer freezes.** It was reloaded on a fixed 20-second
+  timer even when nothing changed, which exhausts WidgetKit's daily refresh
+  budget and leaves the widget stale; it now reloads only when the visible
+  metrics actually change (and at most every 30s), so the budget lasts and the
+  data keeps updating.
+
 ## [1.8.3] - 2026-06-29
 
 ### Fixed

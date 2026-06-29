@@ -80,7 +80,9 @@ struct MetricsProvider: TimelineProvider {
         // metrics; this short policy is just a fallback so the widget still ages
         // its data if the app stops running.
         let entry = MetricsEntry(date: Date(), snapshot: load())
-        completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(60))))
+        // Budget-friendly fallback so the widget still ages if the app stops
+        // nudging; the running app drives timely refreshes on real changes.
+        completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(300))))
     }
 
     private func load() -> MetricsSnapshot {

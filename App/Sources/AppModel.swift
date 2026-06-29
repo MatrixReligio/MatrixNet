@@ -107,6 +107,10 @@ public final class AppModel {
     private var refreshTask: Task<Void, Never>?
     private var lastMetricsWrite = Date.distantPast
     private var lastWidgetReload = Date.distantPast
+    // The metrics last pushed to the widget, so we only spend a WidgetKit reload
+    // when the visible numbers actually change (idle reloads exhaust the daily
+    // refresh budget and freeze the widget).
+    private var lastReloadedSnapshot: MetricsSnapshot?
     private var lastHistoryWrite = Date.distantPast
     private var lastRateSampleAt = Date.distantPast
     private var lastRateBytesIn: UInt64 = 0
@@ -463,12 +467,18 @@ public final class AppModel {
         )
         guard SharedMetricsStore.write(snapshot, to: url) else { return }
         // The app writes; the widget reads. Nudge WidgetKit to refresh — but
-        // sparingly: reloadAllTimelines has a system budget, and calling it every
-        // couple of seconds exhausts it so later reloads are silently dropped and
-        // the widget appears frozen. ~20s keeps it live without burning the budget
-        // (the widget's own timeline policy refreshes it between nudges).
-        if now.timeIntervalSince(lastWidgetReload) >= 20 {
+        // reloadAllTimelines has a daily budget, and a fixed timer (even while
+        // idle) exhausts it so later reloads are dropped and the widget freezes.
+        // Reload only when the visible numbers actually change, and at most every
+        // 30s; the widget's own timeline policy ages the data between nudges.
+        let changed = lastReloadedSnapshot.map { prev in
+            prev.activeConnections != snapshot.activeConnections
+                || abs(prev.throughputIn - snapshot.throughputIn) > 1024
+                || abs(prev.throughputOut - snapshot.throughputOut) > 1024
+        } ?? true
+        if changed, now.timeIntervalSince(lastWidgetReload) >= 30 {
             lastWidgetReload = now
+            lastReloadedSnapshot = snapshot
             WidgetCenter.shared.reloadAllTimelines()
         }
     }
