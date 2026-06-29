@@ -10952,52 +10952,6 @@
         }
       }
     },
-    "When a local proxy hides the real address, resolve the destination country over encrypted DNS (DoH). On by default, only for proxied flows — turn off to stay fully passive.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wenn ein lokaler Proxy die echte Adresse verbirgt, das Zielland über verschlüsseltes DNS (DoH) ermitteln. Standardmäßig an, nur für Proxy-Verbindungen — zum vollständig passiven Betrieb ausschalten."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cuando un proxy local oculta la dirección real, resolver el país de destino mediante DNS cifrado (DoH). Activado por defecto, solo para flujos por proxy; desactívalo para permanecer totalmente pasivo."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quand un proxy local masque l’adresse réelle, résoudre le pays de la destination via DNS chiffré (DoH). Activé par défaut, uniquement pour les flux relayés — désactivez pour rester totalement passif."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ローカルプロキシが実アドレスを隠す場合、暗号化DNS（DoH）で宛先の国を解決します。既定で有効、プロキシ経由の接続のみ。オフにすると完全に受動的になります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "로컬 프록시가 실제 주소를 가릴 때 암호화 DNS(DoH)로 목적지 국가를 확인합니다. 기본 켜짐, 프록시 연결에만 적용 — 끄면 완전히 수동으로 동작합니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "当本地代理隐藏真实地址时,通过加密 DNS(DoH)解析目的地国家。默认开启,仅对经代理的连接生效——关闭则保持完全被动。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "當本機代理隱藏真實位址時,透過加密 DNS(DoH)解析目的地國家。預設開啟,僅對經代理的連線生效——關閉則保持完全被動。"
-          }
-        }
-      }
-    },
     "Proxied traffic volume needs packet capture to be measured.": {
       "localizations": {
         "de": {
@@ -11040,6 +10994,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "代理流量的大小需開啟封包擷取才能統計。"
+          }
+        }
+      }
+    },
+    "Resolve a proxied destination's country via encrypted DNS (DoH). On by default.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Land eines Proxy-Ziels über verschlüsseltes DNS (DoH) ermitteln. Standardmäßig an."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resolver el país de un destino por proxy mediante DNS cifrado (DoH). Activado por defecto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résoudre le pays d’une destination relayée via DNS chiffré (DoH). Activé par défaut."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暗号化DNS（DoH）でプロキシ経由先の国を解決します。既定で有効。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "암호화 DNS(DoH)로 프록시 대상의 국가를 확인합니다. 기본 켜짐."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过加密 DNS(DoH)解析经代理目的地的国家。默认开启。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過加密 DNS(DoH)解析經代理目的地的國家。預設開啟。"
           }
         }
       }

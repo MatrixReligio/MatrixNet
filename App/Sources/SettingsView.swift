@@ -97,7 +97,7 @@ private struct GeneralSettings: View {
             Section {
                 Toggle("Resolve country for proxied destinations", isOn: $proxyGeoResolution)
             } footer: {
-                Text("When a local proxy hides the real address, resolve the destination country over encrypted DNS (DoH). On by default, only for proxied flows — turn off to stay fully passive.")
+                Text("Resolve a proxied destination's country via encrypted DNS (DoH). On by default.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
