@@ -290,9 +290,12 @@ process on purpose.
 
 ## Privacy
 
-MatrixNet processes everything locally. It sends no data off your machine, has no
-telemetry, requires no account, and talks to no server. Captures, history, and
-settings live only on your disk.
+MatrixNet processes everything locally — no telemetry, no account, no cloud. The
+only network request it can make for monitoring is the optional GeoIP country
+lookup for proxied flows (on by default): when a local proxy hides the real
+address, it resolves the destination's domain over encrypted DNS (DoH) to recover
+its country. Turn it off in Settings to keep no data leaving your machine.
+Captures, history, and settings live only on your disk.
 
 ## Versioning
 
