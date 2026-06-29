@@ -87,7 +87,11 @@ if [ -x "$GENERATE_APPCAST" ]; then
     printf '%s' "$SPARKLE_PRIVATE_KEY" > "$KEYFILE"
     KEYARGS=(--ed-key-file "$KEYFILE")
   fi
-  "$GENERATE_APPCAST" "${KEYARGS[@]}" \
+  # Expand KEYARGS only if non-empty: under `set -u`, macOS's bash 3.2 treats
+  # "${KEYARGS[@]}" on an empty array as an unbound variable and aborts. The
+  # `${arr[@]+"${arr[@]}"}` idiom expands to nothing when empty (local runs sign
+  # with the login-keychain key and set no --ed-key-file), else to the elements.
+  "$GENERATE_APPCAST" ${KEYARGS[@]+"${KEYARGS[@]}"} \
     --download-url-prefix "https://github.com/MatrixReligio/MatrixNet/releases/download/v$VERSION/" \
     "$DIST"
   [ -n "$KEYFILE" ] && rm -f "$KEYFILE"
