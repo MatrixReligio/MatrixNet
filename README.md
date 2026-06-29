@@ -48,7 +48,9 @@ fighting it.
   threat connections, share via proxy), a protocol-mix breakdown, top
   destination countries, and an enriched Top Talkers list.
 - System-wide, per-app live connection list: process, remote host/IP, country,
-  up/down rate, cumulative bytes, and connection lifecycle.
+  up/down rate, cumulative bytes, and connection lifecycle. The Connections,
+  History and Usage views **group by app by default** — click an app to drill
+  into its individual flows.
 - Kernel-attributed process ownership — the same mechanism `nettop` and Activity
   Monitor use — so attribution is accurate without polling races.
 - **Client/server role** inferred per flow from the ports (did this host dial
@@ -56,6 +58,9 @@ fighting it.
 - **Proxy & VPN/tunnel awareness** — connections whose remote is your configured
   or local proxy are marked, and processes that relay other apps' traffic
   (NetworkExtension tunnels) are badged, so it's clear when traffic is routed.
+  With packet capture on, a proxied connection still shows its **real domain and
+  byte volume** (read from the tunnel interface), and the "via proxy" metric is a
+  share of bytes.
 - **Threat-IP flagging** — remote addresses on a public threat-intelligence
   blocklist are flagged with a ⚠️ badge (advisory only — MatrixNet labels, it
   never blocks).
@@ -138,7 +143,9 @@ fighting it.
 - The **GeoIP database refreshes automatically** in the background from the
   monthly DB-IP dataset, so country attribution stays accurate over time. It
   covers both **IPv4 and IPv6** destinations, so the map and country metrics
-  don't under-count IPv6 traffic.
+  don't under-count IPv6 traffic. When a local proxy/tunnel is active the
+  destination IP is a synthetic placeholder, so the country is recovered from the
+  real domain instead (see Privacy).
 - The **threat-IP list refreshes automatically** the same way, from the public
   IPsum aggregate — the app only ever contacts its own release asset, never the
   upstream feeds.
@@ -147,8 +154,12 @@ fighting it.
 - **Zero conflict by design.** MatrixNet is fully passive: it uses no
   NetworkExtension, claims no exclusive routing/proxy slot, and never sits in the
   packet path. It coexists with AdGuard, Surge, Little Snitch, LuLu, and any VPN.
-- **100% local.** All processing happens on your machine. No data leaves the
-  device. No telemetry. No account. No cloud.
+- **100% local, passive capture.** All packet and connection processing happens
+  on your machine — no telemetry, no account, no cloud. The one network request
+  MatrixNet can make for monitoring is the optional GeoIP country lookup for
+  *proxied* flows (on by default): when a local proxy hides the real address, it
+  resolves the destination's domain over encrypted DNS (DoH) to recover its
+  country. Turn it off in Settings to keep no data leaving the device.
 - **Least privilege.** Connection monitoring needs no authorization at all.
   Packet capture is isolated in a minimal, capture-only helper; protocol parsing
   of untrusted bytes runs in the unprivileged app.

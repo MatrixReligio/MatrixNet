@@ -8,6 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.0] - 2026-06-29
+
+### Added
+- **Proxy-aware geolocation.** When a local proxy/tunnel (Loon, Surge, Clash, …)
+  is active, a connection's kernel destination is a synthetic fake-IP, so its IP
+  is no longer geolocated (which produced bogus countries). Instead MatrixNet
+  resolves the real domain over encrypted DNS (DoH) to recover the country — on by
+  default, only for proxied flows whose country is otherwise unknown, so a machine
+  with no proxy stays fully passive. Turn it off in Settings.
+- **Connections, History and Usage aggregate by app by default.** Each view now
+  shows one row per app (summed bytes, flow/host counts); click an app to drill
+  into its individual flows, entries, or country/domain breakdown.
+- **Byte-weighted proxy share.** The Overview "via proxy" metric now reflects the
+  share of *bytes* routed through a proxy/tunnel (falling back to a
+  connection-count share when packet capture is off), with the proxy engine's own
+  relay leg excluded so traffic isn't double-counted.
+
+### Fixed
+- **Proxied connections show their real domain and byte volume** when packet
+  capture is on (the app-side traffic is read from the tunnel interface). When
+  capture is off, the connections view now says proxied volume needs capture
+  instead of silently showing 0 bytes.
+- **Synthetic fake-IP ranges are never geolocated while a proxy is active**, so
+  the map and country metrics no longer attribute proxied traffic to a wrong
+  country. Without a proxy those addresses are treated as normal IPs.
+- **The Overview throughput chart no longer overflows past the left edge** of its
+  coordinate space.
+- **The Usage tab's period and view-mode controls are merged into one row.**
+
 ## [1.7.0] - 2026-06-29
 
 ### Added
