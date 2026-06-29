@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.6] - 2026-06-29
+
+### Fixed
+- **The desktop widget actually refreshes now.** Earlier fixes (1.8.4/1.8.5)
+  treated the symptom; this is the root cause. WidgetKit exempts app-initiated
+  timeline reloads from its ~40–70/day budget **only while the app is in the
+  foreground** — previous versions reloaded from the background too, burning the
+  whole budget in minutes and then freezing the widget for the rest of the day.
+  The app now nudges the widget only when it is the foreground app (throttled to
+  ~10s, which is budget-free), and the widget's background fallback was relaxed to
+  one refresh every 30 minutes so it stays within budget and spreads evenly
+  instead of front-loading. Result: the widget is live while the app window is
+  focused and refreshes about every 30 minutes otherwise — the most a third-party
+  macOS widget can reliably do in the background.
+
 ## [1.8.5] - 2026-06-29
 
 ### Fixed
