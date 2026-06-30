@@ -57,8 +57,8 @@ public struct Preferences {
 
     /// How many days of connection history to retain (0 = keep forever).
     public var historyRetentionDays: Int {
-        get { defaults.object(forKey: Key.historyRetentionDays.rawValue) as? Int ?? 30 }
-        nonmutating set { defaults.set(newValue, forKey: Key.historyRetentionDays.rawValue) }
+        get { Self.clampRetention(defaults.object(forKey: Key.historyRetentionDays.rawValue) as? Int ?? 30) }
+        nonmutating set { defaults.set(Self.clampRetention(newValue), forKey: Key.historyRetentionDays.rawValue) }
     }
 
     /// Whether to show resolved domain names instead of raw IPs where a name is
@@ -77,8 +77,18 @@ public struct Preferences {
 
     /// How many days of per-app usage history to retain.
     public var usageRetentionDays: Int {
-        get { defaults.object(forKey: Key.usageRetentionDays.rawValue) as? Int ?? 90 }
-        nonmutating set { defaults.set(newValue, forKey: Key.usageRetentionDays.rawValue) }
+        get { Self.clampRetention(defaults.object(forKey: Key.usageRetentionDays.rawValue) as? Int ?? 90) }
+        nonmutating set { defaults.set(Self.clampRetention(newValue), forKey: Key.usageRetentionDays.rawValue) }
+    }
+
+    /// Clamps a retention-day count to a safe range. The floor of 1 is the load-
+    /// bearing guard: a non-positive value (corrupted defaults, an old build, a
+    /// stray script write) would otherwise put the launch-prune cutoff at today or
+    /// in the future and delete recent — or all — stored data. The high ceiling
+    /// only bounds the date arithmetic; it never shrinks a legitimately large
+    /// window.
+    private static func clampRetention(_ days: Int) -> Int {
+        min(36500, max(1, days))
     }
 
     /// Day of the month the billing cycle resets on, clamped to 1...28 so it is

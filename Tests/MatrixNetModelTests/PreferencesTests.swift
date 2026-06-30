@@ -41,6 +41,29 @@ struct PreferencesTests {
         #expect(Preferences(defaults: store).usageRetentionDays == 120)
     }
 
+    /// A corrupted/externally-written `UserDefaults` value (negative, zero, or
+    /// absurdly large) must never reach the launch prune, where a non-positive
+    /// retention makes the cutoff land today/in the future and wipes usage data.
+    @Test("usage retention clamps out destructive values")
+    func usageRetentionClamps() throws {
+        let store = try freshDefaults()
+        store.set(0, forKey: Preferences.Key.usageRetentionDays.rawValue)
+        #expect(Preferences(defaults: store).usageRetentionDays >= 1)
+        store.set(-5, forKey: Preferences.Key.usageRetentionDays.rawValue)
+        #expect(Preferences(defaults: store).usageRetentionDays >= 1)
+        store.set(1_000_000, forKey: Preferences.Key.usageRetentionDays.rawValue)
+        #expect(Preferences(defaults: store).usageRetentionDays <= 36500)
+    }
+
+    @Test("history retention clamps out destructive values")
+    func historyRetentionClamps() throws {
+        let store = try freshDefaults()
+        store.set(0, forKey: Preferences.Key.historyRetentionDays.rawValue)
+        #expect(Preferences(defaults: store).historyRetentionDays >= 1)
+        store.set(-3, forKey: Preferences.Key.historyRetentionDays.rawValue)
+        #expect(Preferences(defaults: store).historyRetentionDays >= 1)
+    }
+
     @Test("home region round-trips and clears back to nil")
     func homeRegion() throws {
         let store = try freshDefaults()
