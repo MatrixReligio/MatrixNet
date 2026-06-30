@@ -16,6 +16,11 @@ struct PacketsView: View {
     /// selection. Refreshed a few times per second while nothing is selected,
     /// and frozen while a packet is selected so it can be inspected.
     @State private var displayedPackets: [PacketRow] = []
+    /// Tracks the live capture's last-seen size and newest packet id so the
+    /// refresh loop can skip the (expensive) re-sort + table rebuild when no new
+    /// packets have arrived — the table only re-renders when there's something new.
+    @State private var lastRawCount = -1
+    @State private var lastRawLastID: UInt64?
     @State private var search = ""
     @State private var sortOrder = [KeyPathComparator(\PacketRow.timestamp, order: .forward)]
     @State private var columns = TableColumnCustomization<PacketRow>()
@@ -61,12 +66,20 @@ struct PacketsView: View {
         .onAppear { capture.refreshState() }
         .task(id: selection) {
             // While a packet is selected, freeze the list (the id change restarts
-            // this task and the guard stops it). Otherwise throttle refreshes so a
-            // fast stream can't move rows under the cursor or clear the selection.
+            // this task and the guard stops it). Otherwise refresh about once a
+            // second — but only rebuild when packets actually arrived, so an idle
+            // capture costs nothing (each rebuild re-sorts and forces NSTableView
+            // to re-measure visible row heights, which is the expensive part).
             guard selection == nil else { return }
             while !Task.isCancelled {
-                displayedPackets = sortedPackets
-                try? await Task.sleep(for: .milliseconds(700))
+                let rawCount = capture.packets.count
+                let rawLastID = capture.packets.last?.id
+                if rawCount != lastRawCount || rawLastID != lastRawLastID {
+                    lastRawCount = rawCount
+                    lastRawLastID = rawLastID
+                    displayedPackets = sortedPackets
+                }
+                try? await Task.sleep(for: .milliseconds(1000))
             }
         }
         .onChange(of: search) { _, _ in displayedPackets = sortedPackets }
@@ -269,8 +282,12 @@ private struct PacketDetail: View {
     let packet: PacketRow
 
     var body: some View {
+        // Build the full protocol field tree on demand for just this one selected
+        // packet. The live list stores only light dissections (no field tree), so
+        // this is where the detailed parse happens — cheap for a single packet.
+        let layers = PacketDissector().dissect(packet.bytes, linkType: packet.linkType, detailed: true).layers
         VStack(alignment: .leading, spacing: 12) {
-            ForEach(Array(packet.layers.enumerated()), id: \.offset) { _, layer in
+            ForEach(Array(layers.enumerated()), id: \.offset) { _, layer in
                 DisclosureGroup {
                     ForEach(Array(layer.fields.enumerated()), id: \.offset) { _, field in
                         HStack(alignment: .top) {

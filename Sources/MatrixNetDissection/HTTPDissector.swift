@@ -18,7 +18,7 @@ enum HTTPDissector {
     /// Headers surfaced as fields when present (others are still counted).
     private static let notableHeaders = ["host", "content-type", "user-agent", "server", "location"]
 
-    static func dissect(_ bytes: [UInt8], at start: Int) throws -> DissectionNode {
+    static func dissect(_ bytes: [UInt8], at start: Int, detailed: Bool) throws -> DissectionNode {
         guard looksLikeHTTP(bytes, at: start) else { throw DissectionError.malformed }
         guard start < bytes.count,
               let text = String(bytes: bytes[start ..< bytes.count], encoding: .isoLatin1)
@@ -31,6 +31,20 @@ enum HTTPDissector {
         let lines = head.components(separatedBy: "\r\n").filter { !$0.isEmpty }
         guard let startLine = lines.first else { throw DissectionError.malformed }
 
+        // Building the display fields is the expensive part and only needed when a
+        // user inspects the packet, so skip it entirely in lightweight mode.
+        let fields = detailed ? headerFields(startLine: startLine, lines: lines) : []
+
+        return DissectionNode(
+            label: "Hypertext Transfer Protocol",
+            shortName: "HTTP",
+            fields: fields,
+            byteRange: start ..< bytes.count
+        )
+    }
+
+    /// Builds the request/status-line fields plus any notable headers.
+    private static func headerFields(startLine: String, lines: [String]) -> [DissectionField] {
         var fields = [DissectionField]()
         let parts = startLine.split(separator: " ", maxSplits: 2).map(String.init)
 
@@ -53,12 +67,7 @@ enum HTTPDissector {
             }
         }
 
-        return DissectionNode(
-            label: "Hypertext Transfer Protocol",
-            shortName: "HTTP",
-            fields: fields,
-            byteRange: start ..< bytes.count
-        )
+        return fields
     }
 
     private static func asciiPrefix(_ bytes: [UInt8], at offset: Int, max: Int) -> String? {

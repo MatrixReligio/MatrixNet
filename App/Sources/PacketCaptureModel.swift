@@ -16,8 +16,12 @@ struct PacketRow: Identifiable {
     let direction: TrafficDirection
     let summary: String
     let protocolPath: [String]
-    let layers: [DissectionNode]
+    /// The captured bytes and their link framing, kept so the detail view can
+    /// re-dissect a *single* selected packet into a full field tree on demand.
+    /// The live stream dissects lightly (no field tree) for the list, which is the
+    /// expensive part to build per packet — see `didCapture`.
     let bytes: [UInt8]
+    let linkType: LinkLayerType
 
     var highestProtocol: String {
         protocolPath.last ?? "?"
@@ -159,10 +163,16 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
                 case 0: .nullLoopback
                 default: .rawIP
                 }
+                // Light dissection only: the per-field tree is the costly part to
+                // build for every packet (string-heavy), and it is needed solely
+                // when the user selects a packet to inspect — the detail view
+                // rebuilds it on demand from `bytes`. The summary, protocol path,
+                // five-tuple, hostnames, JA4 and TCP segment are all still produced.
                 return DissectedRow(
                     packet: packet,
                     bytes: bytes,
-                    dissected: dissector.dissect(bytes, linkType: linkType)
+                    linkType: linkType,
+                    dissected: dissector.dissect(bytes, linkType: linkType, detailed: false)
                 )
             }
             await self?.append(rows)
@@ -173,6 +183,7 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
     private struct DissectedRow {
         let packet: WirePacket
         let bytes: [UInt8]
+        let linkType: LinkLayerType
         let dissected: DissectedPacket
     }
 
@@ -202,8 +213,8 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
                 direction: direction(from: row.packet.direction),
                 summary: row.dissected.summary,
                 protocolPath: row.dissected.protocolPath,
-                layers: row.dissected.layers,
-                bytes: row.bytes
+                bytes: row.bytes,
+                linkType: row.linkType
             ))
             nextID += 1
         }

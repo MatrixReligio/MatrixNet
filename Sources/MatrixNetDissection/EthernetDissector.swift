@@ -8,17 +8,17 @@ enum EthernetDissector {
         let payloadOffset: Int
     }
 
-    static func dissect(_ bytes: [UInt8]) throws -> Result {
+    static func dissect(_ bytes: [UInt8], detailed: Bool) throws -> Result {
         var reader = ByteReader(bytes)
         let destination = try reader.readBytes(6)
         let source = try reader.readBytes(6)
         let etherType = try reader.readUInt16()
 
-        let fields = [
+        let fields: [DissectionField] = detailed ? [
             DissectionField(name: "Destination", value: HexFormat.mac(destination), byteRange: 0 ..< 6),
             DissectionField(name: "Source", value: HexFormat.mac(source), byteRange: 6 ..< 12),
             DissectionField(name: "EtherType", value: etherTypeDescription(etherType), byteRange: 12 ..< 14)
-        ]
+        ] : []
         let node = DissectionNode(
             label: "Ethernet II",
             shortName: "Ethernet",

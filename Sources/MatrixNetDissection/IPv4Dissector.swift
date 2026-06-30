@@ -2,7 +2,7 @@ import MatrixNetModel
 
 /// Dissects an IPv4 header (RFC 791), including variable-length options.
 enum IPv4Dissector {
-    static func dissect(_ bytes: [UInt8], at start: Int) throws -> NetworkLayerResult {
+    static func dissect(_ bytes: [UInt8], at start: Int, detailed: Bool) throws -> NetworkLayerResult {
         var reader = ByteReader(bytes, offset: start)
 
         let versionAndIHL = try reader.readUInt8()
@@ -34,7 +34,7 @@ enum IPv4Dissector {
         let fragmentOffset = flagsAndFragment & 0x1FFF
         let transport = TransportProtocol(ipProtocolNumber: ipProtocol)
 
-        let fields = [
+        let fields: [DissectionField] = detailed ? [
             DissectionField(name: "Version", value: "4", byteRange: start ..< start + 1),
             DissectionField(name: "Header Length", value: "\(headerLength) bytes", byteRange: start ..< start + 1),
             DissectionField(name: "Total Length", value: "\(totalLength)", byteRange: start + 2 ..< start + 4),
@@ -53,7 +53,7 @@ enum IPv4Dissector {
             ),
             DissectionField(name: "Source", value: source.description, byteRange: start + 12 ..< start + 16),
             DissectionField(name: "Destination", value: destination.description, byteRange: start + 16 ..< start + 20)
-        ]
+        ] : []
         let node = DissectionNode(
             label: "Internet Protocol Version 4",
             shortName: "IPv4",

@@ -41,18 +41,105 @@ public struct WirePacket: Codable, Sendable, Equatable {
     }
 }
 
-/// Encodes/decodes a batch of `WirePacket`s for one XPC message. Uses the binary
-/// property-list format: faster than JSON and, crucially, it stores the raw
-/// packet `Data` without base64 expansion on this hot path.
+/// Encodes/decodes a batch of `WirePacket`s for one XPC message using a compact,
+/// length-prefixed little-endian binary framing.
+///
+/// This is a hot path: at high packet rates the app decodes a batch many times a
+/// second, on every packet, even in the background. The previous `Codable` +
+/// binary-property-list approach spent the bulk of the app's capture CPU in
+/// `PropertyListDecoder`/`KeyedDecodingContainer` reflection. This hand-rolled
+/// codec walks the bytes directly — no reflection, no plist parsing — and is
+/// several times cheaper to decode. Decoding is total: any malformed or truncated
+/// input yields an empty batch rather than throwing (matching the old `try?`).
+///
+/// Layout: `UInt32 count`, then per packet — `Float64 timestamp`, `Int32 pid`,
+/// `UInt8 direction`, `UInt32 dlt`, `UInt32 originalLength`,
+/// `UInt32 nameLength` + UTF-8 name, `UInt32 dataLength` + raw bytes.
+/// Helper and app always ship together in one build, so the framing needs no
+/// version negotiation (a stale helper is re-registered on update regardless).
 public enum WirePacketBatch {
     public static func encode(_ packets: [WirePacket]) -> Data {
-        let encoder = PropertyListEncoder()
-        encoder.outputFormat = .binary
-        return (try? encoder.encode(packets)) ?? Data()
+        var out = Data()
+        out.reserveCapacity(packets.reduce(8) { $0 + 30 + $1.processName.utf8.count + $1.data.count })
+        appendU32(UInt32(truncatingIfNeeded: packets.count), to: &out)
+        for packet in packets {
+            appendU64(packet.timestamp.bitPattern, to: &out)
+            appendU32(UInt32(bitPattern: packet.pid), to: &out)
+            out.append(packet.direction)
+            appendU32(packet.dlt, to: &out)
+            appendU32(UInt32(truncatingIfNeeded: packet.originalLength), to: &out)
+            let name = Array(packet.processName.utf8)
+            appendU32(UInt32(name.count), to: &out)
+            out.append(contentsOf: name)
+            appendU32(UInt32(packet.data.count), to: &out)
+            out.append(packet.data)
+        }
+        return out
     }
 
     public static func decode(_ data: Data) -> [WirePacket] {
-        (try? PropertyListDecoder().decode([WirePacket].self, from: data)) ?? []
+        let bytes = [UInt8](data)
+        var cursor = 0
+
+        func remaining(_ n: Int) -> Bool {
+            n >= 0 && cursor + n <= bytes.count
+        }
+        func readU32() -> UInt32? {
+            guard remaining(4) else { return nil }
+            defer { cursor += 4 }
+            return UInt32(bytes[cursor]) | UInt32(bytes[cursor + 1]) << 8
+                | UInt32(bytes[cursor + 2]) << 16 | UInt32(bytes[cursor + 3]) << 24
+        }
+        func readU64() -> UInt64? {
+            guard remaining(8) else { return nil }
+            defer { cursor += 8 }
+            var value: UInt64 = 0
+            for index in 0 ..< 8 {
+                value |= UInt64(bytes[cursor + index]) << (8 * index)
+            }
+            return value
+        }
+
+        guard let count = readU32() else { return [] }
+        var packets = [WirePacket]()
+        packets.reserveCapacity(min(Int(count), bytes.count / 30 + 1))
+        for _ in 0 ..< count {
+            guard let timestamp = readU64(), let pid = readU32(), remaining(1) else { return [] }
+            let direction = bytes[cursor]
+            cursor += 1
+            guard let dlt = readU32(), let originalLength = readU32(),
+                  let nameLength = readU32(), remaining(Int(nameLength)) else { return [] }
+            let name = String(decoding: bytes[cursor ..< cursor + Int(nameLength)], as: UTF8.self)
+            cursor += Int(nameLength)
+            guard let dataLength = readU32(), remaining(Int(dataLength)) else { return [] }
+            let payload = Data(bytes[cursor ..< cursor + Int(dataLength)])
+            cursor += Int(dataLength)
+            packets.append(WirePacket(
+                timestamp: Double(bitPattern: timestamp),
+                pid: Int32(bitPattern: pid),
+                processName: name,
+                direction: direction,
+                dlt: dlt,
+                originalLength: Int(originalLength),
+                data: payload
+            ))
+        }
+        return packets
+    }
+
+    private static func appendU32(_ value: UInt32, to data: inout Data) {
+        data.append(UInt8(value & 0xFF))
+        data.append(UInt8((value >> 8) & 0xFF))
+        data.append(UInt8((value >> 16) & 0xFF))
+        data.append(UInt8((value >> 24) & 0xFF))
+    }
+
+    private static func appendU64(_ value: UInt64, to data: inout Data) {
+        var remaining = value
+        for _ in 0 ..< 8 {
+            data.append(UInt8(remaining & 0xFF))
+            remaining >>= 8
+        }
     }
 }
 

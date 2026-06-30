@@ -17,7 +17,7 @@ struct TLSDissectorTests {
 
     @Test("extracts the SNI host from a ClientHello")
     func extractsSNI() throws {
-        let result = try TLSDissector.dissect(clientHello, at: 0)
+        let result = try TLSDissector.dissect(clientHello, at: 0, detailed: true)
         #expect(result.node.shortName == "TLS")
         #expect(result.serverName == "example.com")
         let handshake = try #require(result.node.fields.first { $0.name == "Handshake Type" })
@@ -34,14 +34,14 @@ struct TLSDissectorTests {
     func applicationData() throws {
         // 0x17 application data, version 0303, length 5, 5 encrypted bytes.
         let appData = hex("17 0303 0005 0102030405")
-        let result = try TLSDissector.dissect(appData, at: 0)
+        let result = try TLSDissector.dissect(appData, at: 0, detailed: true)
         #expect(result.node.shortName == "TLS")
         #expect(result.serverName == nil)
     }
 
     @Test("truncated TLS records do not crash", arguments: 0 ... 40)
     func truncationFuzz(_ length: Int) {
-        _ = try? TLSDissector.dissect(Array(clientHello.prefix(length)), at: 0)
+        _ = try? TLSDissector.dissect(Array(clientHello.prefix(length)), at: 0, detailed: true)
         #expect(Bool(true))
     }
 
@@ -51,7 +51,7 @@ struct TLSDissectorTests {
         // Extensions-length field sits at offset 50; corrupt it to a huge value.
         bytes[50] = 0xFF
         bytes[51] = 0xFF
-        _ = try? TLSDissector.dissect(bytes, at: 0)
+        _ = try? TLSDissector.dissect(bytes, at: 0, detailed: true)
         #expect(Bool(true))
     }
 }

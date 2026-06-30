@@ -7,7 +7,7 @@ import MatrixNetModel
 enum IPv6Dissector {
     static let headerLength = 40
 
-    static func dissect(_ bytes: [UInt8], at start: Int) throws -> NetworkLayerResult {
+    static func dissect(_ bytes: [UInt8], at start: Int, detailed: Bool) throws -> NetworkLayerResult {
         var reader = ByteReader(bytes, offset: start)
 
         let versionClassFlow = try reader.readUInt32()
@@ -27,7 +27,7 @@ enum IPv6Dissector {
         }
 
         let transport = TransportProtocol(ipProtocolNumber: nextHeader)
-        let fields = [
+        let fields: [DissectionField] = detailed ? [
             DissectionField(name: "Version", value: "6", byteRange: start ..< start + 1),
             DissectionField(name: "Payload Length", value: "\(payloadLength)", byteRange: start + 4 ..< start + 6),
             DissectionField(
@@ -38,7 +38,7 @@ enum IPv6Dissector {
             DissectionField(name: "Hop Limit", value: "\(hopLimit)", byteRange: start + 7 ..< start + 8),
             DissectionField(name: "Source", value: source.description, byteRange: start + 8 ..< start + 24),
             DissectionField(name: "Destination", value: destination.description, byteRange: start + 24 ..< start + 40)
-        ]
+        ] : []
         let node = DissectionNode(
             label: "Internet Protocol Version 6",
             shortName: "IPv6",

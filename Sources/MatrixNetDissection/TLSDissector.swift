@@ -23,35 +23,42 @@ enum TLSDissector {
         return (0x14 ... 0x17).contains(contentType) && major == 0x03
     }
 
-    static func dissect(_ bytes: [UInt8], at start: Int) throws -> Result {
+    static func dissect(_ bytes: [UInt8], at start: Int, detailed: Bool) throws -> Result {
         var reader = ByteReader(bytes, offset: start)
         let contentType = try reader.readUInt8()
         let recordVersion = try reader.readUInt16()
         let recordLength = try reader.readUInt16()
 
-        var fields = [
+        // The SNI server name and JA4 fingerprint are extracted in both modes
+        // (attribution needs them while capturing); only the display `fields` are
+        // gated on `detailed`.
+        var fields: [DissectionField] = detailed ? [
             DissectionField(name: "Content Type", value: contentTypeName(contentType)),
             DissectionField(name: "Version", value: versionName(recordVersion)),
             DissectionField(name: "Length", value: "\(recordLength)")
-        ]
+        ] : []
 
         var serverName: String?
         var clientFingerprint: String?
         var clientFingerprintLabel: JA4Label?
         if contentType == 0x16 { // handshake
             let handshakeType = try reader.readUInt8()
-            fields.append(DissectionField(name: "Handshake Type", value: handshakeTypeName(handshakeType)))
+            if detailed {
+                fields.append(DissectionField(name: "Handshake Type", value: handshakeTypeName(handshakeType)))
+            }
             if handshakeType == 0x01, let parsed = try? parseClientHello(&reader) { // ClientHello
                 serverName = parsed.serverName
-                if let serverName {
-                    fields.append(DissectionField(name: "Server Name", value: serverName))
-                }
                 let ja4 = JA4.string(from: parsed.hello, transport: .tcp)
                 clientFingerprint = ja4
                 clientFingerprintLabel = JA4Identifier.identify(ja4)
-                fields.append(DissectionField(name: "JA4", value: ja4))
-                if let label = clientFingerprintLabel {
-                    fields.append(DissectionField(name: "Client", value: label.name))
+                if detailed {
+                    if let serverName {
+                        fields.append(DissectionField(name: "Server Name", value: serverName))
+                    }
+                    fields.append(DissectionField(name: "JA4", value: ja4))
+                    if let label = clientFingerprintLabel {
+                        fields.append(DissectionField(name: "Client", value: label.name))
+                    }
                 }
             }
         }

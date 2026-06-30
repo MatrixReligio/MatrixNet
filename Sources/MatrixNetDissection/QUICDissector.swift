@@ -13,32 +13,37 @@ enum QUICDissector {
         let clientFingerprint: String?
     }
 
-    static func dissect(_ bytes: [UInt8], at start: Int) -> Result? {
+    static func dissect(_ bytes: [UInt8], at start: Int, detailed: Bool) -> Result? {
         guard start >= 0, start <= bytes.count else { return nil }
         let packet = Array(bytes[start...])
         guard let header = QUICInitial.parse(packet), header.version == 1 else { return nil }
 
-        var fields = [
+        // The SNI server name and JA4 fingerprint are extracted in both modes
+        // (attribution needs them while capturing); only the display `fields` are
+        // gated on `detailed`.
+        var fields: [DissectionField] = detailed ? [
             DissectionField(name: "Version", value: "1 (RFC 9001)"),
             DissectionField(name: "DCID", value: hex(header.dcid))
-        ]
+        ] : []
         var serverName: String?
         var clientFingerprint: String?
         if let plaintext = QUICInitialCrypto.decryptInitial(packet),
            let handshake = QUICCryptoFrames.reassembleClientHello(plaintext),
            let parsed = TLSDissector.clientHello(fromHandshake: handshake) {
             serverName = parsed.serverName
-            if let serverName {
-                fields.append(DissectionField(name: "Server Name", value: serverName))
-            }
-            if let alpn = parsed.hello.alpnFirst, let alpnText = String(bytes: alpn, encoding: .utf8) {
-                fields.append(DissectionField(name: "ALPN", value: alpnText))
-            }
             let ja4 = JA4.string(from: parsed.hello, transport: .quic)
             clientFingerprint = ja4
-            fields.append(DissectionField(name: "JA4", value: ja4))
-            if let label = JA4Identifier.identify(ja4) {
-                fields.append(DissectionField(name: "Client", value: label.name))
+            if detailed {
+                if let serverName {
+                    fields.append(DissectionField(name: "Server Name", value: serverName))
+                }
+                if let alpn = parsed.hello.alpnFirst, let alpnText = String(bytes: alpn, encoding: .utf8) {
+                    fields.append(DissectionField(name: "ALPN", value: alpnText))
+                }
+                fields.append(DissectionField(name: "JA4", value: ja4))
+                if let label = JA4Identifier.identify(ja4) {
+                    fields.append(DissectionField(name: "Client", value: label.name))
+                }
             }
         }
 

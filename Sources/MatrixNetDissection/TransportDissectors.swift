@@ -3,7 +3,12 @@ import MatrixNetModel
 /// Dissects a TCP header (RFC 9293), decoding the flag bits and honouring the
 /// data-offset field for the payload boundary.
 enum TCPDissector {
-    static func dissect(_ bytes: [UInt8], at start: Int, segmentEnd: Int) throws -> TransportLayerResult {
+    static func dissect(
+        _ bytes: [UInt8],
+        at start: Int,
+        segmentEnd: Int,
+        detailed: Bool
+    ) throws -> TransportLayerResult {
         var reader = ByteReader(bytes, offset: start)
         let sourcePort = try reader.readUInt16()
         let destinationPort = try reader.readUInt16()
@@ -20,14 +25,14 @@ enum TCPDissector {
         let payloadOffset = start + headerLength
         let payloadLength = max(0, segmentEnd - payloadOffset)
 
-        let fields = [
+        let fields: [DissectionField] = detailed ? [
             DissectionField(name: "Source Port", value: "\(sourcePort)", byteRange: start ..< start + 2),
             DissectionField(name: "Destination Port", value: "\(destinationPort)", byteRange: start + 2 ..< start + 4),
             DissectionField(name: "Sequence Number", value: "\(sequence)", byteRange: start + 4 ..< start + 8),
             DissectionField(name: "Acknowledgement", value: "\(acknowledgement)", byteRange: start + 8 ..< start + 12),
             DissectionField(name: "Flags", value: tcpFlagsDescription(flags), byteRange: start + 12 ..< start + 14),
             DissectionField(name: "Window", value: "\(window)", byteRange: start + 14 ..< start + 16)
-        ]
+        ] : []
         let node = DissectionNode(
             label: "Transmission Control Protocol",
             shortName: "TCP",
@@ -62,18 +67,18 @@ enum TCPDissector {
 enum UDPDissector {
     static let headerLength = 8
 
-    static func dissect(_ bytes: [UInt8], at start: Int) throws -> TransportLayerResult {
+    static func dissect(_ bytes: [UInt8], at start: Int, detailed: Bool) throws -> TransportLayerResult {
         var reader = ByteReader(bytes, offset: start)
         let sourcePort = try reader.readUInt16()
         let destinationPort = try reader.readUInt16()
         let length = try reader.readUInt16()
         _ = try reader.readUInt16() // checksum (not validated)
 
-        let fields = [
+        let fields: [DissectionField] = detailed ? [
             DissectionField(name: "Source Port", value: "\(sourcePort)", byteRange: start ..< start + 2),
             DissectionField(name: "Destination Port", value: "\(destinationPort)", byteRange: start + 2 ..< start + 4),
             DissectionField(name: "Length", value: "\(length)", byteRange: start + 4 ..< start + 6)
-        ]
+        ] : []
         let node = DissectionNode(
             label: "User Datagram Protocol",
             shortName: "UDP",

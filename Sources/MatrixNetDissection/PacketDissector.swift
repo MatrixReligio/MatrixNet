@@ -10,14 +10,27 @@ public struct PacketDissector: Sendable {
     public init() {}
 
     /// Dissects `bytes` framed according to `linkType`.
-    public func dissect(_ bytes: [UInt8], linkType: LinkLayerType) -> DissectedPacket {
+    ///
+    /// When `detailed` is false the per-layer display field trees are skipped
+    /// (each node carries empty `fields`/`children` but a correct
+    /// `label`/`shortName`/`byteRange`). All extracted values — the five-tuple,
+    /// summary, protocol path, hostnames, JA4 fingerprint, and TCP segment — are
+    /// computed identically in both modes; only the inspector display data is
+    /// elided. This is the fast path for live capture, where the field tree is
+    /// only needed once a user selects a packet.
+    public func dissect(_ bytes: [UInt8], linkType: LinkLayerType, detailed: Bool = true) -> DissectedPacket {
         var layers = [DissectionNode]()
 
-        guard let (etherType, networkOffset) = parseLinkLayer(bytes, linkType: linkType, into: &layers) else {
+        guard let (etherType, networkOffset) = parseLinkLayer(
+            bytes,
+            linkType: linkType,
+            into: &layers,
+            detailed: detailed
+        ) else {
             return DissectedPacket(layers: layers, fiveTuple: nil, summary: summarize(layers, fiveTuple: nil))
         }
 
-        guard let network = parseNetworkLayer(bytes, etherType: etherType, at: networkOffset) else {
+        guard let network = parseNetworkLayer(bytes, etherType: etherType, at: networkOffset, detailed: detailed) else {
             return DissectedPacket(layers: layers, fiveTuple: nil, summary: summarize(layers, fiveTuple: nil))
         }
         layers.append(network.node)
@@ -27,7 +40,8 @@ public struct PacketDissector: Sendable {
             bytes,
             proto: proto,
             at: network.payloadOffset,
-            segmentEnd: network.payloadEnd
+            segmentEnd: network.payloadEnd,
+            detailed: detailed
         ) else {
             return DissectedPacket(layers: layers, fiveTuple: nil, summary: summarize(layers, fiveTuple: nil))
         }
@@ -44,9 +58,9 @@ public struct PacketDissector: Sendable {
         if let application = parseApplicationLayer(
             bytes,
             proto: proto,
-            ports: (transport.sourcePort, transport.destinationPort),
+            transport: transport,
             destination: network.destination,
-            at: transport.payloadOffset
+            detailed: detailed
         ) {
             layers.append(application.node)
             hostnames = application.hostnames
@@ -78,13 +92,15 @@ public struct PacketDissector: Sendable {
     private func parseApplicationLayer(
         _ bytes: [UInt8],
         proto: TransportProtocol,
-        ports: (source: UInt16, destination: UInt16),
+        transport: TransportLayerResult,
         destination: IPAddress,
-        at offset: Int
+        detailed: Bool
     ) -> ApplicationLayer? {
+        let offset = transport.payloadOffset
+        let ports = (source: transport.sourcePort, destination: transport.destinationPort)
         guard offset < bytes.count else { return nil }
         if ports.source == 53 || ports.destination == 53 {
-            guard let dns = try? DNSDissector.dissect(bytes, at: offset) else { return nil }
+            guard let dns = try? DNSDissector.dissect(bytes, at: offset, detailed: detailed) else { return nil }
             // Bind resolved IPs to the *queried* name, not an answer's canonical
             // name — CDN domains resolve through a CNAME (www.foo.com → foo.cdn.net),
             // and the user-facing host is what was asked for.
@@ -99,7 +115,7 @@ public struct PacketDissector: Sendable {
         // QUIC runs over UDP (HTTP/3 on :443). Try it before the TLS branch so a
         // UDP/443 datagram is not mis-dissected as a TLS record.
         if proto == .udp, ports.source == 443 || ports.destination == 443 {
-            guard let quic = QUICDissector.dissect(bytes, at: offset) else { return nil }
+            guard let quic = QUICDissector.dissect(bytes, at: offset, detailed: detailed) else { return nil }
             let hostnames = (quic.serverName.flatMap(HostnameNormalizer.normalize))
                 .map { [HostnameObservation(ip: destination, name: $0)] } ?? []
             return ApplicationLayer(node: quic.node, hostnames: hostnames, fingerprint: quic.clientFingerprint)
@@ -108,13 +124,13 @@ public struct PacketDissector: Sendable {
             bytes,
             at: offset
         ) {
-            guard let tls = try? TLSDissector.dissect(bytes, at: offset) else { return nil }
+            guard let tls = try? TLSDissector.dissect(bytes, at: offset, detailed: detailed) else { return nil }
             let hostnames = (tls.serverName.flatMap(HostnameNormalizer.normalize))
                 .map { [HostnameObservation(ip: destination, name: $0)] } ?? []
             return ApplicationLayer(node: tls.node, hostnames: hostnames, fingerprint: tls.clientFingerprint)
         }
         if ports.source == 80 || ports.destination == 80 || HTTPDissector.looksLikeHTTP(bytes, at: offset) {
-            guard let node = try? HTTPDissector.dissect(bytes, at: offset) else { return nil }
+            guard let node = try? HTTPDissector.dissect(bytes, at: offset, detailed: detailed) else { return nil }
             return ApplicationLayer(node: node, hostnames: [], fingerprint: nil)
         }
         return nil
@@ -125,11 +141,12 @@ public struct PacketDissector: Sendable {
     private func parseLinkLayer(
         _ bytes: [UInt8],
         linkType: LinkLayerType,
-        into layers: inout [DissectionNode]
+        into layers: inout [DissectionNode],
+        detailed: Bool
     ) -> (etherType: UInt16, offset: Int)? {
         switch linkType {
         case .ethernet:
-            guard let ethernet = try? EthernetDissector.dissect(bytes) else { return nil }
+            guard let ethernet = try? EthernetDissector.dissect(bytes, detailed: detailed) else { return nil }
             layers.append(ethernet.node)
             return (ethernet.etherType, ethernet.payloadOffset)
         case .rawIP:
@@ -142,10 +159,15 @@ public struct PacketDissector: Sendable {
         }
     }
 
-    private func parseNetworkLayer(_ bytes: [UInt8], etherType: UInt16, at offset: Int) -> NetworkLayerResult? {
+    private func parseNetworkLayer(
+        _ bytes: [UInt8],
+        etherType: UInt16,
+        at offset: Int,
+        detailed: Bool
+    ) -> NetworkLayerResult? {
         switch etherType {
-        case 0x0800: try? IPv4Dissector.dissect(bytes, at: offset)
-        case 0x86DD: try? IPv6Dissector.dissect(bytes, at: offset)
+        case 0x0800: try? IPv4Dissector.dissect(bytes, at: offset, detailed: detailed)
+        case 0x86DD: try? IPv6Dissector.dissect(bytes, at: offset, detailed: detailed)
         default: nil
         }
     }
@@ -154,11 +176,12 @@ public struct PacketDissector: Sendable {
         _ bytes: [UInt8],
         proto: TransportProtocol,
         at offset: Int,
-        segmentEnd: Int
+        segmentEnd: Int,
+        detailed: Bool
     ) -> TransportLayerResult? {
         switch proto {
-        case .tcp: try? TCPDissector.dissect(bytes, at: offset, segmentEnd: segmentEnd)
-        case .udp: try? UDPDissector.dissect(bytes, at: offset)
+        case .tcp: try? TCPDissector.dissect(bytes, at: offset, segmentEnd: segmentEnd, detailed: detailed)
+        case .udp: try? UDPDissector.dissect(bytes, at: offset, detailed: detailed)
         default: nil
         }
     }

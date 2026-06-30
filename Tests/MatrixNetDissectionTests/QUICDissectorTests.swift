@@ -8,7 +8,7 @@ struct QUICDissectorTests {
     @Test("dissects a QUIC Initial to SNI + QUIC JA4")
     func dissectsAppendixA() {
         let packet = hexBytes(QUICTestVectors.appendixAProtectedClientInitial)
-        let result = QUICDissector.dissect(packet, at: 0)
+        let result = QUICDissector.dissect(packet, at: 0, detailed: true)
         #expect(result?.serverName == "example.com")
         #expect(result?.clientFingerprint?.hasPrefix("q13d") == true)
         #expect(result?.node.shortName == "QUIC")
@@ -16,7 +16,7 @@ struct QUICDissectorTests {
 
     @Test("a non-QUIC payload returns nil")
     func nonQUIC() {
-        #expect(QUICDissector.dissect([0x40, 0x00, 0x00, 0x00], at: 0) == nil)
+        #expect(QUICDissector.dissect([0x40, 0x00, 0x00, 0x00], at: 0, detailed: true) == nil)
     }
 
     /// With trailing (coalesced/padding) bytes after the Initial, the node's
@@ -25,7 +25,7 @@ struct QUICDissectorTests {
     func byteRangeBounded() throws {
         let initial = hexBytes(QUICTestVectors.appendixAProtectedClientInitial)
         let withTrailing = initial + [UInt8](repeating: 0xFF, count: 200)
-        let result = try #require(QUICDissector.dissect(withTrailing, at: 0))
+        let result = try #require(QUICDissector.dissect(withTrailing, at: 0, detailed: true))
         #expect(result.node.byteRange.upperBound == initial.count)
     }
 }

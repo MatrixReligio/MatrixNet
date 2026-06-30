@@ -21,7 +21,7 @@ struct DNSDissectorTests {
 
     @Test("parses a DNS query name and type")
     func parsesQuery() throws {
-        let result = try DNSDissector.dissect(query, at: 0)
+        let result = try DNSDissector.dissect(query, at: 0, detailed: true)
         #expect(result.message.id == 0x1234)
         #expect(result.message.isResponse == false)
         #expect(result.message.questions.first?.name == "example.com")
@@ -31,7 +31,7 @@ struct DNSDissectorTests {
 
     @Test("parses a DNS response and extracts the answer IP via a compression pointer")
     func parsesResponse() throws {
-        let result = try DNSDissector.dissect(response, at: 0)
+        let result = try DNSDissector.dissect(response, at: 0, detailed: true)
         #expect(result.message.isResponse)
         let answer = try #require(result.message.answers.first)
         #expect(answer.name == "example.com")
@@ -44,14 +44,14 @@ struct DNSDissectorTests {
         // Header claims 1 question; qname is a pointer to offset 12 (itself).
         let malicious = hex("1234 0100 0001 0000 0000 0000 C00C")
         // Must not hang or crash; either throws or yields no question name.
-        let result = try? DNSDissector.dissect(malicious, at: 0)
+        let result = try? DNSDissector.dissect(malicious, at: 0, detailed: true)
         #expect(result == nil || result?.message.questions.first?.name.isEmpty != false)
     }
 
     @Test("truncated DNS payloads do not crash", arguments: 0 ... 30)
     func truncationFuzz(_ length: Int) {
         let truncated = Array(response.prefix(length))
-        _ = try? DNSDissector.dissect(truncated, at: 0)
+        _ = try? DNSDissector.dissect(truncated, at: 0, detailed: true)
         // Reaching here without trapping is the assertion.
         #expect(Bool(true))
     }
@@ -60,7 +60,7 @@ struct DNSDissectorTests {
     func oversizedLabel() {
         // qname label length 0x3F (63) but no bytes follow.
         let bad = hex("1234 0100 0001 0000 0000 0000 3F")
-        _ = try? DNSDissector.dissect(bad, at: 0)
+        _ = try? DNSDissector.dissect(bad, at: 0, detailed: true)
         #expect(Bool(true))
     }
 }

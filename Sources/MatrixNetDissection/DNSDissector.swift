@@ -35,7 +35,11 @@ enum DNSDissector {
     /// huge loop even before the bounds checks would stop it.
     private static let maxRecords = 100
 
-    static func dissect(_ bytes: [UInt8], at start: Int) throws -> (node: DissectionNode, message: DNSMessage) {
+    static func dissect(
+        _ bytes: [UInt8],
+        at start: Int,
+        detailed: Bool
+    ) throws -> (node: DissectionNode, message: DNSMessage) {
         var reader = ByteReader(bytes, offset: start)
         let id = try reader.readUInt16()
         let flags = try reader.readUInt16()
@@ -79,15 +83,16 @@ enum DNSDissector {
             questions: questions,
             answers: answers
         )
+        let fields: [DissectionField] = detailed ? [
+            DissectionField(name: "Transaction ID", value: HexFormat.hex16(id)),
+            DissectionField(name: "Flags", value: HexFormat.hex16(flags)),
+            DissectionField(name: "Questions", value: "\(questionCount)"),
+            DissectionField(name: "Answers", value: "\(answerCount)")
+        ] : []
         let node = DissectionNode(
             label: "Domain Name System",
             shortName: "DNS",
-            fields: [
-                DissectionField(name: "Transaction ID", value: HexFormat.hex16(id)),
-                DissectionField(name: "Flags", value: HexFormat.hex16(flags)),
-                DissectionField(name: "Questions", value: "\(questionCount)"),
-                DissectionField(name: "Answers", value: "\(answerCount)")
-            ],
+            fields: fields,
             byteRange: start ..< bytes.count
         )
         return (node, message)

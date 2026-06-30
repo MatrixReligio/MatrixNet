@@ -664,7 +664,15 @@ extension AppModel {
                 nameMap[connection.fiveTuple.destination.address.description] = host
             }
         }
-        resolvedHostnames = nameMap
+        // Only publish when the map actually changed. This is reassigned every
+        // ~1s tick, and any view that reads it (e.g. the Packets table's summary
+        // column) is invalidated on every assignment — even an identical one —
+        // forcing a full re-render/row-height re-measure. Hostnames change rarely
+        // (only when a new lookup lands), so gating this removes a once-a-second
+        // table-wide invalidation.
+        if resolvedHostnames != nameMap {
+            resolvedHostnames = nameMap
+        }
         topTalkers = makeTopTalkers(connections: connections)
     }
 }
