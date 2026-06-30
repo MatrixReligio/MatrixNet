@@ -10,9 +10,18 @@ struct HistoryStoreTests {
         _ host: String,
         bytesIn: Int = 100,
         bytesOut: Int = 50,
+        id: UUID = UUID(),
         at: Date = Date(timeIntervalSince1970: 1000)
     ) -> ConnectionSummary {
-        ConnectionSummary(appName: app, remoteHost: host, proto: "TCP", bytesIn: bytesIn, bytesOut: bytesOut, at: at)
+        ConnectionSummary(
+            id: id,
+            appName: app,
+            remoteHost: host,
+            proto: "TCP",
+            bytesIn: bytesIn,
+            bytesOut: bytesOut,
+            at: at
+        )
     }
 
     @Test("records new observations")
@@ -22,14 +31,17 @@ struct HistoryStoreTests {
         #expect(try store.recent().count == 2)
     }
 
-    @Test("upserts repeat observations by app + host + proto")
+    @Test("repeat samples of one connection accumulate its growth, not double-count")
     func upserts() throws {
         let store = try HistoryStore.inMemory()
+        // The SAME connection (shared id) sampled twice: cumulative 100 → 300.
+        let conn = UUID()
         try store.record([summary(
             "Safari",
             "apple.com",
             bytesIn: 100,
             bytesOut: 50,
+            id: conn,
             at: Date(timeIntervalSince1970: 1000)
         )])
         try store.record([summary(
@@ -37,6 +49,7 @@ struct HistoryStoreTests {
             "apple.com",
             bytesIn: 300,
             bytesOut: 80,
+            id: conn,
             at: Date(timeIntervalSince1970: 2000)
         )])
 
@@ -44,10 +57,27 @@ struct HistoryStoreTests {
         #expect(records.count == 1)
         let record = try #require(records.first)
         #expect(record.sightings == 2)
-        #expect(record.bytesIn == 300) // monotonic max
+        #expect(record.bytesIn == 300) // delta 100 + 200, not the cumulative counted twice
         #expect(record.bytesOut == 80)
         #expect(record.lastSeen == Date(timeIntervalSince1970: 2000))
         #expect(record.firstSeen == Date(timeIntervalSince1970: 1000))
+    }
+
+    @Test("separate sequential connections to the same host accumulate")
+    func sequentialConnectionsAccumulate() throws {
+        let store = try HistoryStore.inMemory()
+        let connA = UUID()
+        let connB = UUID()
+        let host = "cdn.example"
+        // Connection A downloads to 100, sampled twice, then closes.
+        try store.record([summary("Safari", host, bytesIn: 60, bytesOut: 0, id: connA)])
+        try store.record([summary("Safari", host, bytesIn: 100, bytesOut: 0, id: connA)])
+        // A new, separate connection to the same host downloads 80.
+        try store.record([summary("Safari", host, bytesIn: 80, bytesOut: 0, id: connB)])
+
+        let record = try #require(try store.recent().first)
+        // 100 (A) + 80 (B) — the old `max` kept only the larger single connection.
+        #expect(record.bytesIn == 180)
     }
 
     @Test("collapses duplicate tuples within one batch: one sighting, summed bytes")

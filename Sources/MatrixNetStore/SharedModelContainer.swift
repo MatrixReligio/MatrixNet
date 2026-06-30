@@ -62,25 +62,25 @@ public enum SharedModelContainer {
         try ModelContainer(for: schema, configurations: [ModelConfiguration(isStoredInMemoryOnly: true)])
     }
 
-    /// Moves the SQLite store and its `-wal`/`-shm` sidecars aside to a
-    /// timestamped `.corrupt-<unix>` backup instead of deleting them, so a store
-    /// that failed to open can still be recovered by hand. Only if a file cannot
-    /// be moved at all does it fall back to removing it, so the app can still
-    /// launch rather than loop on the same broken store.
+    /// Moves the SQLite store and its `-wal`/`-shm` sidecars aside to a unique
+    /// `.corrupt-<unix>-<uuid>` backup instead of deleting them, so a store that
+    /// failed to open can still be recovered by hand. The UUID makes the backup
+    /// name collision-proof: two failed opens in the same second would otherwise
+    /// reuse the same name, the move would fail, and the second store would be
+    /// lost. A move that genuinely fails leaves the original file untouched
+    /// (recreation then throws and the caller runs without a store for the
+    /// session) — never deleted, because losing the user's data is the worse
+    /// outcome.
     private static func backUpStore(at url: URL) {
         let manager = FileManager.default
         let directory = url.deletingLastPathComponent()
         let base = url.lastPathComponent
-        let stamp = String(Int(Date().timeIntervalSince1970))
+        let stamp = "\(Int(Date().timeIntervalSince1970))-\(UUID().uuidString)"
         for suffix in ["", "-wal", "-shm"] {
             let source = directory.appendingPathComponent(base + suffix)
             guard manager.fileExists(atPath: source.path) else { continue }
             let backup = directory.appendingPathComponent("\(base).corrupt-\(stamp)\(suffix)")
-            do {
-                try manager.moveItem(at: source, to: backup)
-            } catch {
-                try? manager.removeItem(at: source)
-            }
+            try? manager.moveItem(at: source, to: backup)
         }
     }
 }

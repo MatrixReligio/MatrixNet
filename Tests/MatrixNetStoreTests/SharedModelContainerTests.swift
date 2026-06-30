@@ -16,6 +16,7 @@ struct SharedModelContainerTests {
 
         try history.record([
             ConnectionSummary(
+                id: UUID(),
                 appName: "A",
                 remoteHost: "x",
                 proto: "TCP",
@@ -74,5 +75,36 @@ struct SharedModelContainerTests {
         #expect(!backups.isEmpty)
         let mainBackup = try #require(backups.first { !$0.hasSuffix("-wal") && !$0.hasSuffix("-shm") })
         #expect(try Data(contentsOf: dir.appendingPathComponent(mainBackup)) == garbage)
+    }
+
+    /// Two failed opens close together must each keep their own backup. A
+    /// seconds-resolution backup name collides on the second recovery, and the
+    /// old fallback then *deleted* the second store — the exact data loss the fix
+    /// is meant to prevent. Each recovery must produce its own backup.
+    @Test("a second failed open keeps its own backup, never deletes")
+    func secondFailedOpenAlsoBacksUp() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("matrixnet-test-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent("matrixnet.store")
+        let schema = Schema([
+            ConnectionHistoryRecord.self,
+            UsageBucketRecord.self,
+            KnownDestinationRecord.self,
+            AppFingerprintRecord.self
+        ])
+
+        func recover(_ marker: String) throws {
+            try Data(marker.utf8).write(to: url)
+            _ = try SharedModelContainer.make(configuration: ModelConfiguration(schema: schema, url: url))
+        }
+        try recover("first corrupt store")
+        try recover("second corrupt store")
+
+        let mainBackups = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+            .filter { $0.contains("corrupt") && !$0.hasSuffix("-wal") && !$0.hasSuffix("-shm") }
+        // Both recoveries preserved their store — two distinct backups, no deletion.
+        #expect(mainBackups.count == 2)
     }
 }

@@ -305,6 +305,7 @@ public final class AppModel {
 
         let summaries = connections.map { connection in
             ConnectionSummary(
+                id: connection.id,
                 appName: connection.app.displayName,
                 remoteHost: connection.remoteHostname ?? connection.fiveTuple.destination.address.description,
                 proto: connection.fiveTuple.proto.displayName,
@@ -388,9 +389,6 @@ public final class AppModel {
             meta[key] = flow
         }
         let deltas = UsageAccumulator.deltas(previous: lastUsageSeen, current: current)
-        lastUsageSeen = current
-        guard !deltas.isEmpty else { return }
-
         let hour = UsageBucketing.hourStart(of: now, calendar: .current)
         var merged: [String: UsageRow] = [:]
         for (key, delta) in deltas {
@@ -413,7 +411,12 @@ public final class AppModel {
                 )
             }
         }
-        try? usageStore.accumulate(Array(merged.values))
+        // Advance the baseline only after a durable write (or when there's nothing
+        // to write); a failed save keeps the old baseline so the next flush retries
+        // this interval's growth instead of silently dropping those bytes.
+        if merged.isEmpty || (try? usageStore.accumulate(Array(merged.values))) != nil {
+            lastUsageSeen = current
+        }
 
         if let last = lastCompactedHour, last < hour {
             try? usageStore.compactHour(last, limit: 20)

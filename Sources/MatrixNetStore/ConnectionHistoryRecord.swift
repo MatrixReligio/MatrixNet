@@ -37,14 +37,20 @@ public final class ConnectionHistoryRecord {
 
 /// A connection observation handed to the store (decoupled from the model layer).
 public struct ConnectionSummary: Sendable {
+    /// Stable id of the live connection this observation came from. The store uses
+    /// it to accumulate per-connection deltas, so sequential connections to the
+    /// same app+host+proto sum correctly instead of collapsing to the largest.
+    public let id: UUID
     public let appName: String
     public let remoteHost: String
     public let proto: String
+    /// Cumulative (monotonic) bytes for the connection at observation time.
     public let bytesIn: Int
     public let bytesOut: Int
     public let at: Date
 
-    public init(appName: String, remoteHost: String, proto: String, bytesIn: Int, bytesOut: Int, at: Date) {
+    public init(id: UUID, appName: String, remoteHost: String, proto: String, bytesIn: Int, bytesOut: Int, at: Date) {
+        self.id = id
         self.appName = appName
         self.remoteHost = remoteHost
         self.proto = proto

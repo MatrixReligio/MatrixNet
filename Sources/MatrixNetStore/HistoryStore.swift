@@ -6,6 +6,10 @@ import SwiftData
 @MainActor
 public final class HistoryStore {
     private let container: ModelContainer
+    /// Per-connection last-seen cumulative byte counts, so each sample contributes
+    /// only its growth. Keyed by the connection's stable id; pruned to the live
+    /// set on every `record` so a closed connection's entry can't linger.
+    private var lastSeen: [UUID: (bytesIn: Int, bytesOut: Int)] = [:]
 
     public init(container: ModelContainer) {
         self.container = container
@@ -33,7 +37,7 @@ public final class HistoryStore {
     /// rather than reduced to the largest single socket.
     public func record(_ summaries: [ConnectionSummary]) throws {
         let context = container.mainContext
-        for group in Self.collapse(summaries) {
+        for group in collapse(summaries) {
             let app = group.appName
             let host = group.remoteHost
             let proto = group.proto
@@ -43,8 +47,8 @@ public final class HistoryStore {
             descriptor.fetchLimit = 1
 
             if let existing = try context.fetch(descriptor).first {
-                existing.bytesIn = max(existing.bytesIn, group.bytesIn)
-                existing.bytesOut = max(existing.bytesOut, group.bytesOut)
+                existing.bytesIn += group.bytesIn
+                existing.bytesOut += group.bytesOut
                 existing.sightings += 1
                 existing.lastSeen = max(existing.lastSeen, group.lastAt)
                 existing.firstSeen = min(existing.firstSeen, group.firstAt)
@@ -63,8 +67,9 @@ public final class HistoryStore {
         try context.save()
     }
 
-    /// One collapsed observation per app+host+proto in a batch: bytes summed
-    /// across the concurrent sockets, with the earliest and latest timestamps.
+    /// One collapsed observation per app+host+proto in a batch: per-connection
+    /// deltas summed across the concurrent sockets, with the earliest and latest
+    /// timestamps.
     private struct Group {
         let appName: String
         let remoteHost: String
@@ -75,14 +80,25 @@ public final class HistoryStore {
         var lastAt: Date
     }
 
-    private static func collapse(_ summaries: [ConnectionSummary]) -> [Group] {
+    /// Turns each summary's cumulative counters into the growth since that
+    /// connection's previous sample, then groups by app+host+proto. Pruning
+    /// `lastSeen` to the ids in this batch keeps the baseline from growing without
+    /// bound (a closed connection's id is never reused within a session).
+    private func collapse(_ summaries: [ConnectionSummary]) -> [Group] {
         var groups: [String: Group] = [:]
         var order: [String] = []
+        var seenIDs = Set<UUID>()
         for summary in summaries {
+            seenIDs.insert(summary.id)
+            let previous = lastSeen[summary.id] ?? (bytesIn: 0, bytesOut: 0)
+            let deltaIn = max(0, summary.bytesIn - previous.bytesIn)
+            let deltaOut = max(0, summary.bytesOut - previous.bytesOut)
+            lastSeen[summary.id] = (summary.bytesIn, summary.bytesOut)
+
             let key = "\(summary.appName)\u{1F}\(summary.remoteHost)\u{1F}\(summary.proto)"
             if var group = groups[key] {
-                group.bytesIn += summary.bytesIn
-                group.bytesOut += summary.bytesOut
+                group.bytesIn += deltaIn
+                group.bytesOut += deltaOut
                 group.firstAt = min(group.firstAt, summary.at)
                 group.lastAt = max(group.lastAt, summary.at)
                 groups[key] = group
@@ -91,14 +107,15 @@ public final class HistoryStore {
                     appName: summary.appName,
                     remoteHost: summary.remoteHost,
                     proto: summary.proto,
-                    bytesIn: summary.bytesIn,
-                    bytesOut: summary.bytesOut,
+                    bytesIn: deltaIn,
+                    bytesOut: deltaOut,
                     firstAt: summary.at,
                     lastAt: summary.at
                 )
                 order.append(key)
             }
         }
+        lastSeen = lastSeen.filter { seenIDs.contains($0.key) }
         return order.compactMap { groups[$0] }
     }
 
