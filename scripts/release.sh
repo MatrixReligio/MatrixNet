@@ -40,6 +40,26 @@ if [ ! -s "$GEOIP" ] || [ "$(stat -f%z "$GEOIP")" -lt 10000000 ]; then
 fi
 echo "==> GeoIP database bundled ($(stat -f%z "$GEOIP") bytes)"
 
+# Guard against a version mismatch: the VERSION argument only names the DMG and
+# the appcast download URL, while the app's real CFBundleShortVersionString comes
+# from project.yml. If someone bumps the workflow input but forgets project.yml,
+# the tag/DMG/appcast would say a new version while the app inside (and Sparkle's
+# update comparison) stays on the old one. Read the built plist and require a match.
+PLIST="$APP/Contents/Info.plist"
+BUILT_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")"
+BUILT_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$PLIST")"
+if [ "$BUILT_VERSION" != "$VERSION" ]; then
+  echo "ERROR: built app version '$BUILT_VERSION' != requested '$VERSION' — bump project.yml." >&2
+  exit 1
+fi
+case "$BUILT_BUILD" in
+  '' | *[!0-9]*)
+    echo "ERROR: CFBundleVersion '$BUILT_BUILD' is not numeric." >&2
+    exit 1
+    ;;
+esac
+echo "==> Version check OK: $BUILT_VERSION (build $BUILT_BUILD)"
+
 mkdir -p "$DIST"
 DMG="$DIST/MatrixNet-$VERSION.dmg"
 
