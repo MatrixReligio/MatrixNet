@@ -45,12 +45,22 @@ struct WirePacketTests {
     func edgeCases() {
         let edge = [
             WirePacket(
-                timestamp: 0, pid: -1, processName: "进程名 🛰️", direction: 0,
-                dlt: 0, originalLength: 0, data: Data()
+                timestamp: 0,
+                pid: -1,
+                processName: "进程名 🛰️",
+                direction: 0,
+                dlt: 0,
+                originalLength: 0,
+                data: Data()
             ),
             WirePacket(
-                timestamp: 1.25e9, pid: 2_147_483_647, processName: "", direction: 255,
-                dlt: 4_294_967_295, originalLength: 9000, data: Data(repeating: 0xAB, count: 4096)
+                timestamp: 1.25e9,
+                pid: 2_147_483_647,
+                processName: "",
+                direction: 255,
+                dlt: 4_294_967_295,
+                originalLength: 9000,
+                data: Data(repeating: 0xAB, count: 4096)
             )
         ]
         #expect(WirePacketBatch.decode(WirePacketBatch.encode(edge)) == edge)

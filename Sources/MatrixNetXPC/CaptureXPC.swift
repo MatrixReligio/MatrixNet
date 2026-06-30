@@ -81,8 +81,8 @@ public enum WirePacketBatch {
         let bytes = [UInt8](data)
         var cursor = 0
 
-        func remaining(_ n: Int) -> Bool {
-            n >= 0 && cursor + n <= bytes.count
+        func remaining(_ length: Int) -> Bool {
+            length >= 0 && cursor + length <= bytes.count
         }
         func readU32() -> UInt32? {
             guard remaining(4) else { return nil }
@@ -109,7 +109,7 @@ public enum WirePacketBatch {
             cursor += 1
             guard let dlt = readU32(), let originalLength = readU32(),
                   let nameLength = readU32(), remaining(Int(nameLength)) else { return [] }
-            let name = String(decoding: bytes[cursor ..< cursor + Int(nameLength)], as: UTF8.self)
+            let name = String(bytes: bytes[cursor ..< cursor + Int(nameLength)], encoding: .utf8) ?? ""
             cursor += Int(nameLength)
             guard let dataLength = readU32(), remaining(Int(dataLength)) else { return [] }
             let payload = Data(bytes[cursor ..< cursor + Int(dataLength)])
