@@ -26,6 +26,31 @@ jobs:
           ./scripts/build-threatlist.sh 3
           ls -la App/Resources/threatlist.dat
 
+      - name: Fetch Sparkle tools (sign_update)
+        env:
+          SPARKLE_VERSION: "2.9.3"
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o sparkle.tar.xz \
+            "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+          mkdir -p sparkle && tar -xf sparkle.tar.xz -C sparkle
+          echo "SPARKLE_BIN=$RUNNER_TEMP/sparkle/bin" >> "$GITHUB_ENV"
+
+      - name: Sign threatlist.dat (Ed25519, for the app's signature check)
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          KEYFILE="$(mktemp)"
+          trap 'rm -f "$KEYFILE"' EXIT
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > "$KEYFILE"
+          # -p prints only the base64 EdDSA signature; the app verifies it with
+          # CryptoKit against the embedded SUPublicEDKey before installing.
+          "$SPARKLE_BIN/sign_update" -p App/Resources/threatlist.dat --ed-key-file "$KEYFILE" \
+            > App/Resources/threatlist.dat.edsig
+          test -s App/Resources/threatlist.dat.edsig
+
       - name: Publish to the threatlist-latest release
         uses: softprops/action-gh-release@v3
         with:
@@ -37,5 +62,8 @@ jobs:
             Source: IPsum (https://github.com/stamparm/ipsum), released under the
             Unlicense (public domain). Level 3 — addresses present on three or
             more independent public blocklists. Rebuilt automatically.
-          files: App/Resources/threatlist.dat
+            `threatlist.dat.edsig` is an Ed25519 signature the app verifies before install.
+          files: |
+            App/Resources/threatlist.dat
+            App/Resources/threatlist.dat.edsig
           make_latest: false

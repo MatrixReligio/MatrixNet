@@ -127,6 +127,12 @@ enum GeoIP {
                 log.warning("Downloaded GeoIP database failed validation; keeping current.")
                 return false
             }
+            guard await DataAssetSignature.isValid(
+                data: data, signatureURL: remoteURL.appendingPathExtension("edsig")
+            ) else {
+                log.warning("Downloaded GeoIP database failed signature verification; keeping current.")
+                return false
+            }
             try FileManager.default.createDirectory(
                 at: destination.deletingLastPathComponent(), withIntermediateDirectories: true
             )

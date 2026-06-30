@@ -120,6 +120,12 @@ enum Threat {
                 log.warning("Downloaded threat list failed validation; keeping current.")
                 return false
             }
+            guard await DataAssetSignature.isValid(
+                data: data, signatureURL: remoteURL.appendingPathExtension("edsig")
+            ) else {
+                log.warning("Downloaded threat list failed signature verification; keeping current.")
+                return false
+            }
             try FileManager.default.createDirectory(
                 at: destination.deletingLastPathComponent(), withIntermediateDirectories: true
             )

@@ -83,6 +83,11 @@ are relevant context for assessing and reporting issues:
 - **Verified components.** The app and helper are signed with a Developer ID and
   notarized; the helper's signing identity (Team ID + bundle identifier) is
   validated as part of registration.
+- **Signed data assets.** The rolling GeoIP and threat-list datasets the app
+  downloads in the background are Ed25519-signed at publish time and verified
+  against the app's embedded public key before install (in addition to a
+  structural check), so a tampered dataset on the release host is rejected. The
+  copy bundled in the app is already covered by the code signature.
 
 ## Scope
 

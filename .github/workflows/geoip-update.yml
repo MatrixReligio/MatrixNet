@@ -28,6 +28,31 @@ jobs:
           fi
           ls -la App/Resources/geoip.dat
 
+      - name: Fetch Sparkle tools (sign_update)
+        env:
+          SPARKLE_VERSION: "2.9.3"
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o sparkle.tar.xz \
+            "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+          mkdir -p sparkle && tar -xf sparkle.tar.xz -C sparkle
+          echo "SPARKLE_BIN=$RUNNER_TEMP/sparkle/bin" >> "$GITHUB_ENV"
+
+      - name: Sign geoip.dat (Ed25519, for the app's signature check)
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          KEYFILE="$(mktemp)"
+          trap 'rm -f "$KEYFILE"' EXIT
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > "$KEYFILE"
+          # -p prints only the base64 EdDSA signature; the app verifies it with
+          # CryptoKit against the embedded SUPublicEDKey before installing.
+          "$SPARKLE_BIN/sign_update" -p App/Resources/geoip.dat --ed-key-file "$KEYFILE" \
+            > App/Resources/geoip.dat.edsig
+          test -s App/Resources/geoip.dat.edsig
+
       - name: Publish to the geoip-latest release
         uses: softprops/action-gh-release@v3
         with:
@@ -38,5 +63,8 @@ jobs:
 
             IP Geolocation by DB-IP (https://db-ip.com), licensed under CC-BY-4.0.
             Rebuilt automatically from the latest DB-IP Country Lite dataset.
-          files: App/Resources/geoip.dat
+            `geoip.dat.edsig` is an Ed25519 signature the app verifies before install.
+          files: |
+            App/Resources/geoip.dat
+            App/Resources/geoip.dat.edsig
           make_latest: false
