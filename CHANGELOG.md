@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.9] - 2026-06-30
+
+### Performance
+- **The widget metrics file is no longer rewritten every ~2 seconds.** The widget
+  only reads it when its timeline refreshes — at most once a minute while the app
+  is the foreground app, and roughly every 30 minutes in the background — so the
+  old per-tick write just wore the disk for snapshots nothing read. The app now
+  writes only right before a foreground reload (≤ once/minute) or on a slow
+  background heartbeat (~20 min, matched to the widget's ~30‑min cadence with
+  margin). That's ~72 writes/day instead of ~43,000, with no change to how fresh
+  the widget actually is.
+
 ## [1.8.8] - 2026-06-30
 
 ### Performance
