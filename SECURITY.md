@@ -71,9 +71,15 @@ are relevant context for assessing and reporting issues:
 - **No decryption.** Phase 1 does **not** perform HTTPS/TLS interception or
   decryption. Encrypted payloads stay encrypted; only metadata (e.g. TLS
   handshake, SNI, certificate fields) is dissected.
-- **Local-only processing.** All data is processed and stored on the user's
-  machine. MatrixNet sends nothing off the device, has no telemetry, and requires
-  no account or network service of its own.
+- **Local-only processing.** All capture, dissection, and storage happen on the
+  user's machine. MatrixNet has no telemetry, no account, and no network service
+  of its own. It makes outbound requests only to: fetch its own dataset/update
+  assets (GeoIP, threat list, Sparkle appcast) from its GitHub releases, and —
+  when **"Resolve country for proxied destinations"** is enabled (on by default) —
+  resolve a *proxied* flow's domain via encrypted DNS (DoH) to Cloudflare
+  (`1.1.1.1`). That last one is the only case where an observed domain leaves the
+  device; it fires only for proxied flows whose country is otherwise unknown, and
+  can be turned off in Settings to keep MatrixNet fully on-device.
 - **Verified components.** The app and helper are signed with a Developer ID and
   notarized; the helper's signing identity (Team ID + bundle identifier) is
   validated as part of registration.

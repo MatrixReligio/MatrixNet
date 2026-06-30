@@ -55,7 +55,8 @@ public struct Preferences {
         nonmutating set { setBool(newValue, .threatNotificationsEnabled) }
     }
 
-    /// How many days of connection history to retain (0 = keep forever).
+    /// How many days of connection history to retain, clamped to a safe range
+    /// (see `clampRetention`).
     public var historyRetentionDays: Int {
         get { Self.clampRetention(defaults.object(forKey: Key.historyRetentionDays.rawValue) as? Int ?? 30) }
         nonmutating set { defaults.set(Self.clampRetention(newValue), forKey: Key.historyRetentionDays.rawValue) }

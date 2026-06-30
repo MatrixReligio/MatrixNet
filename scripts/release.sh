@@ -93,6 +93,10 @@ if [ -x "$GENERATE_APPCAST" ]; then
     # generate_appcast's --ed-key-file needs a real file path (process
     # substitution /dev/fd/* is not seekable and fails to load).
     KEYFILE="$(mktemp)"
+    # Remove the private-key temp file on ANY exit: under `set -e`, a failing
+    # generate_appcast below would otherwise skip the cleanup and leave the
+    # EdDSA signing key sitting in /tmp.
+    trap 'rm -f "$KEYFILE"' EXIT
     printf '%s' "$SPARKLE_PRIVATE_KEY" > "$KEYFILE"
     KEYARGS=(--ed-key-file "$KEYFILE")
   fi
@@ -103,7 +107,6 @@ if [ -x "$GENERATE_APPCAST" ]; then
   "$GENERATE_APPCAST" ${KEYARGS[@]+"${KEYARGS[@]}"} \
     --download-url-prefix "https://github.com/MatrixReligio/MatrixNet/releases/download/v$VERSION/" \
     "$DIST"
-  [ -n "$KEYFILE" ] && rm -f "$KEYFILE"
   echo "appcast: $DIST/appcast.xml"
 else
   echo "WARN: generate_appcast not found (set SPARKLE_BIN); skipping appcast." >&2

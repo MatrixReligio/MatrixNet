@@ -97,9 +97,16 @@ private struct GeneralSettings: View {
             Section {
                 Toggle("Resolve country for proxied destinations", isOn: $proxyGeoResolution)
             } footer: {
-                Text("Resolve a proxied destination's country via encrypted DNS (DoH). On by default.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(
+                    """
+                    Recovers a proxied destination's country by resolving its domain via \
+                    encrypted DNS (DoH). On by default. When on, this sends the observed \
+                    domain of a proxied flow to Cloudflare (1.1.1.1) — the only case where \
+                    MatrixNet contacts a third party. Turn it off to stay fully on-device.
+                    """
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
             Section {
