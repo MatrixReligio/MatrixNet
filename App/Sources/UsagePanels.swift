@@ -29,9 +29,22 @@ struct UsageEmptyState: View {
 struct UsageHero: View {
     let totals: UsageTotals
     let trend: [TrendBucket]
+    /// Drives the chart shape: dense hourly samples read best as a smooth area,
+    /// while sparse per-day samples are shown as discrete grouped bars so a few
+    /// days' totals are never dressed up as a continuous curve.
+    let granularity: TrendGranularity
+
+    /// The x-position the pointer is hovering, snapped to the nearest sample for
+    /// the readout tooltip.
+    @State private var selectedDate: Date?
 
     private let downLabel = String(localized: "Download")
     private let upLabel = String(localized: "Upload")
+
+    private var selectedBucket: TrendBucket? {
+        guard let selectedDate else { return nil }
+        return UsageReport.bucket(at: selectedDate, in: trend)
+    }
 
     var body: some View {
         Panel {
@@ -41,7 +54,7 @@ struct UsageHero: View {
                 Spacer()
             }
             if trend.count > 1 {
-                chart.frame(height: 140)
+                chart.frame(height: 150)
             }
         }
     }
@@ -60,34 +73,24 @@ struct UsageHero: View {
 
     private var chart: some View {
         Chart {
-            ForEach(trend, id: \.start) { bucket in
-                AreaMark(
-                    x: .value("Time", bucket.start),
-                    y: .value("Bytes", bucket.totals.bytesIn),
-                    series: .value("Direction", downLabel)
-                )
-                .foregroundStyle(Theme.inbound.opacity(0.18))
-                .interpolationMethod(.monotone)
+            if granularity == .hour {
+                hourlyMarks
+            } else {
+                dailyMarks
             }
-            ForEach(trend, id: \.start) { bucket in
-                LineMark(
-                    x: .value("Time", bucket.start),
-                    y: .value("Bytes", bucket.totals.bytesIn),
-                    series: .value("Direction", downLabel)
-                )
-                .foregroundStyle(by: .value("Direction", downLabel))
-                .interpolationMethod(.monotone)
-            }
-            ForEach(trend, id: \.start) { bucket in
-                LineMark(
-                    x: .value("Time", bucket.start),
-                    y: .value("Bytes", bucket.totals.bytesOut),
-                    series: .value("Direction", upLabel)
-                )
-                .foregroundStyle(by: .value("Direction", upLabel))
-                .interpolationMethod(.monotone)
+            if let selectedBucket {
+                RuleMark(x: .value("Time", ruleDate(selectedBucket.start)))
+                    .foregroundStyle(Color.primary.opacity(0.15))
+                    .annotation(
+                        position: .top,
+                        spacing: 0,
+                        overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
+                    ) {
+                        tooltip(selectedBucket)
+                    }
             }
         }
+        .chartXSelection(value: $selectedDate)
         .chartForegroundStyleScale([downLabel: Theme.inbound, upLabel: Theme.outbound])
         .chartLegend(position: .top, alignment: .trailing, spacing: 4)
         .chartYAxis {
@@ -100,6 +103,115 @@ struct UsageHero: View {
                 }
             }
         }
+        .chartXAxis { xAxis }
+    }
+
+    /// Smooth filled area + line with visible per-sample points (today's hours).
+    @ChartContentBuilder private var hourlyMarks: some ChartContent {
+        ForEach(trend, id: \.start) { bucket in
+            AreaMark(
+                x: .value("Time", bucket.start),
+                y: .value("Bytes", bucket.totals.bytesIn),
+                series: .value("Direction", downLabel)
+            )
+            .foregroundStyle(Theme.inbound.opacity(0.18))
+            .interpolationMethod(.monotone)
+        }
+        ForEach(trend, id: \.start) { bucket in
+            LineMark(
+                x: .value("Time", bucket.start),
+                y: .value("Bytes", bucket.totals.bytesIn),
+                series: .value("Direction", downLabel)
+            )
+            .foregroundStyle(by: .value("Direction", downLabel))
+            .interpolationMethod(.monotone)
+            .symbol(.circle)
+            .symbolSize(18)
+        }
+        ForEach(trend, id: \.start) { bucket in
+            LineMark(
+                x: .value("Time", bucket.start),
+                y: .value("Bytes", bucket.totals.bytesOut),
+                series: .value("Direction", upLabel)
+            )
+            .foregroundStyle(by: .value("Direction", upLabel))
+            .interpolationMethod(.monotone)
+            .symbol(.circle)
+            .symbolSize(18)
+        }
+    }
+
+    /// Grouped download/upload bars, one pair per day — discrete by construction,
+    /// so three days of history read as three bars, not an invented curve.
+    @ChartContentBuilder private var dailyMarks: some ChartContent {
+        ForEach(trend, id: \.start) { bucket in
+            BarMark(
+                x: .value("Day", bucket.start, unit: .day),
+                y: .value("Bytes", bucket.totals.bytesIn)
+            )
+            .position(by: .value("Direction", downLabel))
+            .foregroundStyle(by: .value("Direction", downLabel))
+            BarMark(
+                x: .value("Day", bucket.start, unit: .day),
+                y: .value("Bytes", bucket.totals.bytesOut)
+            )
+            .position(by: .value("Direction", upLabel))
+            .foregroundStyle(by: .value("Direction", upLabel))
+        }
+    }
+
+    /// Hour ticks for today; day ticks otherwise — never the auto-picked
+    /// 12-hour labels, which imply a sub-day resolution the daily data lacks.
+    @AxisContentBuilder private var xAxis: some AxisContent {
+        if granularity == .hour {
+            AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                AxisGridLine()
+                AxisTick()
+                AxisValueLabel(format: .dateTime.hour())
+            }
+        } else {
+            AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                AxisGridLine()
+                AxisTick()
+                AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+            }
+        }
+    }
+
+    private func tooltip(_ bucket: TrendBucket) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(verbatim: tooltipDate(bucket.start))
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+            HStack(spacing: 4) {
+                Text(verbatim: "↓").foregroundStyle(Theme.inbound)
+                Text(verbatim: Format.bytes(bucket.totals.bytesIn)).font(Theme.mono(11))
+            }
+            HStack(spacing: 4) {
+                Text(verbatim: "↑").foregroundStyle(Theme.outbound)
+                Text(verbatim: Format.bytes(bucket.totals.bytesOut)).font(Theme.mono(11))
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.08))
+        )
+    }
+
+    /// Where to anchor the hover rule. Hourly points sit on their exact
+    /// timestamp; daily bars are centred on the day band, so shift the rule to
+    /// the day's midpoint to line up with the bar pair.
+    private func ruleDate(_ start: Date) -> Date {
+        granularity == .hour ? start : start.addingTimeInterval(43200)
+    }
+
+    private func tooltipDate(_ date: Date) -> String {
+        granularity == .hour
+            ? date.formatted(.dateTime.month(.abbreviated).day().hour())
+            : date.formatted(.dateTime.month(.abbreviated).day())
     }
 }
 

@@ -70,4 +70,37 @@ struct UsageReportTests {
         #expect(report.count == 1)
         #expect(report[0].totals.bytesIn == 190)
     }
+
+    // MARK: - Tooltip bucket selection (chart hover)
+
+    private var buckets: [TrendBucket] {
+        [
+            TrendBucket(start: Date(timeIntervalSince1970: 0), totals: UsageTotals(bytesIn: 1, bytesOut: 0)),
+            TrendBucket(start: Date(timeIntervalSince1970: 86400), totals: UsageTotals(bytesIn: 2, bytesOut: 0)),
+            TrendBucket(start: Date(timeIntervalSince1970: 172_800), totals: UsageTotals(bytesIn: 3, bytesOut: 0))
+        ]
+    }
+
+    @Test("bucket(at:) returns nil for an empty trend")
+    func bucketEmpty() {
+        #expect(UsageReport.bucket(at: Date(timeIntervalSince1970: 0), in: []) == nil)
+    }
+
+    @Test("bucket(at:) snaps to the nearest bucket by start")
+    func bucketNearest() {
+        // 50_000 is nearer day-1 (Δ36_400) than day-0 (Δ50_000).
+        #expect(UsageReport.bucket(at: Date(timeIntervalSince1970: 50000), in: buckets)?.start
+            == Date(timeIntervalSince1970: 86400))
+    }
+
+    @Test("bucket(at:) matches an exact bucket start")
+    func bucketExact() {
+        #expect(UsageReport.bucket(at: Date(timeIntervalSince1970: 172_800), in: buckets)?.totals.bytesIn == 3)
+    }
+
+    @Test("bucket(at:) clamps a date before the first bucket to the first")
+    func bucketBeforeStart() {
+        #expect(UsageReport.bucket(at: Date(timeIntervalSince1970: -100), in: buckets)?.start
+            == Date(timeIntervalSince1970: 0))
+    }
 }

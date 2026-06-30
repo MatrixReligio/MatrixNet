@@ -84,7 +84,9 @@ fighting it.
 ### 📊 Usage Reports
 - A **Usage tab** that answers "where did my bandwidth go": the top apps,
   countries, and domains by bytes over **Today / 7 days / 30 days / your billing
-  cycle**, with a download/upload trend chart.
+  cycle**, with an interactive download/upload trend chart — hourly area for
+  today, daily bars for longer windows — that you can hover for exact per-period
+  totals.
 - Built from hourly buckets kept locally (default 90 days, configurable), so
   totals survive relaunch — unlike Activity Monitor, which resets to zero.
 - Select an app to scope the country and domain breakdowns to just that app, and

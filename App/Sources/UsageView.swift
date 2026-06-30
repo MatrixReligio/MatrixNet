@@ -110,7 +110,8 @@ struct UsageView: View {
                 } else {
                     UsageHero(
                         totals: UsageReport.totals(rows),
-                        trend: UsageReport.trend(rows, by: period.trendGranularity, calendar: .current)
+                        trend: UsageReport.trend(rows, by: period.trendGranularity, calendar: .current),
+                        granularity: period.trendGranularity
                     )
 
                     Picker("Breakdown", selection: $dimension) {

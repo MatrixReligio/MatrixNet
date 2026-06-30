@@ -63,6 +63,14 @@ public enum UsageReport {
             .sorted { $0.start < $1.start }
     }
 
+    /// The bucket whose `start` is nearest the given date — backs the trend
+    /// chart's hover tooltip, snapping a continuous x-position to a real sample.
+    public static func bucket(at date: Date, in buckets: [TrendBucket]) -> TrendBucket? {
+        buckets.min {
+            abs($0.start.timeIntervalSince(date)) < abs($1.start.timeIntervalSince(date))
+        }
+    }
+
     private static func total(_ totals: UsageTotals) -> UInt64 {
         totals.bytesIn + totals.bytesOut
     }
