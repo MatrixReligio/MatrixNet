@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.10] - 2026-06-30
+
+### Changed
+- **The Usage trend chart now matches its data's resolution.** The 7‑day, 30‑day,
+  and cycle views plot one grouped download/upload **bar per day** instead of a
+  smoothed area — so a few days of history reads as a few discrete bars, never a
+  continuous curve invented by interpolation. Today's view keeps the smooth
+  hourly area, now with a visible point on each sample.
+- **The chart is now interactive.** Hover (or click) anywhere on it to pin a
+  readout showing that day's — or hour's — exact downloaded and uploaded bytes.
+- **The time axis no longer mislabels daily data.** Daily views label ticks by
+  date (e.g. "Jun 28") rather than the auto‑picked 12‑hour marks that implied a
+  sub‑day precision the data didn't have.
+
+> The underlying usage totals were always correct — this release only fixes how
+> the trend was drawn and read.
+
 ## [1.8.9] - 2026-06-30
 
 ### Performance
