@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.8] - 2026-06-30
+
+### Performance
+- **Packet capture uses far less CPU.** Profiling a busy capture showed the
+  sustained cost was the per-packet pipeline (it runs even with the window
+  closed), not the UI. Two fixes:
+  - **Packet batches are decoded ~24× faster.** The helper→app IPC was decoded
+    with `PropertyListDecoder`, whose `Codable` reflection dominated the app's
+    capture CPU. Replaced with a compact length-prefixed binary framing decoded
+    by a direct byte walk (no reflection).
+  - **Live packets are dissected lightly.** Building the full per-field protocol
+    tree for every packet was ~30% of dissection time, yet it's only needed when
+    you select a packet to inspect. The live list now extracts just what it shows
+    (and what flow attribution needs — five-tuple, hostnames, JA4, TCP state);
+    the detail view rebuilds the full tree on demand for the one selected packet.
+  - The connection/packet tables also stop re-rendering when nothing changed
+    (the hostname map is only republished when it actually changes; the packet
+    list refreshes only when new packets arrive).
+  - **After updating, if the Packets tab shows “Waiting for Packets”, click
+    “Reinstall Helper” once** — the capture helper must be re-registered to run
+    the new build (as with any update that changes the helper).
+
 ## [1.8.7] - 2026-06-30
 
 ### Fixed
