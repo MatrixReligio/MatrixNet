@@ -27,6 +27,13 @@ enum TLSDissector {
         var reader = ByteReader(bytes, offset: start)
         let contentType = try reader.readUInt8()
         let recordVersion = try reader.readUInt16()
+        // Validate the record header before emitting a TLS layer: the port-443
+        // trigger alone would otherwise dress arbitrary bytes (e.g. a pure ACK's
+        // padding) up as TLS. A real record is a known content type with a TLS 1.x
+        // major version (0x03).
+        guard (0x14 ... 0x17).contains(contentType), recordVersion >> 8 == 0x03 else {
+            throw DissectionError.malformed
+        }
         let recordLength = try reader.readUInt16()
 
         // The SNI server name and JA4 fingerprint are extracted in both modes

@@ -98,7 +98,12 @@ public struct PacketDissector: Sendable {
     ) -> ApplicationLayer? {
         let offset = transport.payloadOffset
         let ports = (source: transport.sourcePort, destination: transport.destinationPort)
-        guard offset < bytes.count else { return nil }
+        // Bound parsing to the transport payload, not the captured buffer: trailing
+        // link-layer padding past the datagram must never be read as payload. Only
+        // copy when there actually is trailing data (the common case is none).
+        let end = transport.payloadEnd
+        guard offset < end else { return nil }
+        let bytes = end < bytes.count ? Array(bytes[..<end]) : bytes
         if ports.source == 53 || ports.destination == 53 {
             guard let dns = try? DNSDissector.dissect(bytes, at: offset, detailed: detailed) else { return nil }
             // Bind resolved IPs to the *queried* name, not an answer's canonical
@@ -181,7 +186,7 @@ public struct PacketDissector: Sendable {
     ) -> TransportLayerResult? {
         switch proto {
         case .tcp: try? TCPDissector.dissect(bytes, at: offset, segmentEnd: segmentEnd, detailed: detailed)
-        case .udp: try? UDPDissector.dissect(bytes, at: offset, detailed: detailed)
+        case .udp: try? UDPDissector.dissect(bytes, at: offset, segmentEnd: segmentEnd, detailed: detailed)
         default: nil
         }
     }

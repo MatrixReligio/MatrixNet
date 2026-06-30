@@ -44,6 +44,7 @@ enum TCPDissector {
             sourcePort: sourcePort,
             destinationPort: destinationPort,
             payloadOffset: payloadOffset,
+            payloadEnd: payloadOffset + payloadLength,
             tcpSegment: TCPSegment(
                 flags: TCPFlags(rawValue: flags),
                 sequence: sequence,
@@ -67,7 +68,12 @@ enum TCPDissector {
 enum UDPDissector {
     static let headerLength = 8
 
-    static func dissect(_ bytes: [UInt8], at start: Int, detailed: Bool) throws -> TransportLayerResult {
+    static func dissect(
+        _ bytes: [UInt8],
+        at start: Int,
+        segmentEnd: Int,
+        detailed: Bool
+    ) throws -> TransportLayerResult {
         var reader = ByteReader(bytes, offset: start)
         let sourcePort = try reader.readUInt16()
         let destinationPort = try reader.readUInt16()
@@ -85,11 +91,16 @@ enum UDPDissector {
             fields: fields,
             byteRange: start ..< start + headerLength
         )
+        // The UDP length field covers the 8-byte header + payload. Trust it only
+        // when sane, clamped to the IP datagram end (which itself is clamped to the
+        // buffer); a bogus/zero length falls back to the IP payload end.
+        let datagramEnd = Int(length) >= headerLength ? min(start + Int(length), segmentEnd) : segmentEnd
         return TransportLayerResult(
             node: node,
             sourcePort: sourcePort,
             destinationPort: destinationPort,
             payloadOffset: start + headerLength,
+            payloadEnd: max(start + headerLength, datagramEnd),
             tcpSegment: nil
         )
     }

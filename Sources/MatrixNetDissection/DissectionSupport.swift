@@ -30,6 +30,11 @@ struct TransportLayerResult {
     let destinationPort: UInt16
     /// Absolute offset where the application payload begins.
     let payloadOffset: Int
+    /// Absolute offset where the application payload ends — derived from the IP
+    /// datagram length (TCP) or the UDP length field, clamped to the buffer. The
+    /// application dissectors must bound their reads here, not at the buffer's end,
+    /// so link-layer padding past the datagram is never mistaken for payload.
+    let payloadEnd: Int
     /// The structured TCP fields, when the transport is TCP (nil for UDP).
     let tcpSegment: TCPSegment?
 }
