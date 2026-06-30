@@ -8,6 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.12] - 2026-06-30
+
+### Fixed
+- **Connection history now adds up bytes across separate visits to the same host.**
+  It previously kept only the single largest session, so two separate downloads
+  from one host showed the bigger one, not their sum.
+- **Usage is no longer lost if a save briefly fails.** The 30-second usage flush
+  now advances its baseline only after the data is durably written, so a transient
+  write failure retries instead of dropping that interval.
+- **Capturing one app no longer hides other apps' usage.** While packet capture is
+  active, per-app and per-destination usage now merges the packet and system
+  signals instead of showing only what the packet path saw (still avoiding
+  double-counting under a proxy).
+- **Per-destination bytes are attributed strictly by flow.** Packets are no longer
+  pinned to a same-process connection with a different destination.
+- **Reused process IDs no longer mislabel traffic.** Process name/path caches are
+  now validated by process start time.
+- **Packet dissection rejects transport headers beyond a packet's real length**,
+  so link-layer padding can't fabricate a connection tuple.
+- **The store backup created on a failed open is uniquely named and never deleted**
+  on a move failure, closing a same-second data-loss window.
+
+### Changed
+- The "Resolve country for proxied destinations" setting (on by default) now states
+  clearly that it sends a proxied flow's domain to Cloudflare DoH, and can be turned
+  off to keep MatrixNet fully on-device; `SECURITY.md` documents this too.
+- Internal: the release script no longer leaves the Sparkle signing key's temp file
+  behind if appcast generation fails.
+
 ## [1.8.11] - 2026-06-30
 
 ### Fixed
