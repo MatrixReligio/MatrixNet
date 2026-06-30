@@ -98,7 +98,11 @@ public actor ConnectionAggregator {
     /// fallback) and accumulates real byte totals per connection and per app.
     public func attributePackets(_ packets: [PacketAttribution]) async {
         for packet in packets {
-            guard let id = await correlator.connectionID(forPacketFlow: packet.flowKey, pid: packet.pid) else {
+            // Strict flow-key match only: a PID fallback could pin these bytes to a
+            // same-PID connection with a different destination, mis-persisting
+            // per-(app, address) usage. Under a proxy the connection is registered
+            // before its packets arrive, so the flow key matches here.
+            guard let id = await correlator.connectionID(forFlowKey: packet.flowKey) else {
                 continue
             }
             let bytes = UInt64(max(0, packet.bytes))
@@ -138,7 +142,20 @@ public actor ConnectionAggregator {
     /// figures while capturing (accurate under a proxy); otherwise falls back to
     /// the NStat-derived totals so usage accrues during ordinary monitoring.
     public func usageSnapshot() -> [UsageFlowTotal] {
-        usageByFlow.isEmpty ? Array(nstatUsageByFlow.values) : Array(usageByFlow.values)
+        // Without capture, NStat is the only signal — return it as-is (the relay
+        // leg included, since it's the sole record of that traffic).
+        guard !usageByFlow.isEmpty else { return Array(nstatUsageByFlow.values) }
+        // Capturing: merge per key rather than flip globally. Packet-derived
+        // figures win for keys they cover (accurate under a proxy), but NStat-only
+        // flows for non-tunnel apps are kept so capturing one app never hides every
+        // other app's usage. The tunnel relay is dropped here because each app's
+        // real bytes now arrive on the tunnel side via packets, so counting the
+        // relay too would double-represent them.
+        var merged = nstatUsageByFlow.filter { !TunnelProcess.isTunnel($0.value.app) }
+        for (key, flow) in usageByFlow {
+            merged[key] = flow
+        }
+        return Array(merged.values)
     }
 
     /// Accumulates the positive growth of a connection's counters into the global
@@ -184,7 +201,15 @@ public actor ConnectionAggregator {
     /// Prefers packet-derived figures while capturing (accurate under a proxy),
     /// falling back to the `NetworkStatistics`-derived totals otherwise.
     public func appTraffic() -> [AppTraffic] {
-        packetTrafficByApp.isEmpty ? Array(trafficByApp.values) : Array(packetTrafficByApp.values)
+        // Without capture, return NStat as-is (relay leg included — only signal).
+        guard !packetTrafficByApp.isEmpty else { return Array(trafficByApp.values) }
+        // Capturing: per-key merge (see `usageSnapshot`). Packet-derived per-app
+        // figures win, NStat-only non-tunnel apps are kept, the relay is dropped.
+        var merged = trafficByApp.filter { !TunnelProcess.isTunnel($0.key) }
+        for (key, traffic) in packetTrafficByApp {
+            merged[key] = traffic
+        }
+        return Array(merged.values)
     }
 
     /// Clears all live and session state so a stopped-then-restarted monitor

@@ -47,8 +47,21 @@ public actor FlowCorrelator {
         return connectionsByID[id]
     }
 
+    /// Resolves a dissected packet to its owning connection id by **exact flow
+    /// key only**. Use this for per-destination persistence (byte/usage totals):
+    /// the PID fallback below can attach a packet to a same-PID connection with a
+    /// *different* destination, which would mis-persist bytes/host. Returns nil
+    /// when the flow isn't (yet) a tracked connection.
+    public func connectionID(forFlowKey flowKey: FlowKey) -> UUID? {
+        connectionIDByFlowKey[flowKey]
+    }
+
     /// Resolves a dissected packet to its owning connection id: first by flow
-    /// key, then by the most recent live connection for the packet's PID.
+    /// key, then by the most recent live connection for the packet's PID. The PID
+    /// fallback is for app-level attribution (JA4, quality) where the owning app —
+    /// not the exact destination — is what matters, and where the first packet of
+    /// a flow (ClientHello, SYN) often arrives before NetworkStatistics has
+    /// registered the connection. Do NOT use it for per-destination persistence.
     public func connectionID(forPacketFlow flowKey: FlowKey, pid: Int32?) -> UUID? {
         if let id = connectionIDByFlowKey[flowKey] {
             return id

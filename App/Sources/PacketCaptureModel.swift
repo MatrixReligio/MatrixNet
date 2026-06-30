@@ -55,8 +55,10 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
     private var nextID: UInt64 = 0
     private let maxPackets = 5000
     /// Caches full process names resolved from a PID, since the per-packet PKTAP
-    /// `comm` field is capped at 16 characters by the kernel.
-    private var processNameCache: [Int32: String] = [:]
+    /// `comm` field is capped at 16 characters by the kernel. Keyed by PID but
+    /// validated by process start time, so a reused PID never serves the previous
+    /// process's name.
+    private var processNameCache: [Int32: (start: UInt64, name: String)] = [:]
 
     /// Refreshes the helper registration state from the system.
     func refreshState() {
@@ -230,15 +232,27 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
     /// to the truncated `comm` when the path can't be read (e.g. another user).
     private func fullProcessName(pid: Int32, fallback: String) -> String {
         guard pid > 0 else { return fallback }
-        if let cached = processNameCache[pid] { return cached }
+        let start = Self.processStartTime(pid)
+        if let cached = processNameCache[pid], cached.start == start { return cached.name }
         var buffer = [UInt8](repeating: 0, count: 4096)
         let length = proc_pidpath(pid, &buffer, UInt32(buffer.count))
         guard length > 0,
               let path = String(bytes: buffer.prefix(Int(length)), encoding: .utf8),
               !path.isEmpty else { return fallback }
         let name = AppIdentity(pid: pid, executablePath: path).displayName
-        processNameCache[pid] = name
+        processNameCache[pid] = (start, name)
         return name
+    }
+
+    /// Process start time in seconds since the epoch via libproc, or 0 if it can't
+    /// be read. Pairs with the PID in `processNameCache` so a reused PID misses.
+    private static func processStartTime(_ pid: Int32) -> UInt64 {
+        var info = proc_bsdinfo()
+        let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+        let read = withUnsafeMutablePointer(to: &info) {
+            proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, $0, size)
+        }
+        return read == size ? UInt64(info.pbi_start_tvsec) : 0
     }
 
     /// Forwards captured packets to the aggregator (off the main actor) so real

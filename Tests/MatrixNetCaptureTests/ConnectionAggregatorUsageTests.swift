@@ -57,6 +57,64 @@ struct ConnectionAggregatorUsageTests {
         #expect(snapshot.first?.address.description == "1.1.1.1")
     }
 
+    @Test("snapshot keeps NStat-only flows alongside packet flows")
+    func mergesNStatAndPacket() async throws {
+        let aggregator = ConnectionAggregator()
+        // App A: NStat-only usage (no captured packets), destination 1.1.1.1.
+        let connA = try connection(50050, pid: 501)
+        await aggregator.apply(.added(connA))
+        await aggregator.apply(.counts(
+            id: connA.id,
+            ConnectionCounts(
+                bytesIn: 900,
+                bytesOut: 100,
+                packetsIn: 6,
+                packetsOut: 4,
+                timestamp: Date(timeIntervalSince1970: 5)
+            )
+        ))
+        // App B: packet-derived usage to a different destination.
+        let bSource = try Endpoint(address: #require(IPAddress("192.168.1.6")), port: 50060)
+        let bDest = try Endpoint(address: #require(IPAddress("8.8.8.8")), port: 443)
+        let connB = Connection(
+            fiveTuple: FiveTuple(proto: .tcp, source: bSource, destination: bDest),
+            app: AppIdentity(pid: 9),
+            startedAt: Date(timeIntervalSince1970: 0)
+        )
+        await aggregator.apply(.added(connB))
+        await aggregator.attributePackets([
+            ConnectionAggregator.PacketAttribution(flowKey: connB.fiveTuple.flowKey, pid: 9, inbound: true, bytes: 500)
+        ])
+
+        // Packet data exists, but the NStat-only flow must NOT be shadowed away.
+        let usage = await aggregator.usageSnapshot()
+        #expect(usage.contains { $0.address.description == "1.1.1.1" && $0.bytesIn == 900 })
+        #expect(usage.contains { $0.address.description == "8.8.8.8" && $0.bytesIn == 500 })
+
+        // Same for the per-app traffic snapshot.
+        let apps = await aggregator.appTraffic()
+        #expect(apps.contains { $0.bytesIn == 900 })
+        #expect(apps.contains { $0.bytesIn == 500 })
+    }
+
+    @Test("a packet with no flow-key match is not misattributed to a same-PID connection")
+    func noPidMisattribution() async throws {
+        let aggregator = ConnectionAggregator()
+        // A live connection for pid 501 to 1.1.1.1.
+        let connA = try connection(50050, pid: 501)
+        await aggregator.apply(.added(connA))
+        // A packet for the SAME pid but a DIFFERENT, unregistered flow (8.8.8.8).
+        let bSource = try Endpoint(address: #require(IPAddress("192.168.1.6")), port: 50060)
+        let bDest = try Endpoint(address: #require(IPAddress("8.8.8.8")), port: 443)
+        let bKey = FiveTuple(proto: .tcp, source: bSource, destination: bDest).flowKey
+        await aggregator.attributePackets([
+            ConnectionAggregator.PacketAttribution(flowKey: bKey, pid: 501, inbound: true, bytes: 500)
+        ])
+        // The 500 bytes must NOT be attributed to the 1.1.1.1 connection via PID.
+        let usage = await aggregator.usageSnapshot()
+        #expect(!usage.contains { $0.address.description == "1.1.1.1" })
+    }
+
     @Test("reset clears usage")
     func resetClears() async throws {
         let aggregator = ConnectionAggregator()
