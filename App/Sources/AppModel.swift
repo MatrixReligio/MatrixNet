@@ -66,7 +66,7 @@ public final class AppModel {
     var threatNotifier: ThreatNotifier?
     /// Posts new-destination notifications; set by the app delegate at launch.
     var newDestinationNotifier: NewDestinationNotifier?
-    private let preferences = Preferences(defaults: SharedMetricsStore.sharedDefaults ?? .standard)
+    let preferences = Preferences(defaults: SharedMetricsStore.sharedDefaults ?? .standard)
 
     /// Recovers the real country of proxied (fake-IP) flows by resolving their
     /// domain via DoH. Only invoked for proxied flows whose country is otherwise
@@ -84,14 +84,15 @@ public final class AppModel {
     /// same connections (the aggregator is built for both sources).
     let aggregator = ConnectionAggregator()
     private let resolver = HostnameResolver()
-    // All three stores MUST share one container; separate containers at the
-    // default URL make SwiftData migrate the store to the last-opened schema and
-    // drop the other models' tables (lost history, broke usage).
+    /// All three stores MUST share one container; separate containers at the
+    /// default URL make SwiftData migrate the store to the last-opened schema and
+    /// drop the other models' tables (lost history, broke usage).
     private let historyStore: HistoryStore?
-    private let usageStore: UsageStore?
-    private var lastUsageSeen: [String: UsageTotals] = [:]
-    private var lastUsageFlush = Date.distantPast
-    private var lastCompactedHour: Date?
+    // Accessed by the usage-flush logic in AppModel+Usage.swift.
+    let usageStore: UsageStore?
+    var lastUsageSeen: [String: UsageTotals] = [:]
+    var lastUsageFlush = Date.distantPast
+    var lastCompactedHour: Date?
     private let destinationBaselineStore: DestinationBaselineStore?
     private var knownDestinations: [String: AppBaseline] = [:]
     private let fingerprintStore: FingerprintStore?
@@ -194,6 +195,11 @@ public final class AppModel {
 
     /// Stops monitoring and tears down the pipeline.
     public func stop() {
+        // Persist the final sub-interval of usage before teardown: flushUsage is
+        // throttled to 30s, so without this a pause loses up to the last 30s. The
+        // aggregator keeps its totals until the next start()'s reset, so this Task
+        // reads valid data even though teardown proceeds.
+        Task { await flushUsageNow() }
         monitor?.stop()
         monitor = nil
         pumpTask?.cancel()
@@ -371,72 +377,6 @@ public final class AppModel {
     /// Hourly usage rows for the Usage tab over the given reporting period.
     public func usageRows(for period: UsagePeriod) -> [UsageRow] {
         (try? usageStore?.fetch(range: period.range(now: Date(), calendar: .current))) ?? []
-    }
-
-    /// Diffs the aggregator's monotonic per-flow usage totals and persists the
-    /// positive growth into hourly buckets. Throttled to ≈ 30s, with the prior
-    /// hour compacted to its top destinations once it rolls over.
-    private func flushUsage(now: Date) async {
-        guard let usageStore, now.timeIntervalSince(lastUsageFlush) >= 30 else { return }
-        lastUsageFlush = now
-
-        let snapshot = await aggregator.usageSnapshot()
-        var current: [String: UsageTotals] = [:]
-        var meta: [String: ConnectionAggregator.UsageFlowTotal] = [:]
-        for flow in snapshot {
-            let key = "\(flow.app)\u{1F}\(flow.address.description)"
-            current[key] = UsageTotals(bytesIn: flow.bytesIn, bytesOut: flow.bytesOut)
-            meta[key] = flow
-        }
-        let deltas = UsageAccumulator.deltas(previous: lastUsageSeen, current: current)
-        let hour = UsageBucketing.hourStart(of: now, calendar: .current)
-        var merged: [String: UsageRow] = [:]
-        for (key, delta) in deltas {
-            guard let flow = meta[key] else { continue }
-            let host = resolvedHostnames[flow.address.description] ?? flow.address.description
-            let country = GeoIP.country(for: flow.address) ?? ""
-            let rowKey = "\(flow.app)\u{1F}\(host)\u{1F}\(country)"
-            if var row = merged[rowKey] {
-                row.bytesIn += delta.bytesIn
-                row.bytesOut += delta.bytesOut
-                merged[rowKey] = row
-            } else {
-                merged[rowKey] = UsageRow(
-                    periodStart: hour,
-                    app: flow.app,
-                    host: host,
-                    country: country,
-                    bytesIn: delta.bytesIn,
-                    bytesOut: delta.bytesOut
-                )
-            }
-        }
-        // Advance the baseline only after a durable write (or when there's nothing
-        // to write); a failed save keeps the old baseline so the next flush retries
-        // this interval's growth instead of silently dropping those bytes.
-        if merged.isEmpty || (try? usageStore.accumulate(Array(merged.values))) != nil {
-            lastUsageSeen = current
-        }
-
-        if let last = lastCompactedHour, last < hour {
-            try? usageStore.compactHour(last, limit: 20)
-            lastCompactedHour = hour
-        } else if lastCompactedHour == nil {
-            lastCompactedHour = hour
-        }
-    }
-
-    /// On launch: drop usage older than the retention window and compact any
-    /// already-closed hours left untruncated by a previous crash.
-    private func performUsageLaunchMaintenance() {
-        guard let usageStore else { return }
-        let cutoff = Calendar.current.date(byAdding: .day, value: -preferences.usageRetentionDays, to: Date())
-            ?? .distantPast
-        try? usageStore.prune(olderThan: cutoff)
-        let currentHour = UsageBucketing.hourStart(of: Date(), calendar: .current)
-        for hour in (try? usageStore.distinctHours(before: currentHour)) ?? [] {
-            try? usageStore.compactHour(hour, limit: 20)
-        }
     }
 
     /// Publishes a compact metrics snapshot to the shared App Group container and

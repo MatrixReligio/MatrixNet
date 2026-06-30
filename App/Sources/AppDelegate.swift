@@ -45,6 +45,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
+    /// Persist the final (sub-30s) usage interval before quitting: the periodic
+    /// flush is throttled to 30s, so a quit would otherwise drop the last window.
+    /// `.terminateLater` keeps the app alive until the async flush replies.
+    func applicationShouldTerminate(_: NSApplication) -> NSApplication.TerminateReply {
+        Task {
+            await model.flushUsageNow()
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
+
     /// Re-show and refront the main window when the Dock icon is clicked.
     func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag { showMainWindow() }
