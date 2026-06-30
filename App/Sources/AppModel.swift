@@ -108,7 +108,12 @@ public final class AppModel {
     private var refreshTask: Task<Void, Never>?
     private var lastMetricsWrite = Date.distantPast
     private var lastWidgetReload = Date.distantPast
-    private let widgetReloadGate = WidgetReloadGate(minInterval: 10)
+    // The widget is a periodic glance, not a live monitor: refresh it at most once
+    // a minute while the app is foreground (budget-exempt reloads), and persist the
+    // metrics file at most every 20 min in the background — roughly the widget's
+    // ~30-min background refresh cadence, with margin — so the disk isn't written
+    // on every ~1s tick for snapshots no one reads.
+    private let widgetReloadGate = WidgetReloadGate(minInterval: 60, heartbeatInterval: 1200)
     private var lastHistoryWrite = Date.distantPast
     private var lastRateSampleAt = Date.distantPast
     private var lastRateBytesIn: UInt64 = 0
@@ -128,15 +133,6 @@ public final class AppModel {
     /// The total number of currently active (not closed) connections.
     public var activeCount: Int {
         connections.lazy.count(where: { $0.state == .active })
-    }
-
-    /// Aggregate throughput counters across all tracked connections.
-    public var totalBytesIn: UInt64 {
-        connections.reduce(0) { $0 &+ $1.bytesIn }
-    }
-
-    public var totalBytesOut: UInt64 {
-        connections.reduce(0) { $0 &+ $1.bytesOut }
     }
 
     /// Starts passive monitoring. No privileges or user approval required.
@@ -445,9 +441,18 @@ public final class AppModel {
     /// stays fresh without thrashing the disk or the reload budget.
     private func publishWidgetMetrics() {
         let now = Date()
-        guard now.timeIntervalSince(lastMetricsWrite) >= 2, let url = SharedMetricsStore.defaultURL() else {
-            return
-        }
+        guard let url = SharedMetricsStore.defaultURL() else { return }
+        // The widget only reads this file when its timeline refreshes (≈ every 10s
+        // while the app is the foreground app, ≈ every 30 min in the background).
+        // Writing on every ~1s tick just wears the disk for snapshots nobody reads,
+        // so only write right before a reload, or on the slow background heartbeat.
+        let decision = widgetReloadGate.decide(
+            isForeground: NSApp.isActive,
+            now: now,
+            lastReload: lastWidgetReload,
+            lastWrite: lastMetricsWrite
+        )
+        guard decision.write else { return }
         lastMetricsWrite = now
 
         let widgetApps = topApps.prefix(5).map { MetricsSnapshot.TopApp(name: $0.app.displayName, bytes: $0.bytes) }
@@ -471,7 +476,7 @@ public final class AppModel {
         // did on every write) burns the ~40–70/day budget within minutes and then
         // freezes the widget for the rest of the window. While backgrounded we
         // stay silent and let the widget's `.after` policy age it within budget.
-        if widgetReloadGate.shouldReload(isForeground: NSApp.isActive, now: now, lastReload: lastWidgetReload) {
+        if decision.reload {
             lastWidgetReload = now
             WidgetCenter.shared.reloadAllTimelines()
         }
