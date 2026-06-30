@@ -8,6 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.11] - 2026-06-30
+
+### Fixed
+- **A store that fails to open is now backed up, not deleted.** Previously any
+  error opening the local database — which could be a transient lock, a
+  permissions or disk problem, or a migration hiccup, not just real corruption —
+  deleted it and started fresh, silently discarding connection history, usage,
+  destination baselines, and fingerprints. The files are now moved aside to a
+  recoverable timestamped backup instead.
+- **Retention settings are clamped against bad values.** A corrupted or
+  externally written preference (zero or negative days) could push the launch
+  cleanup's cutoff to today or the future and wipe stored usage. The retention
+  window is now floored at 1 day regardless of how the value got there.
+- **Packet dissection no longer reads link-layer padding as application data.**
+  Trailing bytes past a packet's IP length (e.g. a runt frame padded to the
+  60-byte Ethernet minimum) could be mis-parsed — a bare TCP/443 ACK could even
+  show a spurious TLS layer. Parsing is now bounded to the real payload, and the
+  TLS layer validates its record header instead of trusting the port.
+
+### Changed
+- The release script now fails if Gatekeeper rejects the packaged app, instead of
+  logging the rejection and continuing (internal release tooling only).
+
 ## [1.8.10] - 2026-06-30
 
 ### Changed
