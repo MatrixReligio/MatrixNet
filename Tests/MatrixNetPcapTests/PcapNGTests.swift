@@ -70,4 +70,37 @@ struct PcapNGTests {
     func rejectsBadMagic() {
         #expect(PcapNGReader.read([0, 0, 0, 0, 0, 0, 0, 0]) == nil)
     }
+
+    @Test("a mixed-link-type capture writes one IDB per type with matching interface ids")
+    func multiInterfaceExport() {
+        func record(_ value: UInt8) -> CapturedRecord {
+            CapturedRecord(timestampMicros: UInt64(value), originalLength: 4, data: [value, value, value, value])
+        }
+        let bytes = PcapNGWriter.pcapng(records: [
+            (PcapLinkType.ethernet, record(1)),
+            (PcapLinkType.raw, record(2)),
+            (PcapLinkType.nullLoopback, record(3)),
+            (PcapLinkType.ethernet, record(4))
+        ])
+
+        var idbLinkTypes = [UInt32]()
+        var epbInterfaceIDs = [UInt32]()
+        var offset = 0
+        while offset + 8 <= bytes.count {
+            let type = u32(bytes, offset)
+            let length = Int(u32(bytes, offset + 4))
+            guard length >= 12, offset + length <= bytes.count else { break }
+            if type == 0x0000_0001 { // IDB: link type is a u16 at body offset 0
+                idbLinkTypes.append(UInt32(bytes[offset + 8]) | UInt32(bytes[offset + 9]) << 8)
+            }
+            if type == 0x0000_0006 { // EPB: interface id is a u32 at body offset 0
+                epbInterfaceIDs.append(u32(bytes, offset + 8))
+            }
+            offset += length
+        }
+        // One IDB per distinct link type, in first-seen order…
+        #expect(idbLinkTypes == [PcapLinkType.ethernet, PcapLinkType.raw, PcapLinkType.nullLoopback])
+        // …and each packet routed to the interface matching its link type.
+        #expect(epbInterfaceIDs == [0, 1, 2, 0])
+    }
 }

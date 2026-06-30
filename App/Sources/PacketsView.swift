@@ -259,9 +259,10 @@ struct PacketsView: View {
         panel.allowedContentTypes = [UTType(filenameExtension: "pcapng") ?? .data]
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
-        let writer = PcapNGWriter(linkType: PcapLinkType.ethernet)
-        var data = Data(writer.header())
-        for packet in capture.packets {
+        // Carry each packet's real link type so utun (raw IP) and lo0 (loopback)
+        // packets aren't exported as Ethernet — the writer emits one interface per
+        // distinct link type and routes each packet to it.
+        let records: [(linkType: UInt32, record: CapturedRecord)] = capture.packets.map { packet in
             let comment = packet.pid > 0
                 ? "\(packet.processName) (pid \(packet.pid))"
                 : (packet.processName.isEmpty ? nil : packet.processName)
@@ -271,9 +272,18 @@ struct PacketsView: View {
                 data: packet.bytes,
                 comment: comment
             )
-            data.append(contentsOf: writer.packet(record))
+            return (Self.pcapLinkType(packet.linkType), record)
         }
-        try? data.write(to: url)
+        try? Data(PcapNGWriter.pcapng(records: records)).write(to: url)
+    }
+
+    /// Maps a captured packet's link layer to its pcap DLT.
+    private static func pcapLinkType(_ linkType: LinkLayerType) -> UInt32 {
+        switch linkType {
+        case .ethernet: PcapLinkType.ethernet
+        case .rawIP: PcapLinkType.raw
+        case .nullLoopback: PcapLinkType.nullLoopback
+        }
     }
 }
 

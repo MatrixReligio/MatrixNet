@@ -1,6 +1,9 @@
 /// Well-known pcap/pcapng link-layer types.
 public enum PcapLinkType {
     public static let ethernet: UInt32 = 1
+    /// BSD loopback (DLT_NULL): a 4-byte host-order address family precedes the IP
+    /// header. Used by lo0.
+    public static let nullLoopback: UInt32 = 0
     public static let raw: UInt32 = 101
     /// Apple PKTAP — carries per-packet process metadata; Wireshark 4.6+ decodes it.
     public static let pktap: UInt32 = 258

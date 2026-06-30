@@ -2,7 +2,11 @@
 /// a Section Header Block, one Interface Description Block, and an Enhanced
 /// Packet Block per captured packet. All values are little-endian.
 public struct PcapNGWriter {
-    public let linkType: UInt32
+    /// One link type per interface; the header emits an Interface Description
+    /// Block for each, and packets reference them by `interfaceID`. A capture that
+    /// spans interfaces (PKTAP sees en0 + utun + lo0 at once) must describe each
+    /// link type, or readers decode raw-IP/loopback packets as Ethernet.
+    public let linkTypes: [UInt32]
     public let snapLength: UInt32
 
     private static let sectionHeaderType: UInt32 = 0x0A0D_0D0A
@@ -11,18 +15,41 @@ public struct PcapNGWriter {
     private static let byteOrderMagic: UInt32 = 0x1A2B_3C4D
 
     public init(linkType: UInt32, snapLength: UInt32 = 262_144) {
-        self.linkType = linkType
+        self.init(linkTypes: [linkType], snapLength: snapLength)
+    }
+
+    public init(linkTypes: [UInt32], snapLength: UInt32 = 262_144) {
+        self.linkTypes = linkTypes.isEmpty ? [PcapLinkType.ethernet] : linkTypes
         self.snapLength = snapLength
     }
 
-    /// The section header + interface description that begin every pcapng file.
-    public func header() -> [UInt8] {
-        sectionHeaderBlock() + interfaceDescriptionBlock()
+    /// A complete pcapng file for a mixed-link-type capture: one Interface
+    /// Description Block per distinct link type (in first-seen order), then every
+    /// packet routed to the interface matching its link type. This is the honest
+    /// export — raw-IP (utun) and loopback (lo0) packets are no longer mislabeled.
+    public static func pcapng(records: [(linkType: UInt32, record: CapturedRecord)]) -> [UInt8] {
+        var order = [UInt32]()
+        for entry in records where !order.contains(entry.linkType) {
+            order.append(entry.linkType)
+        }
+        let writer = PcapNGWriter(linkTypes: order)
+        var out = writer.header()
+        for entry in records {
+            let interfaceID = UInt32(order.firstIndex(of: entry.linkType) ?? 0)
+            out += writer.packet(entry.record, interfaceID: interfaceID)
+        }
+        return out
     }
 
-    /// An Enhanced Packet Block for one captured packet (interface 0), with an
-    /// optional `opt_comment` carrying the owning process.
-    public func packet(_ record: CapturedRecord) -> [UInt8] {
+    /// The section header + one interface description per link type, beginning
+    /// every pcapng file.
+    public func header() -> [UInt8] {
+        sectionHeaderBlock() + linkTypes.flatMap { interfaceDescriptionBlock(linkType: $0) }
+    }
+
+    /// An Enhanced Packet Block for one captured packet on the given interface,
+    /// with an optional `opt_comment` carrying the owning process.
+    public func packet(_ record: CapturedRecord, interfaceID: UInt32 = 0) -> [UInt8] {
         let paddedDataLength = (record.data.count + 3) & ~3
         let options = optionsBlock(comment: record.comment)
         // type+len(8) + interfaceID+tsHigh+tsLow+capLen+origLen(20) + data + options + trailing(4)
@@ -30,7 +57,7 @@ public struct PcapNGWriter {
         var writer = LittleEndianWriter()
         writer.u32(Self.enhancedPacketType)
         writer.u32(totalLength)
-        writer.u32(0) // interface ID
+        writer.u32(interfaceID)
         writer.u32(UInt32(record.timestampMicros >> 32))
         writer.u32(UInt32(record.timestampMicros & 0xFFFF_FFFF))
         writer.u32(UInt32(record.data.count))
@@ -71,7 +98,7 @@ public struct PcapNGWriter {
         return writer.bytes
     }
 
-    private func interfaceDescriptionBlock() -> [UInt8] {
+    private func interfaceDescriptionBlock(linkType: UInt32) -> [UInt8] {
         var writer = LittleEndianWriter()
         writer.u32(Self.interfaceDescriptionType)
         writer.u32(20) // total length (no options)
