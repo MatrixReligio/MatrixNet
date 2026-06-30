@@ -61,13 +61,22 @@ xcrun stapler validate "$DMG"
 
 # Gatekeeper-verify the notarized app *inside* the DMG (running spctl directly on
 # the DMG reports "no usable signature" because a DMG isn't code-signed — only
-# notarized + stapled — so it is not a meaningful check).
+# notarized + stapled, which `stapler validate` above already checked — so a
+# direct DMG assessment is not a meaningful check).
 echo "==> Verifying app Gatekeeper acceptance"
 MOUNT="$(mktemp -d)"
 hdiutil attach "$DMG" -nobrowse -quiet -mountpoint "$MOUNT"
-spctl -a -t exec -vvv "$MOUNT/MatrixNet.app" 2>&1 | head -3 || true
+# Capture spctl's own exit status: piping to `head` or appending `|| true` would
+# mask a Gatekeeper rejection and let a broken build ship. `|| status=$?` keeps
+# `set -e` from aborting before we can clean up the mount.
+gatekeeper_status=0
+spctl -a -t exec -vvv "$MOUNT/MatrixNet.app" || gatekeeper_status=$?
 hdiutil detach "$MOUNT" -quiet || true
 rm -rf "$MOUNT"
+if [ "$gatekeeper_status" -ne 0 ]; then
+  echo "ERROR: Gatekeeper rejected the app inside the DMG (spctl status $gatekeeper_status)." >&2
+  exit 1
+fi
 
 # Generate the EdDSA-signed Sparkle appcast so auto-update can detect this build.
 # generate_appcast reads the DMG's version, signs it with the EdDSA private key

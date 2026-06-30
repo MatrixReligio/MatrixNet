@@ -70,7 +70,17 @@ the app downloads in the background. No secrets are required beyond the default
 
 ```sh
 xcrun stapler validate dist/MatrixNet-<version>.dmg
-spctl -a -t open --context context:primary-signature -vvv dist/MatrixNet-<version>.dmg
+
+# Assess the app *inside* the DMG, not the DMG file: a DMG is notarized + stapled,
+# not code-signed, so a direct `spctl` of the .dmg reports "no usable signature"
+# even for a perfectly valid release.
+MOUNT="$(mktemp -d)"
+hdiutil attach dist/MatrixNet-<version>.dmg -nobrowse -quiet -mountpoint "$MOUNT"
+spctl -a -t exec -vvv "$MOUNT/MatrixNet.app"
+hdiutil detach "$MOUNT" -quiet
 ```
 
-Both must report acceptance for Gatekeeper to open the app without warnings.
+`stapler validate` must succeed and the app assessment must report
+`accepted` / `source=Notarized Developer ID` for Gatekeeper to open the app
+without warnings. (`scripts/release.sh` runs both checks and now fails the
+release if the app is rejected.)
