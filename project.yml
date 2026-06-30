@@ -20,8 +20,8 @@ settings:
     DEVELOPMENT_TEAM: 4DUQGD879H
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    MARKETING_VERSION: "1.8.12"
-    CURRENT_PROJECT_VERSION: "51"
+    MARKETING_VERSION: "1.8.13"
+    CURRENT_PROJECT_VERSION: "52"
     ENABLE_HARDENED_RUNTIME: YES
     CODE_SIGN_STYLE: Manual
     CODE_SIGN_IDENTITY: "Developer ID Application"
@@ -81,8 +81,8 @@ targets:
     info:
       path: App/MatrixNet-Info.plist
       properties:
-        CFBundleShortVersionString: "1.8.12"
-        CFBundleVersion: "51"
+        CFBundleShortVersionString: "1.8.13"
+        CFBundleVersion: "52"
         LSMinimumSystemVersion: "26.0"
         CFBundleLocalizations: [en, zh-Hans, zh-Hant, ja, ko, fr, de, es]
         # Sparkle auto-update. Appcast is published as a stable GitHub "latest
@@ -130,8 +130,8 @@ targets:
     info:
       path: Widget/MatrixNetWidget-Info.plist
       properties:
-        CFBundleShortVersionString: "1.8.12"
-        CFBundleVersion: "51"
+        CFBundleShortVersionString: "1.8.13"
+        CFBundleVersion: "52"
         CFBundleLocalizations: [en, zh-Hans, zh-Hant, ja, ko, fr, de, es]
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension

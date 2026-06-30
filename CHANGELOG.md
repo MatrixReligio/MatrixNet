@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.13] - 2026-07-01
+
+### Fixed
+- **The last seconds of usage are no longer lost when you pause or quit.** The
+  usage tally is written every 30 seconds; stopping monitoring or quitting (or a
+  session shorter than 30 seconds) now flushes the final interval first.
+- **Packet captures export with the correct link type.** A capture spanning Wi-Fi
+  (Ethernet), VPN/utun (raw IP), and loopback is exported with each packet under
+  its real link type, so Wireshark no longer misdecodes the non-Ethernet packets.
+
+### Security
+- **Downloaded GeoIP and threat-list datasets are now signature-verified.** The
+  rolling datasets the app fetches in the background are Ed25519-signed at publish
+  time and checked against the app's embedded key before install, so a tampered
+  dataset on the release host is rejected. The copy bundled in the app was already
+  covered by the code signature.
+
+### Changed
+- Internal: the release script now fails if the built app's version doesn't match
+  the release version, preventing a mismatched Sparkle update.
+
 ## [1.8.12] - 2026-06-30
 
 ### Fixed
