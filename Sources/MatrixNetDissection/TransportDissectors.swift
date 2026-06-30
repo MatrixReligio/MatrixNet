@@ -9,6 +9,10 @@ enum TCPDissector {
         segmentEnd: Int,
         detailed: Bool
     ) throws -> TransportLayerResult {
+        // The 20-byte fixed header must fit inside the IP datagram, not merely the
+        // captured buffer: a runt frame's link-layer padding can look like a TCP
+        // header and would otherwise mint a bogus five-tuple.
+        guard segmentEnd - start >= 20 else { throw DissectionError.malformed }
         var reader = ByteReader(bytes, offset: start)
         let sourcePort = try reader.readUInt16()
         let destinationPort = try reader.readUInt16()
@@ -16,12 +20,14 @@ enum TCPDissector {
         let acknowledgement = try reader.readUInt32()
         let offsetAndFlags = try reader.readUInt16()
         let dataOffsetWords = Int(offsetAndFlags >> 12)
+        // A data offset below 5 (20 bytes) is an invalid TCP header (RFC 9293).
+        guard dataOffsetWords >= 5 else { throw DissectionError.malformed }
         let flags = offsetAndFlags & 0x01FF
         let window = try reader.readUInt16()
         _ = try reader.readUInt16() // checksum (not validated)
         _ = try reader.readUInt16() // urgent pointer
 
-        let headerLength = max(20, dataOffsetWords * 4)
+        let headerLength = dataOffsetWords * 4
         let payloadOffset = start + headerLength
         let payloadLength = max(0, segmentEnd - payloadOffset)
 
@@ -74,6 +80,8 @@ enum UDPDissector {
         segmentEnd: Int,
         detailed: Bool
     ) throws -> TransportLayerResult {
+        // The 8-byte header must fit inside the IP datagram (see TCP above).
+        guard segmentEnd - start >= headerLength else { throw DissectionError.malformed }
         var reader = ByteReader(bytes, offset: start)
         let sourcePort = try reader.readUInt16()
         let destinationPort = try reader.readUInt16()
@@ -93,8 +101,11 @@ enum UDPDissector {
         )
         // The UDP length field covers the 8-byte header + payload. Trust it only
         // when sane, clamped to the IP datagram end (which itself is clamped to the
-        // buffer); a bogus/zero length falls back to the IP payload end.
-        let datagramEnd = Int(length) >= headerLength ? min(start + Int(length), segmentEnd) : segmentEnd
+        // buffer). A bogus/short length (< the header) is malformed, not a licence
+        // to parse the rest of the IP payload, so it yields no application payload.
+        let datagramEnd = Int(length) >= headerLength
+            ? min(start + Int(length), segmentEnd)
+            : start + headerLength
         return TransportLayerResult(
             node: node,
             sourcePort: sourcePort,
