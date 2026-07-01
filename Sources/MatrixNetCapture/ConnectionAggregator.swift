@@ -90,6 +90,44 @@ public actor ConnectionAggregator {
         }
     }
 
+    /// A DNS/SNI hostname observed on a captured packet, for batch recording.
+    public struct HostnameEntry: Sendable {
+        public let name: String
+        public let ip: IPAddress
+        public init(name: String, ip: IPAddress) {
+            self.name = name
+            self.ip = ip
+        }
+    }
+
+    /// A captured TLS ClientHello fingerprint awaiting per-app attribution.
+    public struct FingerprintEntry: Sendable {
+        public let ja4: String
+        public let flowKey: FlowKey
+        public let pid: Int32
+        public init(ja4: String, flowKey: FlowKey, pid: Int32) {
+            self.ja4 = ja4
+            self.flowKey = flowKey
+            self.pid = pid
+        }
+    }
+
+    /// A captured TCP segment awaiting per-flow quality attribution.
+    public struct TCPSegmentEntry: Sendable {
+        public let segment: TCPSegment
+        public let timestampMicros: UInt64
+        public let inbound: Bool
+        public let flowKey: FlowKey
+        public let pid: Int32
+        public init(segment: TCPSegment, timestampMicros: UInt64, inbound: Bool, flowKey: FlowKey, pid: Int32) {
+            self.segment = segment
+            self.timestampMicros = timestampMicros
+            self.inbound = inbound
+            self.flowKey = flowKey
+            self.pid = pid
+        }
+    }
+
     public init(correlator: FlowCorrelator = FlowCorrelator()) {
         self.correlator = correlator
     }
@@ -308,7 +346,15 @@ public actor ConnectionAggregator {
 
     /// Records a DNS- or SNI-observed hostname for later enrichment.
     public func recordHostname(_ hostname: String, for ip: IPAddress) async {
-        await correlator.recordHostname(hostname, for: ip)
+        await recordHostnames([HostnameEntry(name: hostname, ip: ip)])
+    }
+
+    /// Records many observed hostnames in a single actor hop (the packet pipeline
+    /// hands over a whole batch at once, rather than one `await` per name).
+    public func recordHostnames(_ observations: [HostnameEntry]) async {
+        for observation in observations {
+            await correlator.recordHostname(observation.name, for: observation.ip)
+        }
     }
 
     /// The full IP→hostname table observed from SNI and DNS, for enriching the
@@ -320,9 +366,17 @@ public actor ConnectionAggregator {
     /// Records a TLS client fingerprint (JA4) against the app that owns `flowKey`.
     /// Dropped when the flow cannot be resolved to a tracked connection.
     public func recordFingerprint(_ ja4: String, flowKey: FlowKey, pid: Int32) async {
-        guard let id = await correlator.connectionID(forPacketFlow: flowKey, pid: pid),
-              let connection = connections[id] else { return }
-        fingerprintsByApp[connection.app.displayName, default: []].insert(ja4)
+        await recordFingerprints([FingerprintEntry(ja4: ja4, flowKey: flowKey, pid: pid)])
+    }
+
+    /// Records many TLS client fingerprints in a single actor hop. Each is dropped
+    /// when its flow cannot be resolved to a tracked connection.
+    public func recordFingerprints(_ observations: [FingerprintEntry]) async {
+        for observation in observations {
+            guard let id = await correlator.connectionID(forPacketFlow: observation.flowKey, pid: observation.pid),
+                  let connection = connections[id] else { continue }
+            fingerprintsByApp[connection.app.displayName, default: []].insert(observation.ja4)
+        }
     }
 
     /// All observed (app, JA4) pairs.
@@ -341,12 +395,33 @@ public actor ConnectionAggregator {
         flowKey: FlowKey,
         pid: Int32
     ) async {
-        guard let id = await correlator.connectionID(forPacketFlow: flowKey, pid: pid),
-              let connection = connections[id] else { return }
-        var tracker = qualityByFlow[flowKey] ?? FlowQualityTracker()
-        tracker.ingest(timestampMicros: timestampMicros, inbound: inbound, segment: segment)
-        qualityByFlow[flowKey] = tracker
-        qualityApp[flowKey] = (connection.app.displayName, connection.fiveTuple.destination.address)
+        await recordTCPSegments([
+            TCPSegmentEntry(
+                segment: segment,
+                timestampMicros: timestampMicros,
+                inbound: inbound,
+                flowKey: flowKey,
+                pid: pid
+            )
+        ])
+    }
+
+    /// Feeds many observed TCP segments into their flows' quality trackers in a
+    /// single actor hop. Each is dropped when its flow cannot be resolved to a
+    /// tracked connection.
+    public func recordTCPSegments(_ observations: [TCPSegmentEntry]) async {
+        for observation in observations {
+            guard let id = await correlator.connectionID(forPacketFlow: observation.flowKey, pid: observation.pid),
+                  let connection = connections[id] else { continue }
+            var tracker = qualityByFlow[observation.flowKey] ?? FlowQualityTracker()
+            tracker.ingest(
+                timestampMicros: observation.timestampMicros,
+                inbound: observation.inbound,
+                segment: observation.segment
+            )
+            qualityByFlow[observation.flowKey] = tracker
+            qualityApp[observation.flowKey] = (connection.app.displayName, connection.fiveTuple.destination.address)
+        }
     }
 
     /// A snapshot of every tracked flow's quality, attributed to its app.

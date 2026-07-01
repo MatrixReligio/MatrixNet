@@ -189,22 +189,6 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
         let dissected: DissectedPacket
     }
 
-    /// A captured ClientHello's JA4 fingerprint awaiting per-app attribution.
-    private struct CapturedFingerprint {
-        let ja4: String
-        let flowKey: FlowKey
-        let pid: Int32
-    }
-
-    /// A captured TCP segment awaiting per-flow quality attribution.
-    private struct CapturedSegment {
-        let segment: TCPSegment
-        let timestampMicros: UInt64
-        let inbound: Bool
-        let flowKey: FlowKey
-        let pid: Int32
-    }
-
     private func append(_ rows: [DissectedRow]) {
         for row in rows {
             packets.append(PacketRow(
@@ -270,14 +254,16 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
                 bytes: row.packet.originalLength
             )
         }
-        let hostnames = rows.flatMap(\.dissected.hostnames)
-        let fingerprints = rows.compactMap { row -> CapturedFingerprint? in
-            guard let ja4 = row.dissected.tlsClientFingerprint, let tuple = row.dissected.fiveTuple else { return nil }
-            return CapturedFingerprint(ja4: ja4, flowKey: tuple.flowKey, pid: row.packet.pid)
+        let hostnames = rows.flatMap(\.dissected.hostnames).map {
+            ConnectionAggregator.HostnameEntry(name: $0.name, ip: $0.ip)
         }
-        let segments = rows.compactMap { row -> CapturedSegment? in
+        let fingerprints = rows.compactMap { row -> ConnectionAggregator.FingerprintEntry? in
+            guard let ja4 = row.dissected.tlsClientFingerprint, let tuple = row.dissected.fiveTuple else { return nil }
+            return ConnectionAggregator.FingerprintEntry(ja4: ja4, flowKey: tuple.flowKey, pid: row.packet.pid)
+        }
+        let segments = rows.compactMap { row -> ConnectionAggregator.TCPSegmentEntry? in
             guard let tcp = row.dissected.tcpSegment, let tuple = row.dissected.fiveTuple else { return nil }
-            return CapturedSegment(
+            return ConnectionAggregator.TCPSegmentEntry(
                 segment: tcp,
                 timestampMicros: UInt64((row.packet.timestamp * 1_000_000).rounded()),
                 inbound: row.packet.direction == 2,
@@ -286,23 +272,14 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
             )
         }
         guard !attributions.isEmpty || !hostnames.isEmpty || !fingerprints.isEmpty || !segments.isEmpty else { return }
+        // Hand each kind over as one batch (one actor hop apiece) instead of one
+        // `await` per item: a TCP-heavy batch previously cost ~one hop per segment
+        // (each also re-entering the correlator), thrashing the shared aggregator.
         Task.detached {
-            await attribution.attributePackets(attributions)
-            for observation in hostnames {
-                await attribution.recordHostname(observation.name, for: observation.ip)
-            }
-            for fingerprint in fingerprints {
-                await attribution.recordFingerprint(fingerprint.ja4, flowKey: fingerprint.flowKey, pid: fingerprint.pid)
-            }
-            for item in segments {
-                await attribution.recordTCP(
-                    item.segment,
-                    timestampMicros: item.timestampMicros,
-                    inbound: item.inbound,
-                    flowKey: item.flowKey,
-                    pid: item.pid
-                )
-            }
+            if !attributions.isEmpty { await attribution.attributePackets(attributions) }
+            if !hostnames.isEmpty { await attribution.recordHostnames(hostnames) }
+            if !fingerprints.isEmpty { await attribution.recordFingerprints(fingerprints) }
+            if !segments.isEmpty { await attribution.recordTCPSegments(segments) }
         }
     }
 
