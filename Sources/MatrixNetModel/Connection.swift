@@ -10,7 +10,7 @@ public enum ConnectionState: Sendable, Hashable, Comparable {
 
 /// A network connection as reported by the kernel (NetworkStatistics), carrying
 /// cumulative byte/packet counters and the owning process identity.
-public struct Connection: Sendable, Identifiable {
+public struct Connection: Sendable, Identifiable, Equatable {
     public let id: UUID
     public let fiveTuple: FiveTuple
     public var app: AppIdentity

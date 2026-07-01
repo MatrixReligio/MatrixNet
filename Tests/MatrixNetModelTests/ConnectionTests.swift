@@ -92,4 +92,25 @@ struct ConnectionTests {
         connection.bytesOut = 1
         #expect(connection.totalBytes == 0)
     }
+
+    @Test("equatable: identical connections compare equal, differing byte counts do not")
+    func equatable() throws {
+        let id = UUID()
+        let start = Date(timeIntervalSince1970: 100)
+        let source = try Endpoint(address: #require(IPAddress("192.168.1.5")), port: 50000)
+        let destination = try Endpoint(address: #require(IPAddress("1.1.1.1")), port: 443)
+        func make(bytesIn: UInt64) -> Connection {
+            Connection(
+                id: id,
+                fiveTuple: FiveTuple(proto: .tcp, source: source, destination: destination),
+                app: AppIdentity(pid: 501, displayName: "curl"),
+                bytesIn: bytesIn,
+                startedAt: start
+            )
+        }
+        // The publish-layer diff gate relies on this: an unchanged snapshot must
+        // compare equal so it isn't republished (and re-rendered) every tick.
+        #expect(make(bytesIn: 42) == make(bytesIn: 42))
+        #expect(make(bytesIn: 42) != make(bytesIn: 43))
+    }
 }

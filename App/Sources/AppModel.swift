@@ -217,10 +217,20 @@ public final class AppModel {
         session: (bytesIn: UInt64, bytesOut: UInt64),
         apps: [AppTraffic]
     ) {
-        topApps = apps.sorted { $0.bytes > $1.bytes }
+        // Every published property below is reassigned each ~1s tick. @Observable
+        // fires on assignment without comparing, so an *identical* value still
+        // invalidates every view that read it — a full re-render/row-height
+        // re-measure once a second even when nothing changed. Gate each assignment
+        // on inequality (as resolvedHostnames already does) so an idle app costs
+        // nothing. The derived scalars/sets change only when the connection set or
+        // countries change (not on every byte tick), so this eliminates most idle
+        // re-renders of the Overview/Map; connections/topApps still update whenever
+        // bytes actually move.
+        let sortedApps = apps.sorted { $0.bytes > $1.bytes }
+        if topApps != sortedApps { topApps = sortedApps }
         // Resolve icons here (off the scroll path); cells then read the cache.
         AppIconResolver.shared.prewarm(snapshot.map(\.app))
-        connections = snapshot
+        let enriched = snapshot
             .map { connection in
                 guard connection.remoteHostname == nil,
                       let hostname = hostnames[connection.fiveTuple.destination.address]
@@ -237,10 +247,11 @@ public final class AppModel {
                 }
                 return lhs.lastActivityAt > rhs.lastActivityAt
             }
-        let threats = connections.filter {
+        if connections != enriched { connections = enriched }
+        let threats = enriched.filter {
             $0.state == .active && Threat.isThreat($0.fiveTuple.destination.address)
         }
-        threatCount = threats.count
+        if threatCount != threats.count { threatCount = threats.count }
         threatNotifier?.evaluate(
             threats.map {
                 ThreatNotifier.Hit(
@@ -253,7 +264,7 @@ public final class AppModel {
         )
         detectNewDestinations(now: Date())
 
-        refreshOverview(connections: connections, threats: threats, hostnames: hostnames)
+        refreshOverview(connections: enriched, threats: threats, hostnames: hostnames)
 
         updateThroughput(session: session)
         publishWidgetMetrics()
@@ -427,7 +438,7 @@ public final class AppModel {
 }
 
 /// A busiest-app row for the Overview, enriched from the app's live connections.
-struct TopTalker: Identifiable {
+struct TopTalker: Identifiable, Equatable {
     let app: AppIdentity
     let bytes: UInt64
     let connectionCount: Int
@@ -591,17 +602,25 @@ extension AppModel {
     /// Recomputes the Overview / Top-Talkers metrics from the latest snapshot:
     /// proxy-aware geolocation, byte-weighted proxy share, and the IP→hostname map.
     func refreshOverview(connections: [Connection], threats: [Connection], hostnames: [IPAddress: String]) {
-        activeAppCount = OverviewStats.activeAppCount(connections)
+        // Same diff-gating rationale as publish(): these derived values are
+        // recomputed every tick but change rarely, so only publish real changes.
+        let newActiveAppCount = OverviewStats.activeAppCount(connections)
+        if activeAppCount != newActiveAppCount { activeAppCount = newActiveAppCount }
         let ipCountry = proxyAwareCountryMap(connections)
-        countriesReached = OverviewStats.countriesReached(connections) { ipCountry[$0] }
-        proxyShare = OverviewStats.proxyShare(
+        let newCountriesReached = OverviewStats.countriesReached(connections) { ipCountry[$0] }
+        if countriesReached != newCountriesReached { countriesReached = newCountriesReached }
+        let newProxyShare = OverviewStats.proxyShare(
             connections,
             isRelay: { ProxyInfo.isTunnel($0.app.displayName) },
             routesThroughProxy: { ProxyInfo.routesThroughProxy($0) }
         )
-        protocolMix = OverviewStats.protocolMix(connections)
-        destinationCountries = OverviewStats.destinationCountries(connections) { ipCountry[$0] }
-        threatCountries = Set(threats.compactMap { country(for: $0) })
+        if proxyShare != newProxyShare { proxyShare = newProxyShare }
+        let newProtocolMix = OverviewStats.protocolMix(connections)
+        if protocolMix != newProtocolMix { protocolMix = newProtocolMix }
+        let newDestinationCountries = OverviewStats.destinationCountries(connections) { ipCountry[$0] }
+        if destinationCountries != newDestinationCountries { destinationCountries = newDestinationCountries }
+        let newThreatCountries = Set(threats.compactMap { country(for: $0) })
+        if threatCountries != newThreatCountries { threatCountries = newThreatCountries }
         resolveProxyCountries(connections)
         var nameMap: [String: String] = [:]
         for (ip, name) in hostnames {
@@ -621,6 +640,7 @@ extension AppModel {
         if resolvedHostnames != nameMap {
             resolvedHostnames = nameMap
         }
-        topTalkers = makeTopTalkers(connections: connections)
+        let newTopTalkers = makeTopTalkers(connections: connections)
+        if topTalkers != newTopTalkers { topTalkers = newTopTalkers }
     }
 }
