@@ -72,4 +72,16 @@ struct WirePacketTests {
         #expect(WirePacketBatch.decode(full.prefix(full.count - 1)).isEmpty)
         #expect(WirePacketBatch.decode(full.prefix(2)).isEmpty)
     }
+
+    @Test("decodes correctly from a Data slice whose start index is non-zero")
+    func slicedInput() {
+        // The zero-copy decode reads via withUnsafeBytes, which is 0-based over the
+        // slice's own region — this guards that a non-zero startIndex is respected
+        // and never reads the prefix bytes.
+        var padded = Data([0xDE, 0xAD, 0xBE, 0xEF])
+        padded.append(WirePacketBatch.encode(packets))
+        let slice = padded.suffix(from: padded.startIndex + 4)
+        #expect(slice.startIndex != 0)
+        #expect(WirePacketBatch.decode(slice) == packets)
+    }
 }

@@ -78,53 +78,62 @@ public enum WirePacketBatch {
     }
 
     public static func decode(_ data: Data) -> [WirePacket] {
-        let bytes = [UInt8](data)
-        var cursor = 0
+        // Walk the batch bytes in place via withUnsafeBytes rather than copying the
+        // whole message into a `[UInt8]` first — decode runs many times a second on
+        // every packet, so the per-batch full-buffer copy was pure waste. Only each
+        // packet's own payload is copied out (it must be owned by the WirePacket).
+        // The buffer is 0-based over the Data's own region, so a non-zero startIndex
+        // slice is handled correctly. Decoding stays total: malformed/truncated
+        // input yields an empty batch.
+        data.withUnsafeBytes { raw -> [WirePacket] in
+            let total = raw.count
+            var cursor = 0
 
-        func remaining(_ length: Int) -> Bool {
-            length >= 0 && cursor + length <= bytes.count
-        }
-        func readU32() -> UInt32? {
-            guard remaining(4) else { return nil }
-            defer { cursor += 4 }
-            return UInt32(bytes[cursor]) | UInt32(bytes[cursor + 1]) << 8
-                | UInt32(bytes[cursor + 2]) << 16 | UInt32(bytes[cursor + 3]) << 24
-        }
-        func readU64() -> UInt64? {
-            guard remaining(8) else { return nil }
-            defer { cursor += 8 }
-            var value: UInt64 = 0
-            for index in 0 ..< 8 {
-                value |= UInt64(bytes[cursor + index]) << (8 * index)
+            func remaining(_ length: Int) -> Bool {
+                length >= 0 && cursor + length <= total
             }
-            return value
-        }
+            func readU32() -> UInt32? {
+                guard remaining(4) else { return nil }
+                defer { cursor += 4 }
+                return UInt32(raw[cursor]) | UInt32(raw[cursor + 1]) << 8
+                    | UInt32(raw[cursor + 2]) << 16 | UInt32(raw[cursor + 3]) << 24
+            }
+            func readU64() -> UInt64? {
+                guard remaining(8) else { return nil }
+                defer { cursor += 8 }
+                var value: UInt64 = 0
+                for index in 0 ..< 8 {
+                    value |= UInt64(raw[cursor + index]) << (8 * index)
+                }
+                return value
+            }
 
-        guard let count = readU32() else { return [] }
-        var packets = [WirePacket]()
-        packets.reserveCapacity(min(Int(count), bytes.count / 30 + 1))
-        for _ in 0 ..< count {
-            guard let timestamp = readU64(), let pid = readU32(), remaining(1) else { return [] }
-            let direction = bytes[cursor]
-            cursor += 1
-            guard let dlt = readU32(), let originalLength = readU32(),
-                  let nameLength = readU32(), remaining(Int(nameLength)) else { return [] }
-            let name = String(bytes: bytes[cursor ..< cursor + Int(nameLength)], encoding: .utf8) ?? ""
-            cursor += Int(nameLength)
-            guard let dataLength = readU32(), remaining(Int(dataLength)) else { return [] }
-            let payload = Data(bytes[cursor ..< cursor + Int(dataLength)])
-            cursor += Int(dataLength)
-            packets.append(WirePacket(
-                timestamp: Double(bitPattern: timestamp),
-                pid: Int32(bitPattern: pid),
-                processName: name,
-                direction: direction,
-                dlt: dlt,
-                originalLength: Int(originalLength),
-                data: payload
-            ))
+            guard let count = readU32() else { return [] }
+            var packets = [WirePacket]()
+            packets.reserveCapacity(min(Int(count), total / 30 + 1))
+            for _ in 0 ..< count {
+                guard let timestamp = readU64(), let pid = readU32(), remaining(1) else { return [] }
+                let direction = raw[cursor]
+                cursor += 1
+                guard let dlt = readU32(), let originalLength = readU32(),
+                      let nameLength = readU32(), remaining(Int(nameLength)) else { return [] }
+                let name = String(bytes: raw[cursor ..< cursor + Int(nameLength)], encoding: .utf8) ?? ""
+                cursor += Int(nameLength)
+                guard let dataLength = readU32(), remaining(Int(dataLength)) else { return [] }
+                let payload = Data(raw[cursor ..< cursor + Int(dataLength)])
+                cursor += Int(dataLength)
+                packets.append(WirePacket(
+                    timestamp: Double(bitPattern: timestamp),
+                    pid: Int32(bitPattern: pid),
+                    processName: name,
+                    direction: direction,
+                    dlt: dlt,
+                    originalLength: Int(originalLength),
+                    data: payload
+                ))
+            }
+            return packets
         }
-        return packets
     }
 
     private static func appendU32(_ value: UInt32, to data: inout Data) {
