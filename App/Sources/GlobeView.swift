@@ -347,12 +347,18 @@ private struct GlobeBaseLayer: View {
 private struct GlobeArcsLayer: View {
     let destinations: [GlobeDestination]
     let home: MapCoordinate?
+    @Environment(\.scenePhase) private var scenePhase
 
     private let accent = Color(red: 0.32, green: 0.82, blue: 0.58)
     private let threat = Color(red: 0.94, green: 0.46, blue: 0.42)
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+        // Only burn 30 fps while the app is frontmost and there are arcs to
+        // animate; pause entirely when backgrounded, and idle-breathe when the map
+        // is empty. SwiftUI already stops a TimelineView whose window is occluded,
+        // but not one that's merely not-key, so gate on scenePhase too.
+        let schedule = GlobeAnimation.schedule(active: scenePhase == .active, destinationCount: destinations.count)
+        TimelineView(.animation(minimumInterval: schedule.interval, paused: schedule.paused)) { timeline in
             Canvas { context, size in
                 draw(&context, size: size, phase: timeline.date.timeIntervalSinceReferenceDate)
             }
