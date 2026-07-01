@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.14] - 2026-07-01
+
+### Changed
+- **Lower idle CPU, GPU, and energy use.** A batch of performance work with no
+  change to what you see:
+  - The app no longer re-renders the Overview, Connections, and Map views once a
+    second when nothing has actually changed — derived state is now published only
+    when it differs, so an idle monitor is nearly free.
+  - While capturing packets, each batch's hostnames, fingerprints, and TCP
+    segments are handed to the attribution engine in one step instead of one at a
+    time, cutting cross-thread overhead on busy links.
+  - Captured packet batches are decoded in place rather than copied whole on every
+    message, reducing memory churn during capture.
+  - The animated globe on the Map tab now pauses when the app isn't frontmost and
+    slows to an idle breath when the map is empty, instead of always redrawing at
+    30 fps.
+
 ## [1.8.13] - 2026-07-01
 
 ### Fixed
