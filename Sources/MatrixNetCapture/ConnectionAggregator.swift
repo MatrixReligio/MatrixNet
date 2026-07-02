@@ -309,6 +309,13 @@ public actor ConnectionAggregator {
             // are the persistence layer's concern. Session totals deliberately
             // retain this connection's contribution; only its per-id baseline is
             // released so the maps don't grow unbounded.
+            // Quality trackers go too: quality is a live-flow metric (consumers
+            // look it up via live connections only), and the per-FlowKey maps
+            // would otherwise grow with every flow ever captured.
+            if let flowKey = connections[id]?.fiveTuple.flowKey {
+                qualityByFlow[flowKey] = nil
+                qualityApp[flowKey] = nil
+            }
             connections[id] = nil
             lastSeenIn[id] = nil
             lastSeenOut[id] = nil

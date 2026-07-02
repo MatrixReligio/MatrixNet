@@ -41,6 +41,28 @@ struct AggregatorBatchTests {
         #expect(snapshot.first?.quality.handshakeRTTms == 30.0)
     }
 
+    @Test("a removed connection releases its quality trackers")
+    func qualityCleanupOnRemoval() async throws {
+        let aggregator = ConnectionAggregator()
+        let conn = try connection(50000)
+        await aggregator.apply(.added(conn))
+        let key = conn.fiveTuple.flowKey
+        let syn = TCPSegment(flags: .syn, sequence: 100, acknowledgement: 0, payloadLength: 0)
+        await aggregator.recordTCPSegments([
+            ConnectionAggregator.TCPSegmentEntry(
+                segment: syn, timestampMicros: 1_000_000, inbound: false, flowKey: key, pid: 501
+            )
+        ])
+        #expect(await aggregator.qualitySnapshot().count == 1)
+
+        // Closing the flow must release its trackers: quality is a live-flow
+        // metric (consumers look it up via live connections only), and a
+        // per-FlowKey map that survives removal grows without bound across a
+        // long capture session.
+        await aggregator.apply(.removed(conn.id))
+        #expect(await aggregator.qualitySnapshot().isEmpty)
+    }
+
     @Test("recordFingerprints batch attributes each JA4 to its app")
     func fingerprintBatch() async throws {
         let aggregator = ConnectionAggregator()
