@@ -97,6 +97,7 @@ public final class AppModel {
     var lastUsageSeenPacket: [String: UsageTotals] = [:]
     var lastUsageSeenNStat: [String: UsageTotals] = [:]
     var lastUsageFlush = Date.distantPast
+    var lastChangeLogPurge = Date.distantPast
     var lastCompactedHour: Date?
     private let destinationBaselineStore: DestinationBaselineStore?
     private var knownDestinations: [String: AppBaseline] = [:]

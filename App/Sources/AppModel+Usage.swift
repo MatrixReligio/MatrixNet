@@ -11,9 +11,25 @@ extension AppModel {
     /// positive growth into hourly buckets. Throttled to ≈ 30s, with the prior
     /// hour compacted to its top destinations once it rolls over.
     func flushUsage(now: Date) async {
+        purgeChangeLogIfDue(now: now)
         guard let usageStore, now.timeIntervalSince(lastUsageFlush) >= 30 else { return }
         lastUsageFlush = now
         await persistUsage(usageStore: usageStore, now: now)
+    }
+
+    /// Once a day, trims SwiftData's persistent-history change log (which no
+    /// consumer reads — the widget uses metrics.json) to the last 7 days.
+    /// Detached because the first purge of a long-lived store works through a
+    /// large backlog (~3.5s measured); the app must not stall on it. Runs off
+    /// the flush path rather than launch-only maintenance so a menu-bar app
+    /// that stays up for weeks still gets its daily sweep.
+    private func purgeChangeLogIfDue(now: Date) {
+        guard let historyStore, now.timeIntervalSince(lastChangeLogPurge) >= 86_400 else { return }
+        lastChangeLogPurge = now
+        let cutoff = now.addingTimeInterval(-7 * 86_400)
+        Task.detached(priority: .utility) {
+            try? historyStore.purgeChangeHistory(olderThan: cutoff)
+        }
     }
 
     /// Forces a usage flush regardless of the 30s throttle, so the final

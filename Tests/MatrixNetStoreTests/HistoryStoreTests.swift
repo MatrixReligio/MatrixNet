@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import MatrixNetStore
 
@@ -110,6 +111,30 @@ struct HistoryStoreTests {
         let records = try store.recent()
         #expect(records.count == 1)
         #expect(records.first?.appName == "Fresh")
+    }
+
+    @Test("purgeChangeHistory drops SwiftData's persistent-history change log")
+    func purgesChangeHistory() throws {
+        // History tracking needs a file-backed store (in-memory stores skip it).
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("matrixnet-history-purge-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("matrixnet.store")
+        let container = try SharedModelContainer.make(configuration: ModelConfiguration(url: url))
+        let store = HistoryStore(container: container)
+
+        try store.record([summary("Safari", "apple.com")])
+        try store.record([summary("curl", "example.com")])
+
+        let everything = HistoryDescriptor<DefaultHistoryTransaction>()
+        #expect(try !container.mainContext.fetchHistory(everything).isEmpty)
+
+        try store.purgeChangeHistory(olderThan: .distantFuture)
+
+        #expect(try container.mainContext.fetchHistory(everything).isEmpty)
+        // The business rows themselves must survive the purge untouched.
+        #expect(try store.recent().count == 2)
     }
 
     @Test("returns records newest-first and honours the limit")

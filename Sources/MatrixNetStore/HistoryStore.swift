@@ -133,6 +133,25 @@ public final class HistoryStore {
         try context.save()
     }
 
+    /// Deletes SwiftData's persistent-history change log older than `cutoff`.
+    ///
+    /// This is unrelated to the connection-history *records* above: SwiftData
+    /// tracks every save in ACHANGE/ATRANSACTION tables meant for cross-process
+    /// change consumers — and MatrixNet has none (the widget reads metrics.json,
+    /// not SwiftData). Left alone the log dwarfs the business data (a real
+    /// 1.8.14 store measured ~180 MB of change log against ~14k business rows;
+    /// purging shrank the file to 4 MB with every row intact).
+    ///
+    /// `nonisolated` with its own context so callers can run it off the main
+    /// actor: the first purge of a long-lived store works through a large
+    /// backlog (~3.5s measured on that same store).
+    public nonisolated func purgeChangeHistory(olderThan cutoff: Date) throws {
+        var descriptor = HistoryDescriptor<DefaultHistoryTransaction>()
+        descriptor.predicate = #Predicate { $0.timestamp < cutoff }
+        let context = ModelContext(container)
+        try context.deleteHistory(descriptor)
+    }
+
     /// The most recently active history records, newest first.
     public func recent(limit: Int = 200) throws -> [ConnectionHistoryRecord] {
         var descriptor = FetchDescriptor<ConnectionHistoryRecord>(
