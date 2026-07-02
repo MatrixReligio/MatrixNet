@@ -14,6 +14,12 @@ final class PKTAPCaptureEngine: @unchecked Sendable {
     private var source: DispatchSourceRead?
     private let queue = DispatchQueue(label: "com.matrixreligio.matrixnet.helper.capture")
     private var bufferLength = 0
+    /// Reused across reads: allocating (and zeroing) a fresh buffer of up to
+    /// 512 KiB on every wakeup is measurable churn under load, and immediate
+    /// mode wakes us once per packet burst. Confined to `queue`, like all
+    /// mutable state here; stale bytes beyond a read's count are never parsed
+    /// (BPFRecordParser bounds itself by `count`).
+    private var readBuffer: [UInt8] = []
     private let onBatch: ([WirePacket]) -> Void
 
     /// Link types that indicate pktap framing is active. The macOS *kernel* BPF
@@ -142,11 +148,22 @@ final class PKTAPCaptureEngine: @unchecked Sendable {
     }
 
     private func drain(descriptor: Int32, capacity: Int) {
-        var buffer = [UInt8](repeating: 0, count: capacity)
-        let count = buffer.withUnsafeMutableBytes { read(descriptor, $0.baseAddress, capacity) }
-        guard count > 0 else { return }
+        if readBuffer.count != capacity {
+            readBuffer = [UInt8](repeating: 0, count: capacity)
+        }
+        let count = readBuffer.withUnsafeMutableBytes { read(descriptor, $0.baseAddress, capacity) }
+        guard count > 0 else {
+            // EOF or a persistent error would leave the descriptor readable
+            // forever (the kqueue EOF trap): the source would spin re-invoking
+            // this handler on a dead fd. Tear down on anything but a transient
+            // interruption; the app restarts capture explicitly.
+            if count == 0 || (errno != EINTR && errno != EAGAIN) {
+                cleanup()
+            }
+            return
+        }
 
-        let records = BPFRecordParser.records(in: buffer, count: count)
+        let records = BPFRecordParser.records(in: readBuffer, count: count)
         let packets = records.compactMap { record -> WirePacket? in
             guard let pktap = PKTAPParser.parse(record.bytes) else { return nil }
             return WirePacket(
