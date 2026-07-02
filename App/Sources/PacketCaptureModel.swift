@@ -107,14 +107,27 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
             enableHelper()
             return
         }
+        // After an interruption the dead connection is still referenced here;
+        // replacing it without invalidating first would deallocate a live
+        // NSXPCConnection, which Apple documents as a programming error (its
+        // handlers and resources are only released by invalidate()).
+        connection?.invalidate()
+        connection = nil
         let connection = NSXPCConnection(machServiceName: CaptureXPC.machServiceName, options: .privileged)
         connection.remoteObjectInterface = NSXPCInterface(with: CaptureControl.self)
         connection.exportedInterface = NSXPCInterface(with: CaptureClient.self)
         connection.exportedObject = self
         connection.invalidationHandler = { [weak self] in
             Task { @MainActor in
-                self?.isCapturing = false
-                self?.endAttributionSession()
+                guard let self else { return }
+                // Only report an invalidation that ended a live capture: a
+                // deliberate stopCapture() has already cleared isCapturing by
+                // the time this async handler runs.
+                if self.isCapturing {
+                    self.lastError = "Helper connection closed — press Start to reconnect."
+                }
+                self.isCapturing = false
+                self.endAttributionSession()
             }
         }
         connection.interruptionHandler = { [weak self] in
