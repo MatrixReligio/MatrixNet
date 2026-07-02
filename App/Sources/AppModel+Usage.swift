@@ -24,9 +24,9 @@ extension AppModel {
     /// the flush path rather than launch-only maintenance so a menu-bar app
     /// that stays up for weeks still gets its daily sweep.
     private func purgeChangeLogIfDue(now: Date) {
-        guard let historyStore, now.timeIntervalSince(lastChangeLogPurge) >= 86_400 else { return }
+        guard let historyStore, now.timeIntervalSince(lastChangeLogPurge) >= 86400 else { return }
         lastChangeLogPurge = now
-        let cutoff = now.addingTimeInterval(-7 * 86_400)
+        let cutoff = now.addingTimeInterval(-7 * 86400)
         Task.detached(priority: .utility) {
             try? historyStore.purgeChangeHistory(olderThan: cutoff)
         }

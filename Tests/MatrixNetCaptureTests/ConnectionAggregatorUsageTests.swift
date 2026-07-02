@@ -122,8 +122,13 @@ struct ConnectionAggregatorUsageTests {
         await aggregator.apply(.added(connection))
         await aggregator.apply(.counts(
             id: connection.id,
-            ConnectionCounts(bytesIn: 900, bytesOut: 0, packetsIn: 6, packetsOut: 4,
-                             timestamp: Date(timeIntervalSince1970: 5))
+            ConnectionCounts(
+                bytesIn: 900,
+                bytesOut: 0,
+                packetsIn: 6,
+                packetsOut: 4,
+                timestamp: Date(timeIntervalSince1970: 5)
+            )
         ))
         // While capturing, the packet-derived overlay wins for covered keys.
         await aggregator.attributePackets([
@@ -149,8 +154,13 @@ struct ConnectionAggregatorUsageTests {
         await aggregator.apply(.added(connection))
         await aggregator.apply(.counts(
             id: connection.id,
-            ConnectionCounts(bytesIn: 900, bytesOut: 0, packetsIn: 6, packetsOut: 4,
-                             timestamp: Date(timeIntervalSince1970: 5))
+            ConnectionCounts(
+                bytesIn: 900,
+                bytesOut: 0,
+                packetsIn: 6,
+                packetsOut: 4,
+                timestamp: Date(timeIntervalSince1970: 5)
+            )
         ))
         await aggregator.attributePackets([
             ConnectionAggregator.PacketAttribution(

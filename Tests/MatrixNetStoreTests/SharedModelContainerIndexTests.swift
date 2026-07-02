@@ -44,9 +44,13 @@ struct SharedModelContainerIndexTests {
         let container = try SharedModelContainer.make(configuration: ModelConfiguration(url: url))
         let context = container.mainContext
         context.insert(ConnectionHistoryRecord(
-            appName: "a", remoteHost: "b", proto: "TCP",
-            firstSeen: Date(timeIntervalSince1970: 0), lastSeen: Date(timeIntervalSince1970: 0),
-            bytesIn: 1, bytesOut: 1
+            appName: "a",
+            remoteHost: "b",
+            proto: "TCP",
+            firstSeen: Date(timeIntervalSince1970: 0),
+            lastSeen: Date(timeIntervalSince1970: 0),
+            bytesIn: 1,
+            bytesOut: 1
         ))
         try context.save()
         let dropped = "Z_ConnectionHistoryRecord_SwiftDataIndexOnBinarylastSeen"

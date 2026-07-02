@@ -145,7 +145,7 @@ public final class HistoryStore {
     /// `nonisolated` with its own context so callers can run it off the main
     /// actor: the first purge of a long-lived store works through a large
     /// backlog (~3.5s measured on that same store).
-    public nonisolated func purgeChangeHistory(olderThan cutoff: Date) throws {
+    nonisolated public func purgeChangeHistory(olderThan cutoff: Date) throws {
         var descriptor = HistoryDescriptor<DefaultHistoryTransaction>()
         descriptor.predicate = #Predicate { $0.timestamp < cutoff }
         let context = ModelContext(container)

@@ -77,10 +77,10 @@ public final class AppModel {
         resolver: DoHResolver(),
         lookupCountry: { GeoIP.country(for: $0) }
     )
-    // Nested-optional on purpose: `.some(nil)` is the negative cache ("resolved,
-    // no country") — without it every unresolvable proxied host re-entered
-    // resolveProxyCountries on each ~1s tick, spawning a Task per tick for as
-    // long as the connection lived. Same pattern as AppIconResolver.cache.
+    /// Nested-optional on purpose: `.some(nil)` is the negative cache ("resolved,
+    /// no country") — without it every unresolvable proxied host re-entered
+    /// resolveProxyCountries on each ~1s tick, spawning a Task per tick for as
+    /// long as the connection lived. Same pattern as AppIconResolver.cache.
     private var proxyCountryByHost: [String: String?] = [:]
 
     private var monitor: NetworkStatisticsMonitor?
@@ -90,8 +90,9 @@ public final class AppModel {
     private let resolver = HostnameResolver()
     /// All three stores MUST share one container; separate containers at the
     /// default URL make SwiftData migrate the store to the last-opened schema and
-    /// drop the other models' tables (lost history, broke usage).
-    // Accessed by the flush/maintenance logic in AppModel+Usage.swift.
+    /// drop the other models' tables (lost history, broke usage). Internal (not
+    /// private) so the flush/maintenance logic in AppModel+Usage.swift can reach
+    /// them.
     let historyStore: HistoryStore?
     let usageStore: UsageStore?
     // One baseline per usage source: the two sources observe the same wire
@@ -573,7 +574,12 @@ extension AppModel {
     func country(for connection: Connection) -> String? {
         let destination = connection.fiveTuple.destination
         if ProxyInfo.routesThroughProxy(destination) {
-            return connection.remoteHostname.flatMap { proxyCountryByHost[$0] ?? nil }
+            // Two layers: the lookup unwraps "was it queried", the value itself
+            // may still be a cached negative (resolved, no country).
+            guard let host = connection.remoteHostname, let cached = proxyCountryByHost[host] else {
+                return nil
+            }
+            return cached
         }
         return GeoIP.country(for: destination.address)
     }

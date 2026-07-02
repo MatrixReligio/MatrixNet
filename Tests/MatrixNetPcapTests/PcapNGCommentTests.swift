@@ -36,7 +36,7 @@ struct PcapNGCommentTests {
     func oversizedComment() throws {
         let writer = PcapNGWriter(linkType: PcapLinkType.ethernet)
         var bytes = writer.header()
-        let long = String(repeating: "a", count: 70_000)
+        let long = String(repeating: "a", count: 70000)
         bytes += writer.packet(CapturedRecord(
             timestampMicros: 1,
             originalLength: 4,
