@@ -39,3 +39,58 @@ struct UsageAccumulatorTests {
         #expect(delta == ["a": totals(20, 5)])
     }
 }
+
+/// Each source (packet capture vs NetworkStatistics) keeps its own baseline, so
+/// switching the preferred source at a capture start/stop boundary never
+/// double-counts or freezes a key: a key covered by the packet source persists
+/// its packet growth only, while its NStat baseline keeps advancing silently.
+@Suite("UsageAccumulator sourced deltas")
+struct UsageAccumulatorSourcedTests {
+    private func totals(_ inBytes: UInt64, _ outBytes: UInt64 = 0) -> UsageTotals {
+        UsageTotals(bytesIn: inBytes, bytesOut: outBytes)
+    }
+
+    @Test("while capturing, a packet-covered key persists the packet delta only")
+    func packetWinsWhileCapturing() {
+        let delta = UsageAccumulator.sourcedDeltas(
+            packetPrevious: [:], packetCurrent: ["a": totals(60)],
+            nstatPrevious: ["a": totals(900)], nstatCurrent: ["a": totals(960)],
+            isTunnelKey: { _ in false }
+        )
+        #expect(delta == ["a": totals(60)])
+    }
+
+    @Test("after capture stops, NStat resumes from its own advanced baseline")
+    func nstatResumesAfterCaptureStops() {
+        // While capturing, the NStat baseline for "a" advanced to 960 without
+        // persisting; the capture overlay is now cleared. Only the post-stop
+        // growth (960 -> 970) may be persisted — not the whole capture window.
+        let delta = UsageAccumulator.sourcedDeltas(
+            packetPrevious: ["a": totals(300)], packetCurrent: [:],
+            nstatPrevious: ["a": totals(960)], nstatCurrent: ["a": totals(970)],
+            isTunnelKey: { _ in false }
+        )
+        #expect(delta == ["a": totals(10)])
+    }
+
+    @Test("without capture, tunnel keys are kept — NStat is the only signal")
+    func tunnelKeptWithoutCapture() {
+        let delta = UsageAccumulator.sourcedDeltas(
+            packetPrevious: [:], packetCurrent: [:],
+            nstatPrevious: [:], nstatCurrent: ["tunnel": totals(40)],
+            isTunnelKey: { _ in true }
+        )
+        #expect(delta == ["tunnel": totals(40)])
+    }
+
+    @Test("while capturing, uncovered NStat keys persist but the tunnel relay is dropped")
+    func uncoveredKeysWhileCapturing() {
+        let delta = UsageAccumulator.sourcedDeltas(
+            packetPrevious: [:], packetCurrent: ["a": totals(60)],
+            nstatPrevious: ["b": totals(10), "t": totals(5)],
+            nstatCurrent: ["b": totals(30), "t": totals(50)],
+            isTunnelKey: { $0 == "t" }
+        )
+        #expect(delta == ["a": totals(60), "b": totals(20)])
+    }
+}

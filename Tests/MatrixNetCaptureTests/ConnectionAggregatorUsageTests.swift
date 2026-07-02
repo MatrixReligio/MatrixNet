@@ -115,6 +115,53 @@ struct ConnectionAggregatorUsageTests {
         #expect(!usage.contains { $0.address.description == "1.1.1.1" })
     }
 
+    @Test("ending a capture session falls back to the live NStat figures instead of freezing")
+    func endCaptureSessionUnfreezes() async throws {
+        let aggregator = ConnectionAggregator()
+        let connection = try connection(50070, pid: 9)
+        await aggregator.apply(.added(connection))
+        await aggregator.apply(.counts(
+            id: connection.id,
+            ConnectionCounts(bytesIn: 900, bytesOut: 0, packetsIn: 6, packetsOut: 4,
+                             timestamp: Date(timeIntervalSince1970: 5))
+        ))
+        // While capturing, the packet-derived overlay wins for covered keys.
+        await aggregator.attributePackets([
+            ConnectionAggregator.PacketAttribution(
+                flowKey: connection.fiveTuple.flowKey, pid: 9, inbound: true, bytes: 60
+            )
+        ])
+        #expect(await aggregator.usageSnapshot().first?.bytesIn == 60)
+        #expect(await aggregator.appTraffic().first?.bytesIn == 60)
+
+        // Capture stops: the overlay must clear so the (still-growing) NStat
+        // figures come back — not freeze at the last packet totals forever.
+        await aggregator.endCaptureSession()
+        #expect(await aggregator.usageSnapshot().first?.bytesIn == 900)
+        #expect(await aggregator.appTraffic().first?.bytesIn == 900)
+        #expect(await aggregator.snapshot().first?.bytesIn == 900)
+    }
+
+    @Test("usageSnapshotBySource exposes each source's raw totals")
+    func snapshotBySource() async throws {
+        let aggregator = ConnectionAggregator()
+        let connection = try connection(50071, pid: 9)
+        await aggregator.apply(.added(connection))
+        await aggregator.apply(.counts(
+            id: connection.id,
+            ConnectionCounts(bytesIn: 900, bytesOut: 0, packetsIn: 6, packetsOut: 4,
+                             timestamp: Date(timeIntervalSince1970: 5))
+        ))
+        await aggregator.attributePackets([
+            ConnectionAggregator.PacketAttribution(
+                flowKey: connection.fiveTuple.flowKey, pid: 9, inbound: true, bytes: 60
+            )
+        ])
+        let sources = await aggregator.usageSnapshotBySource()
+        #expect(sources.packet.first?.bytesIn == 60)
+        #expect(sources.nstat.first?.bytesIn == 900)
+    }
+
     @Test("reset clears usage")
     func resetClears() async throws {
         let aggregator = ConnectionAggregator()

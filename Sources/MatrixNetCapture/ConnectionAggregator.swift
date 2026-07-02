@@ -175,6 +175,31 @@ public actor ConnectionAggregator {
         }
     }
 
+    /// The two usage sources side by side, each with its own monotonic totals:
+    /// `packet` is the capture-derived overlay (empty when not capturing),
+    /// `nstat` the always-on NetworkStatistics totals. The persistence layer
+    /// diffs each against its own baseline (`UsageAccumulator.sourcedDeltas`) so
+    /// flipping the preferred source at a capture boundary never double-counts.
+    public struct UsageSourceSnapshot: Sendable {
+        public let packet: [UsageFlowTotal]
+        public let nstat: [UsageFlowTotal]
+    }
+
+    /// Both usage sources, unmerged (see `UsageSourceSnapshot`).
+    public func usageSnapshotBySource() -> UsageSourceSnapshot {
+        UsageSourceSnapshot(packet: Array(usageByFlow.values), nstat: Array(nstatUsageByFlow.values))
+    }
+
+    /// Clears the packet-derived overlays when a capture session ends, so the
+    /// merged views fall back to the (still-growing) NStat figures instead of
+    /// freezing at the totals observed while capture was running. Fingerprint
+    /// and quality state stay: they are identity/live-flow data, not counters.
+    public func endCaptureSession() {
+        usageByFlow.removeAll()
+        packetTrafficByApp.removeAll()
+        packetBytesByConn.removeAll()
+    }
+
     /// Monotonic per-(app, address) usage totals for the Usage tab (these survive
     /// connection close, unlike the per-connection map). Prefers packet-derived
     /// figures while capturing (accurate under a proxy); otherwise falls back to

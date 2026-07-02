@@ -90,7 +90,12 @@ public final class AppModel {
     private let historyStore: HistoryStore?
     // Accessed by the usage-flush logic in AppModel+Usage.swift.
     let usageStore: UsageStore?
-    var lastUsageSeen: [String: UsageTotals] = [:]
+    // One baseline per usage source: the two sources observe the same wire
+    // traffic with different counters, so each must be diffed against itself
+    // (see UsageAccumulator.sourcedDeltas) or a capture start/stop would
+    // double-count or freeze keys.
+    var lastUsageSeenPacket: [String: UsageTotals] = [:]
+    var lastUsageSeenNStat: [String: UsageTotals] = [:]
     var lastUsageFlush = Date.distantPast
     var lastCompactedHour: Date?
     private let destinationBaselineStore: DestinationBaselineStore?
@@ -159,7 +164,8 @@ public final class AppModel {
         // the delta baseline must restart from empty too. Defer the first usage
         // flush a full interval so it can't read a snapshot before the async
         // `aggregator.reset()` lands and double-count stale totals.
-        lastUsageSeen.removeAll()
+        lastUsageSeenPacket.removeAll()
+        lastUsageSeenNStat.removeAll()
         lastUsageFlush = Date()
         lastCompactedHour = UsageBucketing.hourStart(of: Date(), calendar: .current)
 

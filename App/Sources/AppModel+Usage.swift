@@ -26,15 +26,33 @@ extension AppModel {
     }
 
     private func persistUsage(usageStore: UsageStore, now: Date) async {
-        let snapshot = await aggregator.usageSnapshot()
-        var current: [String: UsageTotals] = [:]
+        // Diff each source against its own baseline: the packet overlay and the
+        // NStat totals count the same wire traffic with different counters, so a
+        // merged baseline would double-count or freeze keys whenever capture
+        // starts or stops (see UsageAccumulator.sourcedDeltas).
+        let sources = await aggregator.usageSnapshotBySource()
+        var packetCurrent: [String: UsageTotals] = [:]
+        var nstatCurrent: [String: UsageTotals] = [:]
         var meta: [String: ConnectionAggregator.UsageFlowTotal] = [:]
-        for flow in snapshot {
+        for flow in sources.nstat {
             let key = "\(flow.app)\u{1F}\(flow.address.description)"
-            current[key] = UsageTotals(bytesIn: flow.bytesIn, bytesOut: flow.bytesOut)
+            nstatCurrent[key] = UsageTotals(bytesIn: flow.bytesIn, bytesOut: flow.bytesOut)
             meta[key] = flow
         }
-        let deltas = UsageAccumulator.deltas(previous: lastUsageSeen, current: current)
+        for flow in sources.packet {
+            let key = "\(flow.app)\u{1F}\(flow.address.description)"
+            packetCurrent[key] = UsageTotals(bytesIn: flow.bytesIn, bytesOut: flow.bytesOut)
+            meta[key] = flow
+        }
+        let deltas = UsageAccumulator.sourcedDeltas(
+            packetPrevious: lastUsageSeenPacket,
+            packetCurrent: packetCurrent,
+            nstatPrevious: lastUsageSeenNStat,
+            nstatCurrent: nstatCurrent,
+            isTunnelKey: { key in
+                TunnelProcess.isTunnel(String(key.prefix(while: { $0 != "\u{1F}" })))
+            }
+        )
         let hour = UsageBucketing.hourStart(of: now, calendar: .current)
         var merged: [String: UsageRow] = [:]
         for (key, delta) in deltas {
@@ -61,7 +79,8 @@ extension AppModel {
         // to write); a failed save keeps the old baseline so the next flush retries
         // this interval's growth instead of silently dropping those bytes.
         if merged.isEmpty || (try? usageStore.accumulate(Array(merged.values))) != nil {
-            lastUsageSeen = current
+            lastUsageSeenPacket = packetCurrent
+            lastUsageSeenNStat = nstatCurrent
         }
 
         if let last = lastCompactedHour, last < hour {

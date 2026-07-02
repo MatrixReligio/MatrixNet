@@ -112,12 +112,16 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
         connection.exportedInterface = NSXPCInterface(with: CaptureClient.self)
         connection.exportedObject = self
         connection.invalidationHandler = { [weak self] in
-            Task { @MainActor in self?.isCapturing = false }
+            Task { @MainActor in
+                self?.isCapturing = false
+                self?.endAttributionSession()
+            }
         }
         connection.interruptionHandler = { [weak self] in
             Task { @MainActor in
                 self?.isCapturing = false
                 self?.lastError = "Helper interrupted — press Start to reconnect."
+                self?.endAttributionSession()
             }
         }
         connection.resume()
@@ -142,6 +146,16 @@ final class PacketCaptureModel: NSObject, CaptureClient, @unchecked Sendable {
         connection?.invalidate()
         connection = nil
         isCapturing = false
+        endAttributionSession()
+    }
+
+    /// Tells the aggregator the packet-derived overlay is over, so the merged
+    /// usage/traffic views fall back to the live NStat figures instead of
+    /// freezing at the last captured totals (idempotent; also fired when the
+    /// helper connection dies mid-capture).
+    private func endAttributionSession() {
+        guard let attribution else { return }
+        Task { await attribution.endCaptureSession() }
     }
 
     func clear() {
