@@ -8974,6 +8974,52 @@
         }
       }
     },
+    "Keep connection history for %lld days": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保留连接历史 %lld 天"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保留連線記錄 %lld 天"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続履歴を %lld 日間保持"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 기록을 %lld일간 보관"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conserver l’historique des connexions %lld jours"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbindungsverlauf %lld Tage aufbewahren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conservar el historial de conexiones %lld días"
+          }
+        }
+      }
+    },
     "Billing cycle resets on day %lld": {
       "localizations": {
         "zh-Hans": {
@@ -9020,48 +9066,48 @@
         }
       }
     },
-    "Controls the Usage tab’s retention and the billing-cycle reporting window.": {
+    "Controls the Usage and History tabs’ retention and the billing-cycle reporting window.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "控制“用量”标签页的保留期与计费周期报表窗口。"
+            "value": "控制“用量”与“历史”标签页的保留期以及计费周期报表窗口。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "控制「用量」標籤頁的保留期與計費週期報表範圍。"
+            "value": "控制「用量」與「歷史」標籤頁的保留期以及計費週期報表範圍。"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "「使用量」タブの保持期間と請求サイクルの集計範囲を制御します。"
+            "value": "「使用量」と「履歴」タブの保持期間と請求サイクルの集計範囲を制御します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "'사용량' 탭의 보관 기간과 청구 주기 보고 범위를 제어합니다."
+            "value": "'사용량' 및 '기록' 탭의 보관 기간과 청구 주기 보고 범위를 제어합니다."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Contrôle la rétention de l’onglet Utilisation et la fenêtre du cycle de facturation."
+            "value": "Contrôle la rétention des onglets Utilisation et Historique ainsi que la fenêtre du cycle de facturation."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Steuert die Aufbewahrung im Tab „Verbrauch“ und den Abrechnungszeitraum."
+            "value": "Steuert die Aufbewahrung der Tabs „Verbrauch“ und „Verlauf“ sowie das Abrechnungszeitfenster."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Controla la retención de la pestaña Uso y la ventana del ciclo de facturación."
+            "value": "Controla la retención de las pestañas Uso e Historial y la ventana del ciclo de facturación."
           }
         }
       }

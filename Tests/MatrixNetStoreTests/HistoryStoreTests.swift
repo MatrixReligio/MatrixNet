@@ -99,6 +99,19 @@ struct HistoryStoreTests {
         #expect(record.lastSeen == Date(timeIntervalSince1970: 1004)) // latest in batch
     }
 
+    @Test("prune removes records last seen before the cutoff and keeps the rest")
+    func pruneByLastSeen() throws {
+        let store = try HistoryStore.inMemory()
+        try store.record([
+            summary("Old", "old.example", at: Date(timeIntervalSince1970: 1000)),
+            summary("Fresh", "fresh.example", at: Date(timeIntervalSince1970: 5000))
+        ])
+        try store.prune(olderThan: Date(timeIntervalSince1970: 3000))
+        let records = try store.recent()
+        #expect(records.count == 1)
+        #expect(records.first?.appName == "Fresh")
+    }
+
     @Test("returns records newest-first and honours the limit")
     func recentOrderAndLimit() throws {
         let store = try HistoryStore.inMemory()

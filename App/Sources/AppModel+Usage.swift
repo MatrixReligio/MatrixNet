@@ -91,9 +91,16 @@ extension AppModel {
         }
     }
 
-    /// On launch: drop usage older than the retention window and compact any
-    /// already-closed hours left untruncated by a previous crash.
+    /// On launch: drop usage and connection history older than their retention
+    /// windows, and compact any already-closed hours left untruncated by a
+    /// previous crash. Without the history sweep that table grows monotonically
+    /// for the life of the install (one row per app+host+proto ever seen).
     func performUsageLaunchMaintenance() {
+        if let historyStore {
+            let cutoff = Calendar.current
+                .date(byAdding: .day, value: -preferences.historyRetentionDays, to: Date()) ?? .distantPast
+            try? historyStore.prune(olderThan: cutoff)
+        }
         guard let usageStore else { return }
         let cutoff = Calendar.current.date(byAdding: .day, value: -preferences.usageRetentionDays, to: Date())
             ?? .distantPast

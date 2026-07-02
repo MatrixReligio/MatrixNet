@@ -5,6 +5,10 @@ import SwiftData
 /// store `UInt64`; traffic volumes stay well within `Int.max`.
 @Model
 public final class UsageBucketRecord {
+    // Serves the (periodStart, app, host, country) additive upsert on every
+    // flush; its periodStart prefix also covers the range fetches and prune.
+    #Index<UsageBucketRecord>([\.periodStart, \.app, \.host, \.country])
+
     public var periodStart: Date
     public var app: String
     public var host: String

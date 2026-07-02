@@ -6,6 +6,9 @@ import SwiftData
 /// detected.
 @Model
 public final class KnownDestinationRecord {
+    // Serves the (app, country) upsert lookup.
+    #Index<KnownDestinationRecord>([\.app, \.country])
+
     public var app: String
     public var country: String
     public var firstSeen: Date

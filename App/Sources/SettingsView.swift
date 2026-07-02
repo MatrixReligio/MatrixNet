@@ -186,6 +186,8 @@ private struct DataSettings: View {
     @State private var threatChecked = Threat.lastChecked
     @AppStorage(Preferences.Key.usageRetentionDays.rawValue, store: SharedMetricsStore.sharedDefaults)
     private var usageRetentionDays = 90
+    @AppStorage(Preferences.Key.historyRetentionDays.rawValue, store: SharedMetricsStore.sharedDefaults)
+    private var historyRetentionDays = 30
     @AppStorage(Preferences.Key.billingCycleResetDay.rawValue, store: SharedMetricsStore.sharedDefaults)
     private var billingCycleResetDay = 1
 
@@ -206,11 +208,14 @@ private struct DataSettings: View {
                 Stepper(value: $usageRetentionDays, in: 7 ... 365) {
                     Text("Keep usage history for \(usageRetentionDays) days")
                 }
+                Stepper(value: $historyRetentionDays, in: 7 ... 365) {
+                    Text("Keep connection history for \(historyRetentionDays) days")
+                }
                 Stepper(value: $billingCycleResetDay, in: 1 ... 28) {
                     Text("Billing cycle resets on day \(billingCycleResetDay)")
                 }
             } footer: {
-                Text("Controls the Usage tab’s retention and the billing-cycle reporting window.")
+                Text("Controls the Usage and History tabs’ retention and the billing-cycle reporting window.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

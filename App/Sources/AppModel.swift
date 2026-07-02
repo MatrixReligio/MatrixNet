@@ -87,8 +87,8 @@ public final class AppModel {
     /// All three stores MUST share one container; separate containers at the
     /// default URL make SwiftData migrate the store to the last-opened schema and
     /// drop the other models' tables (lost history, broke usage).
-    private let historyStore: HistoryStore?
-    // Accessed by the usage-flush logic in AppModel+Usage.swift.
+    // Accessed by the flush/maintenance logic in AppModel+Usage.swift.
+    let historyStore: HistoryStore?
     let usageStore: UsageStore?
     // One baseline per usage source: the two sources observe the same wire
     // traffic with different counters, so each must be diffed against itself

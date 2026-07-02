@@ -119,6 +119,20 @@ public final class HistoryStore {
         return order.compactMap { groups[$0] }
     }
 
+    /// Deletes records whose last sighting is older than `cutoff`. Without this
+    /// sweep the table grows monotonically (one row per app+host+proto ever
+    /// seen), and with it every unindexed upsert scan.
+    public func prune(olderThan cutoff: Date) throws {
+        let context = container.mainContext
+        let descriptor = FetchDescriptor<ConnectionHistoryRecord>(
+            predicate: #Predicate { $0.lastSeen < cutoff }
+        )
+        for record in try context.fetch(descriptor) {
+            context.delete(record)
+        }
+        try context.save()
+    }
+
     /// The most recently active history records, newest first.
     public func recent(limit: Int = 200) throws -> [ConnectionHistoryRecord] {
         var descriptor = FetchDescriptor<ConnectionHistoryRecord>(

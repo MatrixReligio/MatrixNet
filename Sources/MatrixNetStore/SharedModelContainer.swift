@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 import SwiftData
 
 /// Builds the single SwiftData container shared by every store.
@@ -43,6 +44,7 @@ public enum SharedModelContainer {
     }
 
     static func make(configuration: ModelConfiguration) throws -> ModelContainer {
+        ensureIndexes(at: configuration.url)
         do {
             return try ModelContainer(for: schema, configurations: [configuration])
         } catch {
@@ -60,6 +62,57 @@ public enum SharedModelContainer {
     /// An in-memory container for tests and previews.
     public static func makeInMemory() throws -> ModelContainer {
         try ModelContainer(for: schema, configurations: [ModelConfiguration(isStoredInMemoryOnly: true)])
+    }
+
+    /// The exact index DDL SwiftData emits for this schema's `#Index`
+    /// declarations (names, columns, collation — captured from a fresh store).
+    /// Keeping them identical means a backfilled store is indistinguishable
+    /// from a freshly created one.
+    private static let indexDDL = [
+        """
+        CREATE INDEX IF NOT EXISTS Z_ConnectionHistoryRecord_SwiftDataIndexOnBinaryappNameremoteHostproto \
+        ON ZCONNECTIONHISTORYRECORD (ZAPPNAME COLLATE BINARY ASC, ZREMOTEHOST COLLATE BINARY ASC, \
+        ZPROTO COLLATE BINARY ASC)
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS Z_ConnectionHistoryRecord_SwiftDataIndexOnBinarylastSeen \
+        ON ZCONNECTIONHISTORYRECORD (ZLASTSEEN COLLATE BINARY ASC)
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS Z_UsageBucketRecord_SwiftDataIndexOnBinaryperiodStartapphostcountry \
+        ON ZUSAGEBUCKETRECORD (ZPERIODSTART COLLATE BINARY ASC, ZAPP COLLATE BINARY ASC, \
+        ZHOST COLLATE BINARY ASC, ZCOUNTRY COLLATE BINARY ASC)
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS Z_AppFingerprintRecord_SwiftDataIndexOnBinaryappja4 \
+        ON ZAPPFINGERPRINTRECORD (ZAPP COLLATE BINARY ASC, ZJA4 COLLATE BINARY ASC)
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS Z_KnownDestinationRecord_SwiftDataIndexOnBinaryappcountry \
+        ON ZKNOWNDESTINATIONRECORD (ZAPP COLLATE BINARY ASC, ZCOUNTRY COLLATE BINARY ASC)
+        """
+    ]
+
+    /// Backfills the `#Index` indexes on stores created before they were
+    /// declared. CoreData's entity version hashes do not cover index
+    /// descriptions, so an index-only schema change never triggers a migration
+    /// — without this, an existing store would stay unindexed forever while
+    /// fresh stores get the indexes. `IF NOT EXISTS` makes it a no-op
+    /// everywhere else, and any failure is ignored: an index is a performance
+    /// aid, never worth failing the store open for. Verified against a copy of
+    /// a real 1.8.14 production store (rows intact, SwiftData reopens cleanly,
+    /// the upsert query plan switches to the index).
+    static func ensureIndexes(at url: URL) {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK else {
+            sqlite3_close(db)
+            return
+        }
+        defer { sqlite3_close(db) }
+        for ddl in indexDDL {
+            sqlite3_exec(db, ddl, nil, nil, nil)
+        }
     }
 
     /// Moves the SQLite store and its `-wal`/`-shm` sidecars aside to a unique

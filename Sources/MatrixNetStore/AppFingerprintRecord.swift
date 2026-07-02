@@ -6,6 +6,9 @@ import SwiftData
 /// the first/last time observed and how many times.
 @Model
 public final class AppFingerprintRecord {
+    // Serves the (app, ja4) upsert lookup.
+    #Index<AppFingerprintRecord>([\.app, \.ja4])
+
     public var app: String
     public var ja4: String
     public var label: String?

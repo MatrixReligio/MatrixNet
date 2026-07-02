@@ -5,6 +5,12 @@ import SwiftData
 /// protocol so repeat sightings accumulate rather than duplicating.
 @Model
 public final class ConnectionHistoryRecord {
+    // The composite serves the (appName, remoteHost, proto) upsert lookup that
+    // runs for every group on the ~5s record path; lastSeen serves recent()'s
+    // sort and prune()'s cutoff. Without these every access is a table scan
+    // that slows down as the table grows.
+    #Index<ConnectionHistoryRecord>([\.appName, \.remoteHost, \.proto], [\.lastSeen])
+
     public var appName: String
     public var remoteHost: String
     public var proto: String
