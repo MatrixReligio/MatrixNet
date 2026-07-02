@@ -77,7 +77,11 @@ public final class AppModel {
         resolver: DoHResolver(),
         lookupCountry: { GeoIP.country(for: $0) }
     )
-    private var proxyCountryByHost: [String: String] = [:]
+    // Nested-optional on purpose: `.some(nil)` is the negative cache ("resolved,
+    // no country") — without it every unresolvable proxied host re-entered
+    // resolveProxyCountries on each ~1s tick, spawning a Task per tick for as
+    // long as the connection lived. Same pattern as AppIconResolver.cache.
+    private var proxyCountryByHost: [String: String?] = [:]
 
     private var monitor: NetworkStatisticsMonitor?
     /// Shared with the packet pipeline so captured packets are attributed to the
@@ -569,7 +573,7 @@ extension AppModel {
     func country(for connection: Connection) -> String? {
         let destination = connection.fiveTuple.destination
         if ProxyInfo.routesThroughProxy(destination) {
-            return connection.remoteHostname.flatMap { proxyCountryByHost[$0] }
+            return connection.remoteHostname.flatMap { proxyCountryByHost[$0] ?? nil }
         }
         return GeoIP.country(for: destination.address)
     }
@@ -593,15 +597,17 @@ extension AppModel {
         let hosts = Set(connections.compactMap { connection -> String? in
             guard ProxyInfo.routesThroughProxy(connection.fiveTuple.destination),
                   let host = connection.remoteHostname,
-                  proxyCountryByHost[host] == nil else { return nil }
+                  proxyCountryByHost.index(forKey: host) == nil else { return nil }
             return host
         })
         guard !hosts.isEmpty else { return }
         Task { [weak self, proxyGeo] in
             for host in hosts {
-                if let code = await proxyGeo.country(forProxiedDomain: host) {
-                    self?.proxyCountryByHost[host] = code
-                }
+                let code = await proxyGeo.country(forProxiedDomain: host)
+                // updateValue, not subscript assignment: `dict[key] = nil` on a
+                // [String: String?] removes the key instead of storing the
+                // negative result.
+                self?.proxyCountryByHost.updateValue(code, forKey: host)
             }
         }
     }
