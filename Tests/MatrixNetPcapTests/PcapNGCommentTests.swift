@@ -32,6 +32,37 @@ struct PcapNGCommentTests {
         #expect(result.records.first?.data == [1, 2])
     }
 
+    @Test("an oversized comment truncates to the declared TLV length, keeping the file parseable")
+    func oversizedComment() throws {
+        let writer = PcapNGWriter(linkType: PcapLinkType.ethernet)
+        var bytes = writer.header()
+        let long = String(repeating: "a", count: 70_000)
+        bytes += writer.packet(CapturedRecord(
+            timestampMicros: 1,
+            originalLength: 4,
+            data: [1, 2, 3, 4],
+            comment: long
+        ))
+        bytes += writer.packet(CapturedRecord(timestampMicros: 2, originalLength: 2, data: [9, 9]))
+
+        let result = try #require(PcapNGReader.read(bytes))
+        #expect(result.records.count == 2)
+        #expect(result.records.first?.comment == String(repeating: "a", count: 65535))
+        #expect(result.records.last?.data == [9, 9])
+    }
+
+    @Test("out-of-range original lengths clamp instead of trapping")
+    func extremeOriginalLength() throws {
+        let writer = PcapNGWriter(linkType: PcapLinkType.ethernet)
+        var bytes = writer.header()
+        bytes += writer.packet(CapturedRecord(timestampMicros: 1, originalLength: Int.max, data: [1]))
+        bytes += writer.packet(CapturedRecord(timestampMicros: 2, originalLength: -1, data: [2]))
+
+        let result = try #require(PcapNGReader.read(bytes))
+        #expect(result.records.first?.originalLength == Int(UInt32.max))
+        #expect(result.records.last?.originalLength == 0)
+    }
+
     @Test("a comment length running past the block does not read across the boundary")
     func corruptCommentLength() throws {
         let writer = PcapNGWriter(linkType: PcapLinkType.ethernet)

@@ -60,8 +60,11 @@ public struct PcapNGWriter {
         writer.u32(interfaceID)
         writer.u32(UInt32(record.timestampMicros >> 32))
         writer.u32(UInt32(record.timestampMicros & 0xFFFF_FFFF))
-        writer.u32(UInt32(record.data.count))
-        writer.u32(UInt32(record.originalLength))
+        // `originalLength` is a caller-supplied Int with no invariant; clamp both
+        // length fields so a bogus value degrades the metadata instead of
+        // trapping (this subsystem never crashes on bad input).
+        writer.u32(UInt32(clamping: record.data.count))
+        writer.u32(UInt32(clamping: record.originalLength))
         writer.raw(record.data)
         writer.pad32()
         writer.raw(options)
@@ -74,10 +77,13 @@ public struct PcapNGWriter {
     /// before).
     private func optionsBlock(comment: String?) -> [UInt8] {
         guard let comment, !comment.isEmpty else { return [] }
-        let value = Array(comment.utf8)
+        // Truncate the *content* to what the u16 TLV length can declare; a
+        // truncated length over untruncated bytes would desynchronise the option
+        // list and corrupt the comment for every reader.
+        let value = Array(comment.utf8.prefix(Int(UInt16.max)))
         var writer = LittleEndianWriter()
         writer.u16(1) // opt_comment
-        writer.u16(UInt16(truncatingIfNeeded: value.count))
+        writer.u16(UInt16(value.count))
         writer.raw(value)
         writer.pad32()
         writer.u16(0) // opt_endofopt
