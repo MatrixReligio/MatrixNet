@@ -38,6 +38,11 @@ struct GlobeView: View {
     @State private var threatsOnly = false
     @State private var hover: GlobeHover?
     @State private var selectedCountry: String?
+    /// Cached once per data change instead of recomputed on demand: as a
+    /// computed property this pipeline (history-store fetch + GeoIP/threat
+    /// lookups + locale names) ran several times per body evaluation *and once
+    /// per mouse-move event* via the hover hit-test.
+    @State private var destinations: [GlobeDestination] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -53,13 +58,35 @@ struct GlobeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle("Map")
         .background(.background)
-        .onChange(of: source) { _, _ in selectedCountry = nil }
+        .onChange(of: source) { _, _ in
+            selectedCountry = nil
+            refreshDestinations()
+        }
+        .onChange(of: threatsOnly) { _, _ in refreshDestinations() }
+        // Live mode: follow the (diff-gated) published model state.
+        .onChange(of: model.destinationCountries) { _, _ in
+            if source == .live { refreshDestinations() }
+        }
+        .onChange(of: model.threatCountries) { _, _ in
+            if source == .live { refreshDestinations() }
+        }
+        // History mode has no published trigger; poll slowly like UsageView.
+        .task(id: source) {
+            refreshDestinations()
+            while !Task.isCancelled, source == .history {
+                try? await Task.sleep(for: .seconds(15))
+                refreshDestinations()
+            }
+        }
     }
 
     // MARK: Data
 
-    private var destinations: [GlobeDestination] {
-        guard let world = WorldMapStore.shared else { return [] }
+    private func refreshDestinations() {
+        guard let world = WorldMapStore.shared else {
+            destinations = []
+            return
+        }
         let rows: [CountryRow] = switch source {
         case .live:
             model.destinationCountries.map {
@@ -72,7 +99,7 @@ struct GlobeView: View {
         case .history:
             historyRows()
         }
-        return rows.compactMap { row in
+        let refreshed = rows.compactMap { row -> GlobeDestination? in
             guard let coordinate = world.centroid(for: row.country) else { return nil }
             if threatsOnly, !row.threat { return nil }
             return GlobeDestination(
@@ -83,6 +110,9 @@ struct GlobeView: View {
                 isThreat: row.threat
             )
         }
+        // Gate the @State write so the history poll doesn't re-render an
+        // unchanged globe every 15 seconds.
+        if destinations != refreshed { destinations = refreshed }
     }
 
     private func historyRows() -> [CountryRow] {
@@ -276,7 +306,7 @@ private struct CountryRow {
     let threat: Bool
 }
 
-struct GlobeDestination: Identifiable {
+struct GlobeDestination: Identifiable, Equatable {
     let country: String
     let name: String
     let coordinate: MapCoordinate
