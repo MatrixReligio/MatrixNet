@@ -8,6 +8,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > This project follows [Semantic Versioning](https://semver.org): **MAJOR** for
 > incompatible changes, **MINOR** for new features, **PATCH** for bug fixes.
 
+## [1.8.15] - 2026-07-02
+
+### Fixed
+- **Usage and Top Talkers no longer freeze after a packet-capture session.**
+  Stopping a capture used to leave the capture-derived totals in place forever:
+  every app and destination seen during the capture stopped accruing usage until
+  the next launch, and starting a capture could drop up to 30 seconds of pending
+  usage. Each data source now keeps its own baseline and the capture overlay is
+  cleared when the session ends, so the always-on statistics stay continuous
+  across capture start/stop.
+- **The database no longer grows without bound.** Three sweeps were missing:
+  - SwiftData's internal change log — which nothing reads — dominated the store
+    (a real-world database measured 203 MB, of which ~180 MB was log against a
+    few megabytes of data; purging shrank it to 4 MB). It is now trimmed daily.
+  - Connection history honours the retention setting (new stepper in Settings ›
+    Data, default 30 days); previously it was never pruned.
+  - The history/usage lookup paths are now indexed — existing databases get the
+    indexes backfilled — so the periodic writes stay fast as the store grows.
+- **"Launch at login" no longer cancels itself.** When macOS required approval
+  in System Settings, the toggle's state sync could unregister the just-created
+  login item; it now stays registered and shows a hint to approve it.
+- **Reconnecting to the capture helper after an interruption no longer leaks
+  the dead connection**, and a capture that ends because the helper connection
+  closed now says so instead of stopping silently.
+- **A stalled capture device can no longer spin the helper.** A persistent read
+  error (e.g. after sleep tears down the tap) now shuts the session down
+  cleanly instead of re-firing on a dead descriptor.
+- **Exported pcapng comments over 64 KiB no longer corrupt the file's option
+  record** (not reachable from the app today; hardening).
+
+### Changed
+- **Lower CPU during capture and on the Map tab.** The globe's destination list
+  is cached instead of being recomputed on every render pass and every mouse
+  movement (in History mode each recompute was a 500-record database query);
+  HTTP packets are no longer fully stringified on the capture fast path; the
+  helper reuses its read buffer instead of reallocating 512 KiB per wakeup;
+  proxied domains that resolve to no country are remembered instead of being
+  retried every second.
+
 ## [1.8.14] - 2026-07-01
 
 ### Changed
