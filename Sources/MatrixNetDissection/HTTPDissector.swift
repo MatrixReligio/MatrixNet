@@ -18,16 +18,34 @@ enum HTTPDissector {
     /// Headers surfaced as fields when present (others are still counted).
     private static let notableHeaders = ["host", "content-type", "user-agent", "server", "location"]
 
+    /// How deep to look for the end of the header section. Real HTTP/1.x header
+    /// sections are far smaller; anything beyond this is body bytes that the
+    /// per-packet fast path must not convert to String or scan (a TSO superframe
+    /// hands us tens of kilobytes per packet).
+    private static let maxHeaderScan = 8192
+
     static func dissect(_ bytes: [UInt8], at start: Int, detailed: Bool) throws -> DissectionNode {
-        guard looksLikeHTTP(bytes, at: start) else { throw DissectionError.malformed }
-        guard start < bytes.count,
-              let text = String(bytes: bytes[start ..< bytes.count], encoding: .isoLatin1)
-        else {
+        guard looksLikeHTTP(bytes, at: start), start < bytes.count else {
             throw DissectionError.malformed
         }
 
         // Header section ends at the first blank line; tolerate its absence.
-        let head = text.components(separatedBy: "\r\n\r\n").first ?? text
+        // Found by bounded byte search so only the header bytes are ever
+        // stringified — never the body.
+        let scanEnd = min(start + Self.maxHeaderScan, bytes.count)
+        var headEnd = scanEnd
+        var index = start
+        while index + 3 < scanEnd {
+            if bytes[index] == 0x0D, bytes[index + 1] == 0x0A,
+               bytes[index + 2] == 0x0D, bytes[index + 3] == 0x0A {
+                headEnd = index
+                break
+            }
+            index += 1
+        }
+        guard let head = String(bytes: bytes[start ..< headEnd], encoding: .isoLatin1) else {
+            throw DissectionError.malformed
+        }
         let lines = head.components(separatedBy: "\r\n").filter { !$0.isEmpty }
         guard let startLine = lines.first else { throw DissectionError.malformed }
 

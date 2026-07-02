@@ -39,6 +39,28 @@ struct HTTPDissectorTests {
         #expect((try? HTTPDissector.dissect(ascii("not http at all"), at: 0, detailed: true)) == nil)
     }
 
+    @Test("header parsing is bounded: fields beyond the scan cap are not extracted")
+    func boundedHeaderScan() throws {
+        // 12 KB of filler header lines with no blank line, then a notable header.
+        // The dissector must not scan arbitrarily deep into a packet for headers —
+        // TSO superframes hand us tens of kilobytes on the per-packet fast path.
+        var text = "GET / HTTP/1.1\r\n"
+        text += String(repeating: "X-Filler: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\r\n", count: 280)
+        text += "Server: beyond-cap\r\n\r\n"
+        let node = try HTTPDissector.dissect(ascii(text), at: 0, detailed: true)
+        #expect(node.fields.first { $0.name == "Method" }?.value == "GET")
+        #expect(node.fields.first { $0.name == "Server" } == nil)
+    }
+
+    @Test("body bytes after the blank line are never parsed as headers")
+    func bodyNotParsedAsHeaders() throws {
+        let request = ascii("POST /u HTTP/1.1\r\nHost: real.com\r\n\r\nServer: fake-in-body\r\n\r\n")
+        let node = try HTTPDissector.dissect(request, at: 0, detailed: true)
+        #expect(node.fields.first { $0.name == "Host" }?.value == "real.com")
+        #expect(node.fields.first { $0.name == "Server" } == nil)
+        #expect(node.byteRange == 0 ..< request.count)
+    }
+
     @Test("a header line without a colon is tolerated")
     func toleratesMalformedHeader() throws {
         let request = ascii("GET / HTTP/1.1\r\ngarbageheader\r\nHost: ok.com\r\n\r\n")
