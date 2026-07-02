@@ -5662,6 +5662,52 @@
         }
       }
     },
+    "Approve MatrixNet under Login Items in System Settings to finish.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请在“系统设置 › 登录项”中批准 MatrixNet 以完成设置。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請在「系統設定 › 登入項目」中核准 MatrixNet 以完成設定。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定を完了するには、システム設定の「ログイン項目」で MatrixNet を承認してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정을 완료하려면 시스템 설정의 '로그인 항목'에서 MatrixNet을 승인하세요."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Approuvez MatrixNet dans Réglages Système › Ouverture pour terminer."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genehmigen Sie MatrixNet unter Systemeinstellungen › Anmeldeobjekte, um den Vorgang abzuschließen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aprueba MatrixNet en Ajustes del Sistema › Ítems de inicio para terminar."
+          }
+        }
+      }
+    },
     "Automatically check for updates": {
       "localizations": {
         "zh-Hans": {

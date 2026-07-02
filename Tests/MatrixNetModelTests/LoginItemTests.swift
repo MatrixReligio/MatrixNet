@@ -8,6 +8,9 @@ private final class FakeLoginItem: LoginItemManaging, @unchecked Sendable {
     var enableCount = 0
     var disableCount = 0
     var throwOnEnable = false
+    /// Simulates SMAppService's `.requiresApproval`: register() succeeds but
+    /// the item does not become enabled until the user approves it.
+    var stuckPendingApproval = false
 
     var isEnabled: Bool {
         enabled
@@ -16,7 +19,7 @@ private final class FakeLoginItem: LoginItemManaging, @unchecked Sendable {
     func enable() throws {
         if throwOnEnable { throw LoginItemBoom() }
         enableCount += 1
-        enabled = true
+        if !stuckPendingApproval { enabled = true }
     }
 
     func disable() throws {
@@ -44,6 +47,19 @@ struct LoginItemTests {
         try controller.setEnabled(false)
         #expect(fake.disableCount == 1)
         #expect(controller.isEnabled == false)
+    }
+
+    @Test("apply reports the actual state when registration lands in requires-approval")
+    func applyPendingApproval() throws {
+        let fake = FakeLoginItem()
+        fake.stuckPendingApproval = true
+        let controller = LoginItemController(manager: fake)
+        let actual = try controller.apply(true)
+        #expect(fake.enableCount == 1)
+        #expect(actual == false)
+        // The pending registration must never be unregistered as a side effect
+        // of reporting the not-yet-enabled state.
+        #expect(fake.disableCount == 0)
     }
 
     @Test("an enable failure propagates to the caller")

@@ -31,6 +31,16 @@ public struct LoginItemController: Sendable {
             try manager.disable()
         }
     }
+
+    /// Applies the desired state and returns the service's *actual* resulting
+    /// state. With `SMAppService` a successful register can land in
+    /// `.requiresApproval` — desired `true`, actual `false` — and the caller
+    /// must surface that without feeding the correction back into another
+    /// `setEnabled(false)`, which would unregister the pending approval.
+    public func apply(_ enabled: Bool) throws -> Bool {
+        try setEnabled(enabled)
+        return manager.isEnabled
+    }
 }
 
 #if canImport(ServiceManagement)

@@ -38,12 +38,21 @@ private struct GeneralSettings: View {
     @AppStorage(Preferences.Key.homeRegion.rawValue, store: SharedMetricsStore.sharedDefaults)
     private var homeRegion = ""
     @State private var loginError: String?
+    /// The service state the last apply actually produced. onChange compares
+    /// against this so the corrective write-back below never loops into a
+    /// second setEnabled — with SMAppService a successful register can land in
+    /// .requiresApproval (toggle on, actual off), and reacting to that
+    /// correction with unregister() would silently revoke the pending approval.
+    @State private var lastAppliedLoginState: Bool?
 
     var body: some View {
         Form {
             Section {
                 Toggle("Launch at login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, newValue in applyLaunchAtLogin(newValue) }
+                    .onChange(of: launchAtLogin) { _, newValue in
+                        guard newValue != lastAppliedLoginState else { return }
+                        applyLaunchAtLogin(newValue)
+                    }
                 Button("Manage in System Settings…") {
                     SMAppService.openSystemSettingsLoginItems()
                 }
@@ -136,14 +145,25 @@ private struct GeneralSettings: View {
     private func applyLaunchAtLogin(_ enabled: Bool) {
         let controller = LoginItemController(manager: SMAppServiceLoginItem())
         do {
-            try controller.setEnabled(enabled)
-            loginError = nil
+            let actual = try controller.apply(enabled)
+            // Registration accepted but pending the user's approval: say so
+            // instead of silently flipping the toggle back.
+            loginError = enabled && !actual
+                ? String(localized: "Approve MatrixNet under Login Items in System Settings to finish.")
+                : nil
+            // Reflect the service's real state. `lastAppliedLoginState` stops
+            // onChange from treating this write-back as a new user intent (the
+            // old code re-entered here and unregistered the pending approval).
+            lastAppliedLoginState = actual
+            if launchAtLogin != actual {
+                launchAtLogin = actual
+            }
         } catch {
             loginError = String(localized: "Could not update the login item. Open Login Items in System Settings.")
-        }
-        // Reflect the service's real state (e.g. when approval is still required).
-        if launchAtLogin != controller.isEnabled {
-            launchAtLogin = controller.isEnabled
+            lastAppliedLoginState = controller.isEnabled
+            if launchAtLogin != controller.isEnabled {
+                launchAtLogin = controller.isEnabled
+            }
         }
     }
 }
